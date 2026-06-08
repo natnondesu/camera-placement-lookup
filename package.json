@@ -1,0 +1,9 @@
+{
+  "name": "camera-placement-lookup",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check generate.mjs",
+    "build": "node generate.mjs"
+  }
+}

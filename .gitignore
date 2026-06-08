@@ -1,0 +1,4 @@
+.vercel/
+node_modules/
+/index.html
+/camera-placement-lookup.csv

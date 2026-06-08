@@ -1,0 +1,1211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Camera Placement Lookup</title>
+  <style>
+    :root {
+      --bg: oklch(1 0 0);
+      --surface: oklch(0.974 0.008 200);
+      --panel: oklch(0.992 0.004 200);
+      --ink: oklch(0.19 0.018 220);
+      --muted: oklch(0.45 0.022 220);
+      --line: oklch(0.84 0.018 210);
+      --primary: oklch(0.58 0.12 200);
+      --primary-strong: oklch(0.46 0.13 200);
+      --accent: oklch(0.62 0.15 45);
+      --success-bg: oklch(0.94 0.055 150);
+      --success-fg: oklch(0.32 0.08 150);
+      --warn-bg: oklch(0.94 0.062 75);
+      --warn-fg: oklch(0.38 0.08 65);
+      --danger-bg: oklch(0.94 0.055 20);
+      --danger-fg: oklch(0.4 0.11 20);
+      --focus: oklch(0.7 0.13 200);
+      color-scheme: light;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button:focus-visible,
+    input:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .shell {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+
+    .topbar {
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      padding: 18px 24px;
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.375rem;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .assumptions {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.875rem;
+      line-height: 1.45;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .button {
+      border: 1px solid var(--primary-strong);
+      background: var(--primary-strong);
+      color: white;
+      border-radius: 8px;
+      min-height: 38px;
+      padding: 8px 13px;
+      cursor: pointer;
+      transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+      white-space: nowrap;
+    }
+
+    .button:hover {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .button:active {
+      transform: translateY(1px);
+    }
+
+    .button.secondary {
+      background: var(--bg);
+      color: var(--ink);
+      border-color: var(--line);
+    }
+
+    .button.secondary:hover {
+      border-color: var(--primary);
+      background: var(--surface);
+    }
+
+    main {
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      padding: 22px 24px 32px;
+      display: grid;
+      grid-template-columns: minmax(280px, 360px) minmax(420px, 1fr);
+      gap: 18px;
+      flex: 1;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      overflow: hidden;
+    }
+
+    .panel-inner {
+      padding: 18px;
+    }
+
+    .panel-title {
+      margin: 0 0 14px;
+      font-size: 1rem;
+      line-height: 1.3;
+    }
+
+    .controls {
+      display: grid;
+      gap: 17px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    label {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 0.875rem;
+      line-height: 1.35;
+    }
+
+    .value {
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary-strong);
+    }
+
+    input[type="number"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    .rule-list {
+      margin: 18px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.875rem;
+      line-height: 1.45;
+    }
+
+    .rule-list strong {
+      color: var(--ink);
+      font-weight: 650;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-rows: auto minmax(360px, 1fr);
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: minmax(260px, 0.85fr) minmax(320px, 1.15fr);
+      gap: 18px;
+    }
+
+    .status-pair {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 16px;
+      align-items: flex-start;
+    }
+
+    .status-group {
+      display: grid;
+      gap: 6px;
+      min-width: 120px;
+    }
+
+    .status-group.feet-priority {
+      min-width: 150px;
+    }
+
+    .status-label {
+      color: var(--muted);
+      font-size: 0.8125rem;
+      font-weight: 650;
+      line-height: 1.25;
+    }
+
+    .feet-priority .status-label {
+      color: var(--primary-strong);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .feet-priority .status-label::after {
+      content: "Priority";
+      border: 1px solid var(--primary);
+      border-radius: 999px;
+      padding: 2px 7px;
+      color: var(--primary-strong);
+      background: var(--surface);
+      font-size: 0.6875rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 0.875rem;
+      font-weight: 650;
+      width: fit-content;
+      min-width: 104px;
+    }
+
+    .feet-priority .status {
+      min-height: 38px;
+      min-width: 132px;
+      border: 2px solid currentColor;
+      padding: 7px 13px;
+      font-size: 0.9375rem;
+      transition: background 160ms ease, box-shadow 160ms ease, color 160ms ease;
+    }
+
+    .status.best {
+      background: var(--success-bg);
+      color: var(--success-fg);
+    }
+
+    .feet-priority .status.best {
+      box-shadow: 0 0 0 3px oklch(0.88 0.052 150);
+    }
+
+    .status.acceptable {
+      background: var(--warn-bg);
+      color: var(--warn-fg);
+    }
+
+    .feet-priority .status.acceptable {
+      box-shadow: 0 0 0 3px oklch(0.88 0.058 75);
+    }
+
+    .status.out,
+    .status.out_of_range {
+      background: var(--danger-bg);
+      color: var(--danger-fg);
+    }
+
+    .feet-priority .status.out,
+    .feet-priority .status.out_of_range {
+      box-shadow: 0 0 0 3px oklch(0.88 0.052 20);
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .metric {
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+      min-width: 0;
+    }
+
+    .metric-label {
+      margin: 0 0 4px;
+      color: var(--muted);
+      font-size: 0.8125rem;
+      line-height: 1.35;
+    }
+
+    .metric-value {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 700;
+      line-height: 1.25;
+      font-variant-numeric: tabular-nums;
+      overflow-wrap: anywhere;
+    }
+
+    .lookup-row {
+      display: grid;
+      gap: 8px;
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 0.875rem;
+      line-height: 1.45;
+    }
+
+    .lookup-row strong {
+      color: var(--ink);
+    }
+
+    .diagram-card {
+      min-height: 380px;
+      display: grid;
+      grid-template-rows: auto minmax(330px, 1fr);
+    }
+
+    .diagram-head {
+      border-bottom: 1px solid var(--line);
+      padding: 14px 16px 11px;
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .diagram-head h2 {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.3;
+    }
+
+    .diagram-legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px 12px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      line-height: 1.25;
+    }
+
+    .diagram-key {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .legend-line {
+      width: 22px;
+      height: 0;
+      border-top: 3px solid var(--primary-strong);
+      border-radius: 999px;
+    }
+
+    .legend-line.face {
+      border-top-color: var(--accent);
+      border-top-style: dashed;
+    }
+
+    .legend-line.reference {
+      border-top-width: 2px;
+      border-top-color: var(--line);
+      border-top-style: dashed;
+    }
+
+    .diagram-stage {
+      min-height: 330px;
+      display: grid;
+    }
+
+    .diagram-stage svg {
+      width: 100%;
+      height: 100%;
+      min-height: 330px;
+      display: block;
+      background: linear-gradient(180deg, var(--panel), var(--surface));
+    }
+
+    .svg-label {
+      fill: var(--ink);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .svg-muted {
+      fill: var(--muted);
+      font-size: 12px;
+    }
+
+    .svg-small {
+      fill: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .svg-value {
+      fill: var(--ink);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .svg-foot-ray {
+      stroke: var(--primary-strong);
+      stroke-width: 3;
+      stroke-linecap: round;
+      fill: none;
+    }
+
+    .svg-face-ray {
+      stroke: var(--accent);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray: 8 8;
+      fill: none;
+    }
+
+    .svg-reference {
+      stroke: var(--line);
+      stroke-width: 1.5;
+      stroke-dasharray: 5 6;
+      fill: none;
+    }
+
+    .svg-measure {
+      stroke: var(--muted);
+      stroke-width: 1.5;
+      stroke-dasharray: 4 5;
+      fill: none;
+    }
+
+    .svg-callout {
+      fill: var(--panel);
+      stroke: var(--line);
+      stroke-width: 1;
+    }
+
+    .svg-status-bg.best {
+      fill: var(--success-bg);
+    }
+
+    .svg-status-bg.acceptable {
+      fill: var(--warn-bg);
+    }
+
+    .svg-status-bg.out_of_range {
+      fill: var(--danger-bg);
+    }
+
+    .svg-status-text.best {
+      fill: var(--success-fg);
+    }
+
+    .svg-status-text.acceptable {
+      fill: var(--warn-fg);
+    }
+
+    .svg-status-text.out_of_range {
+      fill: var(--danger-fg);
+    }
+
+    .table-panel {
+      min-width: 0;
+    }
+
+    .table-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .table-head h2 {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.3;
+    }
+
+    .table-meta {
+      color: var(--muted);
+      font-size: 0.875rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .table-scroll {
+      overflow: auto;
+      max-height: 500px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 1120px;
+      font-size: 0.875rem;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: right;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    td:first-child,
+    th:first-child,
+    td:nth-child(5),
+    th:nth-child(5),
+    td:nth-child(6),
+    th:nth-child(6) {
+      text-align: left;
+    }
+
+    tr.is-selected td {
+      background: oklch(0.94 0.035 200);
+    }
+
+    .table-pill {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      min-width: 88px;
+      justify-content: center;
+    }
+
+    .table-pill.best {
+      color: var(--success-fg);
+      background: var(--success-bg);
+    }
+
+    .table-pill.acceptable {
+      color: var(--warn-fg);
+      background: var(--warn-bg);
+    }
+
+    .table-pill.out_of_range {
+      color: var(--danger-fg);
+      background: var(--danger-bg);
+    }
+
+    @media (max-width: 1060px) {
+      main,
+      .summary {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .actions {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .topbar,
+      main {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+
+      .panel-inner {
+        padding: 14px;
+      }
+
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .table-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 1ms !important;
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="topbar">
+        <div>
+          <h1>Camera Placement Lookup</h1>
+          <p class="assumptions">Human height 1.7 m. Face point 1.5 m from ground. Distance is horizontal camera-to-subject distance.</p>
+        </div>
+        <div class="actions">
+          <button class="button secondary" type="button" id="copyRuleButton">Copy rule JSON</button>
+          <button class="button" type="button" id="downloadCsvButton">Download CSV</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="panel" aria-label="Camera controls">
+        <div class="panel-inner">
+          <h2 class="panel-title">Inputs</h2>
+          <div class="controls">
+            <div class="field">
+              <label for="heightInput">
+                <span>Camera height</span>
+                <span class="value" id="heightLabel">1.8 m</span>
+              </label>
+              <input id="heightRange" type="range" min="1.8" max="20" step="0.1" value="1.8">
+              <input id="heightInput" type="number" min="1.8" max="20" step="0.1" value="1.8">
+            </div>
+            <div class="field">
+              <label for="distanceInput">
+                <span>Distance</span>
+                <span class="value" id="distanceLabel">2.35 m</span>
+              </label>
+              <input id="distanceRange" type="range" min="0.3" max="36" step="0.01" value="2.35">
+              <input id="distanceInput" type="number" min="0.3" max="36" step="0.01" value="2.35">
+            </div>
+            <button class="button secondary" type="button" id="snapButton">Use recommended distance</button>
+          </div>
+
+          <ul class="rule-list">
+            <li><strong>Best:</strong> feet angle 36-39 deg. If face &lt;25 deg conflicts, use a fixed 38 deg feet angle.</li>
+            <li><strong>Face status:</strong> below 25 deg is best, 25-30 deg is acceptable, above 30 deg is out of range.</li>
+            <li><strong>Acceptable feet:</strong> feet angle 32-45 deg.</li>
+          </ul>
+        </div>
+      </section>
+
+      <div class="workspace">
+        <section class="summary" aria-label="Live result">
+          <div class="panel">
+            <div class="panel-inner">
+              <h2 class="panel-title">Live classification</h2>
+              <div class="status-pair" aria-label="Feet and face status">
+                <div class="status-group feet-priority" aria-label="Feet status, priority rule">
+                  <span class="status-label">Feet</span>
+                  <span class="status best" id="feetStatusPill">Best</span>
+                </div>
+                <div class="status-group">
+                  <span class="status-label">Face</span>
+                  <span class="status best" id="faceStatusPill">Best</span>
+                </div>
+              </div>
+              <div class="metric-grid">
+                <div class="metric">
+                  <p class="metric-label">Feet angle</p>
+                  <p class="metric-value" id="feetAngleValue">37.45 deg</p>
+                </div>
+                <div class="metric">
+                  <p class="metric-label">Face angle</p>
+                  <p class="metric-value" id="faceAngleValue">7.28 deg</p>
+                </div>
+                <div class="metric">
+                  <p class="metric-label">Recommended distance</p>
+                  <p class="metric-value" id="recommendedValue">2.35 m</p>
+                </div>
+                <div class="metric">
+                  <p class="metric-label">Distance works?</p>
+                  <p class="metric-value" id="tierValue">best</p>
+                </div>
+              </div>
+              <div class="lookup-row" id="lookupDetails"></div>
+            </div>
+          </div>
+
+          <div class="panel diagram-card">
+            <div class="diagram-head">
+              <h2>Geometry preview</h2>
+              <div class="diagram-legend" aria-label="Diagram legend">
+                <span class="diagram-key"><span class="legend-line"></span>Feet ray</span>
+                <span class="diagram-key"><span class="legend-line face"></span>Face ray</span>
+                <span class="diagram-key"><span class="legend-line reference"></span>Reference</span>
+              </div>
+            </div>
+            <div class="diagram-stage">
+              <svg id="diagram" role="img" aria-label="Side-view camera geometry" viewBox="0 0 720 360"></svg>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel table-panel" aria-label="Lookup table">
+          <div class="table-head">
+            <h2>Lookup table</h2>
+            <div class="table-meta">1.8-20.0 m in 0.1 m steps</div>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Height</th>
+                  <th>Recommended</th>
+                  <th>Feet angle</th>
+                  <th>Face angle</th>
+                  <th>Tier</th>
+                  <th>Face status</th>
+                  <th>Best feet min</th>
+                  <th>Best feet max</th>
+                  <th>Face-safe min</th>
+                  <th>Face-safe max</th>
+                </tr>
+              </thead>
+              <tbody id="lookupBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const RULE = {
+  "minCameraHeightM": 1.8,
+  "maxCameraHeightM": 20,
+  "cameraHeightStepM": 0.1,
+  "humanHeightM": 1.7,
+  "faceHeightM": 1.5,
+  "idealFeetAngleDeg": 37.5,
+  "priorityFeetAngleDeg": 38,
+  "bestFeetAngleMinDeg": 36,
+  "bestFeetAngleMaxDeg": 39,
+  "acceptableFeetAngleMinDeg": 32,
+  "acceptableFeetAngleMaxDeg": 45,
+  "bestFaceAngleMaxDeg": 25,
+  "acceptableFaceAngleMaxDeg": 30
+};
+    const CSV_TEXT = "camera_height_m,face_height_m,human_height_m,recommended_distance_m,recommendation_tier,priority_mode,recommended_feet_angle_deg,recommended_face_angle_deg,face_status,best_feet_distance_min_m,best_feet_distance_max_m,face_safe_acceptable_distance_min_m,face_safe_acceptable_distance_max_m,note\n1.80,1.50,1.70,2.35,best,strict_best,37.45,7.28,ideal_under_25,2.22,2.48,1.80,2.88,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n1.90,1.50,1.70,2.48,best,strict_best,37.46,9.16,ideal_under_25,2.35,2.62,1.90,3.04,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n2.00,1.50,1.70,2.61,best,strict_best,37.46,10.84,ideal_under_25,2.47,2.75,2.00,3.20,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n2.10,1.50,1.70,2.74,best,strict_best,37.47,12.35,ideal_under_25,2.59,2.89,2.10,3.36,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n2.20,1.50,1.70,2.87,best,strict_best,37.47,13.71,ideal_under_25,2.72,3.03,2.20,3.52,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n2.30,1.50,1.70,3.00,best,strict_best,37.48,14.93,ideal_under_25,2.84,3.17,2.30,3.68,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n2.40,1.50,1.70,3.13,best,strict_best,37.48,16.04,ideal_under_25,2.96,3.30,2.40,3.84,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n2.50,1.50,1.70,3.26,best,strict_best,37.48,17.05,ideal_under_25,3.09,3.44,2.50,4.00,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n2.60,1.50,1.70,3.39,best,strict_best,37.49,17.98,ideal_under_25,3.21,3.58,2.60,4.16,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n2.70,1.50,1.70,3.52,best,strict_best,37.49,18.82,ideal_under_25,3.33,3.72,2.70,4.32,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n2.80,1.50,1.70,3.65,best,strict_best,37.49,19.60,ideal_under_25,3.46,3.85,2.80,4.48,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n2.90,1.50,1.70,3.78,best,strict_best,37.50,20.32,ideal_under_25,3.58,3.99,2.90,4.64,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n3.00,1.50,1.70,3.91,best,strict_best,37.50,20.99,ideal_under_25,3.70,4.13,3.00,4.80,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n3.10,1.50,1.70,4.04,best,strict_best,37.50,21.61,ideal_under_25,3.83,4.27,3.10,4.96,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n3.20,1.50,1.70,4.17,best,strict_best,37.50,22.18,ideal_under_25,3.95,4.40,3.20,5.12,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n3.30,1.50,1.70,4.30,best,strict_best,37.50,22.71,ideal_under_25,4.08,4.54,3.30,5.28,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n3.40,1.50,1.70,4.43,best,strict_best,37.51,23.21,ideal_under_25,4.20,4.68,3.40,5.44,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n3.50,1.50,1.70,4.56,best,strict_best,37.51,23.68,ideal_under_25,4.32,4.82,3.50,5.60,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n3.60,1.50,1.70,4.69,best,strict_best,37.51,24.12,ideal_under_25,4.45,4.95,3.64,5.76,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n3.70,1.50,1.70,4.82,best,strict_best,37.51,24.53,ideal_under_25,4.57,5.09,3.81,5.92,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n3.80,1.50,1.70,4.95,best,strict_best,37.51,24.92,ideal_under_25,4.69,5.23,3.98,6.08,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n3.90,1.50,1.70,5.26,best,strict_best,36.55,24.53,ideal_under_25,4.82,5.37,4.16,6.24,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n4.00,1.50,1.70,5.43,best,strict_best,36.38,24.72,ideal_under_25,4.94,5.51,4.33,6.40,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n4.10,1.50,1.70,5.61,best,strict_best,36.16,24.87,ideal_under_25,5.06,5.64,4.50,6.56,Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.\n4.20,1.50,1.70,5.38,best,feet_priority_38deg,37.98,26.65,acceptable_25_to_30,5.19,5.78,4.68,6.72,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n4.30,1.50,1.70,5.50,best,feet_priority_38deg,38.02,26.98,acceptable_25_to_30,5.31,5.92,4.85,6.88,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n4.40,1.50,1.70,5.63,best,feet_priority_38deg,38.01,27.25,acceptable_25_to_30,5.43,6.06,5.02,7.04,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n4.50,1.50,1.70,5.76,best,feet_priority_38deg,38.00,27.51,acceptable_25_to_30,5.56,6.19,5.20,7.20,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n4.60,1.50,1.70,5.89,best,feet_priority_38deg,37.99,27.76,acceptable_25_to_30,5.68,6.33,5.37,7.36,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n4.70,1.50,1.70,6.02,best,feet_priority_38deg,37.98,27.99,acceptable_25_to_30,5.80,6.47,5.54,7.52,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n4.80,1.50,1.70,6.14,best,feet_priority_38deg,38.02,28.26,acceptable_25_to_30,5.93,6.61,5.72,7.68,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n4.90,1.50,1.70,6.27,best,feet_priority_38deg,38.01,28.47,acceptable_25_to_30,6.05,6.74,5.89,7.84,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n5.00,1.50,1.70,6.40,best,feet_priority_38deg,38.00,28.67,acceptable_25_to_30,6.17,6.88,6.06,8.00,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n5.10,1.50,1.70,6.53,best,feet_priority_38deg,37.99,28.87,acceptable_25_to_30,6.30,7.02,6.24,8.16,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n5.20,1.50,1.70,6.66,best,feet_priority_38deg,37.98,29.05,acceptable_25_to_30,6.42,7.16,6.41,8.32,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n5.30,1.50,1.70,6.78,best,feet_priority_38deg,38.02,29.27,acceptable_25_to_30,6.54,7.29,6.58,8.48,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n5.40,1.50,1.70,6.91,best,feet_priority_38deg,38.01,29.44,acceptable_25_to_30,6.67,7.43,6.75,8.64,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n5.50,1.50,1.70,7.04,best,feet_priority_38deg,38.00,29.60,acceptable_25_to_30,6.79,7.57,6.93,8.80,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n5.60,1.50,1.70,7.17,best,feet_priority_38deg,37.99,29.76,acceptable_25_to_30,6.92,7.71,7.10,8.96,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n5.70,1.50,1.70,7.30,best,feet_priority_38deg,37.98,29.91,acceptable_25_to_30,7.04,7.85,7.27,9.12,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.\n5.80,1.50,1.70,7.42,best,feet_priority_38deg,38.01,30.09,out_over_30,7.16,7.98,7.45,9.28,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n5.90,1.50,1.70,7.55,best,feet_priority_38deg,38.01,30.23,out_over_30,7.29,8.12,7.62,9.44,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n6.00,1.50,1.70,7.68,best,feet_priority_38deg,38.00,30.37,out_over_30,7.41,8.26,7.79,9.60,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n6.10,1.50,1.70,7.81,best,feet_priority_38deg,37.99,30.50,out_over_30,7.53,8.40,7.97,9.76,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n6.20,1.50,1.70,7.94,best,feet_priority_38deg,37.98,30.62,out_over_30,7.66,8.53,8.14,9.92,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n6.30,1.50,1.70,8.06,best,feet_priority_38deg,38.01,30.78,out_over_30,7.78,8.67,8.31,10.08,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n6.40,1.50,1.70,8.19,best,feet_priority_38deg,38.01,30.89,out_over_30,7.90,8.81,8.49,10.24,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n6.50,1.50,1.70,8.32,best,feet_priority_38deg,38.00,31.00,out_over_30,8.03,8.95,8.66,10.40,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n6.60,1.50,1.70,8.45,best,feet_priority_38deg,37.99,31.11,out_over_30,8.15,9.08,8.83,10.56,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n6.70,1.50,1.70,8.58,best,feet_priority_38deg,37.99,31.22,out_over_30,8.27,9.22,9.01,10.72,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n6.80,1.50,1.70,8.70,best,feet_priority_38deg,38.01,31.35,out_over_30,8.40,9.36,9.18,10.88,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n6.90,1.50,1.70,8.83,best,feet_priority_38deg,38.01,31.45,out_over_30,8.52,9.50,9.35,11.04,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n7.00,1.50,1.70,8.96,best,feet_priority_38deg,38.00,31.54,out_over_30,8.64,9.63,9.53,11.20,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n7.10,1.50,1.70,9.09,best,feet_priority_38deg,37.99,31.64,out_over_30,8.77,9.77,9.70,11.36,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n7.20,1.50,1.70,9.22,best,feet_priority_38deg,37.99,31.73,out_over_30,8.89,9.91,9.87,11.52,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n7.30,1.50,1.70,9.34,best,feet_priority_38deg,38.01,31.84,out_over_30,9.01,10.05,10.05,11.68,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n7.40,1.50,1.70,9.47,best,feet_priority_38deg,38.00,31.92,out_over_30,9.14,10.19,10.22,11.84,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n7.50,1.50,1.70,9.60,best,feet_priority_38deg,38.00,32.01,out_over_30,9.26,10.32,10.39,12.00,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n7.60,1.50,1.70,9.73,best,feet_priority_38deg,37.99,32.08,out_over_30,9.39,10.46,10.57,12.16,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n7.70,1.50,1.70,9.86,best,feet_priority_38deg,37.99,32.16,out_over_30,9.51,10.60,10.74,12.32,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n7.80,1.50,1.70,9.98,best,feet_priority_38deg,38.01,32.26,out_over_30,9.63,10.74,10.91,12.48,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n7.90,1.50,1.70,10.11,best,feet_priority_38deg,38.00,32.34,out_over_30,9.76,10.87,11.09,12.64,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n8.00,1.50,1.70,10.24,best,feet_priority_38deg,38.00,32.41,out_over_30,9.88,11.01,11.26,12.80,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n8.10,1.50,1.70,10.37,best,feet_priority_38deg,37.99,32.47,out_over_30,10.00,11.15,11.43,12.96,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n8.20,1.50,1.70,10.50,best,feet_priority_38deg,37.99,32.54,out_over_30,10.13,11.29,11.60,13.12,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n8.30,1.50,1.70,10.62,best,feet_priority_38deg,38.01,32.63,out_over_30,10.25,11.42,11.78,13.28,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n8.40,1.50,1.70,10.75,best,feet_priority_38deg,38.00,32.69,out_over_30,10.37,11.56,11.95,13.44,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n8.50,1.50,1.70,10.88,best,feet_priority_38deg,38.00,32.76,out_over_30,10.50,11.70,12.12,13.60,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n8.60,1.50,1.70,11.01,best,feet_priority_38deg,37.99,32.82,out_over_30,10.62,11.84,12.30,13.76,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n8.70,1.50,1.70,11.14,best,feet_priority_38deg,37.99,32.88,out_over_30,10.74,11.97,12.47,13.92,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n8.80,1.50,1.70,11.26,best,feet_priority_38deg,38.01,32.96,out_over_30,10.87,12.11,12.64,14.08,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n8.90,1.50,1.70,11.39,best,feet_priority_38deg,38.00,33.01,out_over_30,10.99,12.25,12.82,14.24,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n9.00,1.50,1.70,11.52,best,feet_priority_38deg,38.00,33.07,out_over_30,11.11,12.39,12.99,14.40,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n9.10,1.50,1.70,11.65,best,feet_priority_38deg,37.99,33.12,out_over_30,11.24,12.53,13.16,14.56,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n9.20,1.50,1.70,11.78,best,feet_priority_38deg,37.99,33.17,out_over_30,11.36,12.66,13.34,14.72,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n9.30,1.50,1.70,11.90,best,feet_priority_38deg,38.01,33.24,out_over_30,11.48,12.80,13.51,14.88,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n9.40,1.50,1.70,12.03,best,feet_priority_38deg,38.00,33.29,out_over_30,11.61,12.94,13.68,15.04,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n9.50,1.50,1.70,12.16,best,feet_priority_38deg,38.00,33.34,out_over_30,11.73,13.08,13.86,15.20,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n9.60,1.50,1.70,12.29,best,feet_priority_38deg,37.99,33.39,out_over_30,11.86,13.21,14.03,15.36,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n9.70,1.50,1.70,12.42,best,feet_priority_38deg,37.99,33.43,out_over_30,11.98,13.35,14.20,15.52,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n9.80,1.50,1.70,12.54,best,feet_priority_38deg,38.01,33.50,out_over_30,12.10,13.49,14.38,15.68,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n9.90,1.50,1.70,12.67,best,feet_priority_38deg,38.00,33.54,out_over_30,12.23,13.63,14.55,15.84,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n10.00,1.50,1.70,12.80,best,feet_priority_38deg,38.00,33.59,out_over_30,12.35,13.76,14.72,16.00,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n10.10,1.50,1.70,12.93,best,feet_priority_38deg,37.99,33.63,out_over_30,12.47,13.90,14.90,16.16,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n10.20,1.50,1.70,13.06,best,feet_priority_38deg,37.99,33.67,out_over_30,12.60,14.04,15.07,16.32,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n10.30,1.50,1.70,13.18,best,feet_priority_38deg,38.01,33.73,out_over_30,12.72,14.18,15.24,16.48,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n10.40,1.50,1.70,13.31,best,feet_priority_38deg,38.00,33.77,out_over_30,12.84,14.31,15.42,16.64,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n10.50,1.50,1.70,13.44,best,feet_priority_38deg,38.00,33.81,out_over_30,12.97,14.45,15.59,16.80,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n10.60,1.50,1.70,13.57,best,feet_priority_38deg,37.99,33.85,out_over_30,13.09,14.59,15.76,16.96,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n10.70,1.50,1.70,13.70,best,feet_priority_38deg,37.99,33.88,out_over_30,13.21,14.73,15.93,17.12,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n10.80,1.50,1.70,13.82,best,feet_priority_38deg,38.01,33.94,out_over_30,13.34,14.86,16.11,17.28,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n10.90,1.50,1.70,13.95,best,feet_priority_38deg,38.00,33.97,out_over_30,13.46,15.00,16.28,17.44,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n11.00,1.50,1.70,14.08,best,feet_priority_38deg,38.00,34.01,out_over_30,13.58,15.14,16.45,17.60,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n11.10,1.50,1.70,14.21,best,feet_priority_38deg,37.99,34.04,out_over_30,13.71,15.28,16.63,17.76,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n11.20,1.50,1.70,14.34,best,feet_priority_38deg,37.99,34.08,out_over_30,13.83,15.42,16.80,17.92,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n11.30,1.50,1.70,14.46,best,feet_priority_38deg,38.01,34.13,out_over_30,13.95,15.55,16.97,18.08,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n11.40,1.50,1.70,14.59,best,feet_priority_38deg,38.00,34.16,out_over_30,14.08,15.69,17.15,18.24,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n11.50,1.50,1.70,14.72,best,feet_priority_38deg,38.00,34.19,out_over_30,14.20,15.83,17.32,18.40,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n11.60,1.50,1.70,14.85,best,feet_priority_38deg,37.99,34.22,out_over_30,14.32,15.97,17.49,18.56,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n11.70,1.50,1.70,14.98,best,feet_priority_38deg,37.99,34.25,out_over_30,14.45,16.10,17.67,18.72,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n11.80,1.50,1.70,15.10,best,feet_priority_38deg,38.01,34.30,out_over_30,14.57,16.24,17.84,18.88,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n11.90,1.50,1.70,15.23,best,feet_priority_38deg,38.00,34.33,out_over_30,14.70,16.38,18.01,19.04,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n12.00,1.50,1.70,15.36,best,feet_priority_38deg,38.00,34.36,out_over_30,14.82,16.52,18.19,19.20,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n12.10,1.50,1.70,15.49,best,feet_priority_38deg,38.00,34.38,out_over_30,14.94,16.65,18.36,19.36,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n12.20,1.50,1.70,15.62,best,feet_priority_38deg,37.99,34.41,out_over_30,15.07,16.79,18.53,19.52,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n12.30,1.50,1.70,15.74,best,feet_priority_38deg,38.01,34.46,out_over_30,15.19,16.93,18.71,19.68,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n12.40,1.50,1.70,15.87,best,feet_priority_38deg,38.00,34.48,out_over_30,15.31,17.07,18.88,19.84,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n12.50,1.50,1.70,16.00,best,feet_priority_38deg,38.00,34.51,out_over_30,15.44,17.20,19.05,20.00,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n12.60,1.50,1.70,16.13,best,feet_priority_38deg,38.00,34.53,out_over_30,15.56,17.34,19.23,20.16,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n12.70,1.50,1.70,16.26,best,feet_priority_38deg,37.99,34.56,out_over_30,15.68,17.48,19.40,20.32,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n12.80,1.50,1.70,16.38,best,feet_priority_38deg,38.01,34.60,out_over_30,15.81,17.62,19.57,20.48,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n12.90,1.50,1.70,16.51,best,feet_priority_38deg,38.00,34.62,out_over_30,15.93,17.76,19.75,20.64,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n13.00,1.50,1.70,16.64,best,feet_priority_38deg,38.00,34.65,out_over_30,16.05,17.89,19.92,20.80,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n13.10,1.50,1.70,16.77,best,feet_priority_38deg,38.00,34.67,out_over_30,16.18,18.03,20.09,20.96,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n13.20,1.50,1.70,16.90,best,feet_priority_38deg,37.99,34.70,out_over_30,16.30,18.17,20.26,21.12,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n13.30,1.50,1.70,17.02,best,feet_priority_38deg,38.01,34.73,out_over_30,16.42,18.31,20.44,21.28,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n13.40,1.50,1.70,17.15,best,feet_priority_38deg,38.00,34.76,out_over_30,16.55,18.44,20.61,21.44,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n13.50,1.50,1.70,17.28,best,feet_priority_38deg,38.00,34.78,out_over_30,16.67,18.58,20.78,21.60,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n13.60,1.50,1.70,17.41,best,feet_priority_38deg,38.00,34.80,out_over_30,16.79,18.72,20.96,21.76,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n13.70,1.50,1.70,17.54,best,feet_priority_38deg,37.99,34.82,out_over_30,16.92,18.86,21.13,21.92,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n13.80,1.50,1.70,17.66,best,feet_priority_38deg,38.01,34.86,out_over_30,17.04,18.99,21.30,22.08,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n13.90,1.50,1.70,17.79,best,feet_priority_38deg,38.00,34.88,out_over_30,17.17,19.13,21.48,22.24,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n14.00,1.50,1.70,17.92,best,feet_priority_38deg,38.00,34.90,out_over_30,17.29,19.27,21.65,22.40,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n14.10,1.50,1.70,18.05,best,feet_priority_38deg,38.00,34.92,out_over_30,17.41,19.41,21.82,22.56,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n14.20,1.50,1.70,18.18,best,feet_priority_38deg,37.99,34.94,out_over_30,17.54,19.54,22.00,22.72,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n14.30,1.50,1.70,18.30,best,feet_priority_38deg,38.00,34.97,out_over_30,17.66,19.68,22.17,22.88,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n14.40,1.50,1.70,18.43,best,feet_priority_38deg,38.00,34.99,out_over_30,17.78,19.82,22.34,23.04,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n14.50,1.50,1.70,18.56,best,feet_priority_38deg,38.00,35.01,out_over_30,17.91,19.96,22.52,23.20,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n14.60,1.50,1.70,18.69,best,feet_priority_38deg,38.00,35.03,out_over_30,18.03,20.10,22.69,23.36,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n14.70,1.50,1.70,18.82,best,feet_priority_38deg,37.99,35.05,out_over_30,18.15,20.23,22.86,23.52,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n14.80,1.50,1.70,18.94,best,feet_priority_38deg,38.00,35.08,out_over_30,18.28,20.37,23.04,23.68,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n14.90,1.50,1.70,19.07,best,feet_priority_38deg,38.00,35.09,out_over_30,18.40,20.51,23.21,23.84,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n15.00,1.50,1.70,19.20,best,feet_priority_38deg,38.00,35.11,out_over_30,18.52,20.65,23.38,24.01,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n15.10,1.50,1.70,19.33,best,feet_priority_38deg,38.00,35.13,out_over_30,18.65,20.78,23.56,24.17,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n15.20,1.50,1.70,19.46,best,feet_priority_38deg,37.99,35.15,out_over_30,18.77,20.92,23.73,24.33,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n15.30,1.50,1.70,19.58,best,feet_priority_38deg,38.00,35.18,out_over_30,18.89,21.06,23.90,24.49,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n15.40,1.50,1.70,19.71,best,feet_priority_38deg,38.00,35.19,out_over_30,19.02,21.20,24.08,24.65,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n15.50,1.50,1.70,19.84,best,feet_priority_38deg,38.00,35.21,out_over_30,19.14,21.33,24.25,24.81,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n15.60,1.50,1.70,19.97,best,feet_priority_38deg,38.00,35.22,out_over_30,19.26,21.47,24.42,24.97,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n15.70,1.50,1.70,20.10,best,feet_priority_38deg,37.99,35.24,out_over_30,19.39,21.61,24.60,25.13,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n15.80,1.50,1.70,20.22,best,feet_priority_38deg,38.00,35.27,out_over_30,19.51,21.75,24.77,25.29,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n15.90,1.50,1.70,20.35,best,feet_priority_38deg,38.00,35.28,out_over_30,19.63,21.88,24.94,25.45,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n16.00,1.50,1.70,20.48,best,feet_priority_38deg,38.00,35.30,out_over_30,19.76,22.02,25.11,25.61,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n16.10,1.50,1.70,20.61,best,feet_priority_38deg,38.00,35.31,out_over_30,19.88,22.16,25.29,25.77,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n16.20,1.50,1.70,20.74,best,feet_priority_38deg,37.99,35.33,out_over_30,20.01,22.30,25.46,25.93,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n16.30,1.50,1.70,20.86,best,feet_priority_38deg,38.00,35.36,out_over_30,20.13,22.44,25.63,26.09,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n16.40,1.50,1.70,20.99,best,feet_priority_38deg,38.00,35.37,out_over_30,20.25,22.57,25.81,26.25,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n16.50,1.50,1.70,21.12,best,feet_priority_38deg,38.00,35.38,out_over_30,20.38,22.71,25.98,26.41,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n16.60,1.50,1.70,21.25,best,feet_priority_38deg,38.00,35.40,out_over_30,20.50,22.85,26.15,26.57,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n16.70,1.50,1.70,21.38,best,feet_priority_38deg,37.99,35.41,out_over_30,20.62,22.99,26.33,26.73,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n16.80,1.50,1.70,21.50,best,feet_priority_38deg,38.00,35.44,out_over_30,20.75,23.12,26.50,26.89,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n16.90,1.50,1.70,21.63,best,feet_priority_38deg,38.00,35.45,out_over_30,20.87,23.26,26.67,27.05,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n17.00,1.50,1.70,21.76,best,feet_priority_38deg,38.00,35.46,out_over_30,20.99,23.40,26.85,27.21,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n17.10,1.50,1.70,21.89,best,feet_priority_38deg,38.00,35.48,out_over_30,21.12,23.54,27.02,27.37,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n17.20,1.50,1.70,22.01,best,feet_priority_38deg,38.01,35.50,out_over_30,21.24,23.67,27.19,27.53,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n17.30,1.50,1.70,22.14,best,feet_priority_38deg,38.00,35.51,out_over_30,21.36,23.81,27.37,27.69,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n17.40,1.50,1.70,22.27,best,feet_priority_38deg,38.00,35.53,out_over_30,21.49,23.95,27.54,27.85,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n17.50,1.50,1.70,22.40,best,feet_priority_38deg,38.00,35.54,out_over_30,21.61,24.09,27.71,28.01,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n17.60,1.50,1.70,22.53,best,feet_priority_38deg,38.00,35.55,out_over_30,21.73,24.22,27.89,28.17,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n17.70,1.50,1.70,22.65,best,feet_priority_38deg,38.01,35.57,out_over_30,21.86,24.36,28.06,28.33,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n17.80,1.50,1.70,22.78,best,feet_priority_38deg,38.00,35.59,out_over_30,21.98,24.50,28.23,28.49,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n17.90,1.50,1.70,22.91,best,feet_priority_38deg,38.00,35.60,out_over_30,22.10,24.64,28.41,28.65,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n18.00,1.50,1.70,23.04,best,feet_priority_38deg,38.00,35.61,out_over_30,22.23,24.77,28.58,28.81,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n18.10,1.50,1.70,23.17,best,feet_priority_38deg,38.00,35.62,out_over_30,22.35,24.91,28.75,28.97,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n18.20,1.50,1.70,23.29,best,feet_priority_38deg,38.01,35.64,out_over_30,22.48,25.05,28.93,29.13,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n18.30,1.50,1.70,23.42,best,feet_priority_38deg,38.00,35.65,out_over_30,22.60,25.19,29.10,29.29,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n18.40,1.50,1.70,23.55,best,feet_priority_38deg,38.00,35.66,out_over_30,22.72,25.33,29.27,29.45,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n18.50,1.50,1.70,23.68,best,feet_priority_38deg,38.00,35.67,out_over_30,22.85,25.46,29.44,29.61,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n18.60,1.50,1.70,23.81,best,feet_priority_38deg,38.00,35.69,out_over_30,22.97,25.60,29.62,29.77,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n18.70,1.50,1.70,23.93,best,feet_priority_38deg,38.01,35.71,out_over_30,23.09,25.74,29.79,29.93,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n18.80,1.50,1.70,24.06,best,feet_priority_38deg,38.00,35.72,out_over_30,23.22,25.88,29.96,30.09,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n18.90,1.50,1.70,24.19,best,feet_priority_38deg,38.00,35.73,out_over_30,23.34,26.01,30.14,30.25,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n19.00,1.50,1.70,24.32,best,feet_priority_38deg,38.00,35.74,out_over_30,23.46,26.15,30.31,30.41,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n19.10,1.50,1.70,24.45,best,feet_priority_38deg,38.00,35.75,out_over_30,23.59,26.29,30.48,30.57,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n19.20,1.50,1.70,24.57,best,feet_priority_38deg,38.01,35.77,out_over_30,23.71,26.43,30.66,30.73,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n19.30,1.50,1.70,24.70,best,feet_priority_38deg,38.00,35.78,out_over_30,23.83,26.56,30.83,30.89,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n19.40,1.50,1.70,24.83,best,feet_priority_38deg,38.00,35.79,out_over_30,23.96,26.70,31.00,31.05,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n19.50,1.50,1.70,24.96,best,feet_priority_38deg,38.00,35.80,out_over_30,24.08,26.84,31.18,31.21,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n19.60,1.50,1.70,25.09,best,feet_priority_38deg,38.00,35.81,out_over_30,24.20,26.98,31.35,31.37,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n19.70,1.50,1.70,25.21,best,feet_priority_38deg,38.01,35.83,out_over_30,24.33,27.11,31.52,31.53,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n19.80,1.50,1.70,25.34,best,feet_priority_38deg,38.00,35.84,out_over_30,24.45,27.25,,,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n19.90,1.50,1.70,25.47,best,feet_priority_38deg,38.00,35.85,out_over_30,24.57,27.39,,,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n20.00,1.50,1.70,25.60,best,feet_priority_38deg,38.00,35.85,out_over_30,24.70,27.53,,,Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle. Face angle is above the original 30 deg out-of-range limit.\n";
+    const EPSILON = 1e-9;
+
+    const els = {
+      heightRange: document.getElementById("heightRange"),
+      heightInput: document.getElementById("heightInput"),
+      heightLabel: document.getElementById("heightLabel"),
+      distanceRange: document.getElementById("distanceRange"),
+      distanceInput: document.getElementById("distanceInput"),
+      distanceLabel: document.getElementById("distanceLabel"),
+      feetStatusPill: document.getElementById("feetStatusPill"),
+      faceStatusPill: document.getElementById("faceStatusPill"),
+      feetAngleValue: document.getElementById("feetAngleValue"),
+      faceAngleValue: document.getElementById("faceAngleValue"),
+      recommendedValue: document.getElementById("recommendedValue"),
+      tierValue: document.getElementById("tierValue"),
+      lookupDetails: document.getElementById("lookupDetails"),
+      lookupBody: document.getElementById("lookupBody"),
+      diagram: document.getElementById("diagram"),
+      snapButton: document.getElementById("snapButton"),
+      downloadCsvButton: document.getElementById("downloadCsvButton"),
+      copyRuleButton: document.getElementById("copyRuleButton"),
+    };
+
+    function toRad(deg) {
+      return deg * Math.PI / 180;
+    }
+
+    function angleDeg(verticalDeltaM, distanceM) {
+      return Math.atan(Math.abs(verticalDeltaM) / distanceM) * 180 / Math.PI;
+    }
+
+    function distanceForFeetAngle(cameraHeightM, angleDegValue) {
+      return cameraHeightM / Math.tan(toRad(angleDegValue));
+    }
+
+    function minDistanceForFaceAngle(cameraHeightM, maxFaceAngleDeg) {
+      const faceDeltaM = Math.abs(cameraHeightM - RULE.faceHeightM);
+      if (faceDeltaM === 0) return 0;
+      return faceDeltaM / Math.tan(toRad(maxFaceAngleDeg));
+    }
+
+    function cameraHeightValues() {
+      const values = [];
+      const count = Math.round((RULE.maxCameraHeightM - RULE.minCameraHeightM) / RULE.cameraHeightStepM);
+      for (let i = 0; i <= count; i += 1) {
+        values.push(Number((RULE.minCameraHeightM + i * RULE.cameraHeightStepM).toFixed(1)));
+      }
+      return values;
+    }
+
+    function lookupRow(cameraHeightM) {
+      const bestFeetMinDistanceM = distanceForFeetAngle(cameraHeightM, RULE.bestFeetAngleMaxDeg);
+      const bestFeetMaxDistanceM = distanceForFeetAngle(cameraHeightM, RULE.bestFeetAngleMinDeg);
+      const bestFaceMinDistanceM = minDistanceForFaceAngle(cameraHeightM, RULE.bestFaceAngleMaxDeg);
+      const strictBestDistanceMinM = Math.max(bestFeetMinDistanceM, bestFaceMinDistanceM);
+      const strictBestDistanceMaxM = bestFeetMaxDistanceM;
+      const hasStrictBest = strictBestDistanceMinM < strictBestDistanceMaxM - EPSILON;
+
+      const acceptableFeetMinDistanceM = distanceForFeetAngle(cameraHeightM, RULE.acceptableFeetAngleMaxDeg);
+      const acceptableFeetMaxDistanceM = distanceForFeetAngle(cameraHeightM, RULE.acceptableFeetAngleMinDeg);
+      const acceptableFaceMinDistanceM = minDistanceForFaceAngle(cameraHeightM, RULE.acceptableFaceAngleMaxDeg);
+      const acceptableDistanceMinM = Math.max(acceptableFeetMinDistanceM, acceptableFaceMinDistanceM);
+      const acceptableDistanceMaxM = acceptableFeetMaxDistanceM;
+      const hasAcceptable = acceptableDistanceMinM <= acceptableDistanceMaxM + EPSILON;
+
+      let rawRecommendedDistanceM;
+      let recommendationTier = "best";
+      let priorityMode = "strict_best";
+
+      if (hasStrictBest) {
+        const idealDistanceM = distanceForFeetAngle(cameraHeightM, RULE.idealFeetAngleDeg);
+        rawRecommendedDistanceM = idealDistanceM >= strictBestDistanceMinM && idealDistanceM <= strictBestDistanceMaxM
+          ? idealDistanceM
+          : (strictBestDistanceMinM + strictBestDistanceMaxM) / 2;
+      } else {
+        rawRecommendedDistanceM = distanceForFeetAngle(cameraHeightM, RULE.priorityFeetAngleDeg);
+        priorityMode = "feet_priority_38deg";
+      }
+
+      const recommendedDistanceM = Number(rawRecommendedDistanceM.toFixed(2));
+      const recommendedFeetAngleDeg = angleDeg(cameraHeightM, recommendedDistanceM);
+      const recommendedFaceAngleDeg = angleDeg(cameraHeightM - RULE.faceHeightM, recommendedDistanceM);
+      const faceStatus = recommendedFaceAngleDeg < RULE.bestFaceAngleMaxDeg
+        ? "ideal_under_25"
+        : recommendedFaceAngleDeg <= RULE.acceptableFaceAngleMaxDeg
+          ? "acceptable_25_to_30"
+          : "out_over_30";
+
+      return {
+        cameraHeightM,
+        recommendedDistanceM,
+        recommendationTier,
+        priorityMode,
+        recommendedFeetAngleDeg,
+        recommendedFaceAngleDeg,
+        faceStatus,
+        bestDistanceMinM: bestFeetMinDistanceM,
+        bestDistanceMaxM: bestFeetMaxDistanceM,
+        acceptableDistanceMinM: hasAcceptable ? acceptableDistanceMinM : null,
+        acceptableDistanceMaxM: hasAcceptable ? acceptableDistanceMaxM : null,
+      };
+    }
+
+    function classifyFeet(feetAngleDeg) {
+      if (
+        feetAngleDeg >= RULE.bestFeetAngleMinDeg &&
+        feetAngleDeg <= RULE.bestFeetAngleMaxDeg
+      ) {
+        return { status: "best", label: "Best" };
+      }
+      if (
+        feetAngleDeg >= RULE.acceptableFeetAngleMinDeg &&
+        feetAngleDeg <= RULE.acceptableFeetAngleMaxDeg
+      ) {
+        return { status: "acceptable", label: "Acceptable" };
+      }
+      return { status: "out_of_range", label: "Out of range" };
+    }
+
+    function classifyFace(faceAngleDeg) {
+      if (faceAngleDeg < RULE.bestFaceAngleMaxDeg) {
+        return { status: "best", label: "Best" };
+      }
+      if (faceAngleDeg <= RULE.acceptableFaceAngleMaxDeg) {
+        return { status: "acceptable", label: "Acceptable" };
+      }
+      return { status: "out_of_range", label: "Out of range" };
+    }
+
+    function classifyOverall(feetStatus, faceStatus) {
+      if (feetStatus === "out_of_range" || faceStatus === "out_of_range") {
+        return { status: "out_of_range", label: "out of range" };
+      }
+      if (feetStatus === "best" && faceStatus === "best") {
+        return { status: "best", label: "best" };
+      }
+      return { status: "acceptable", label: "acceptable" };
+    }
+
+    function classify(cameraHeightM, distanceM) {
+      const feetAngle = angleDeg(cameraHeightM, distanceM);
+      const faceAngle = angleDeg(cameraHeightM - RULE.faceHeightM, distanceM);
+      const feet = { angle: feetAngle, ...classifyFeet(feetAngle) };
+      const face = { angle: faceAngle, ...classifyFace(faceAngle) };
+      return {
+        feet,
+        face,
+        overall: classifyOverall(feet.status, face.status),
+      };
+    }
+
+    function fmt(value, decimals = 2, suffix = "") {
+      if (value === null || value === undefined || Number.isNaN(value)) return "n/a";
+      return value.toFixed(decimals) + suffix;
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function lookupFaceStatusLabel(faceStatus) {
+      if (faceStatus === "ideal_under_25") return "best";
+      if (faceStatus === "acceptable_25_to_30") return "acceptable";
+      if (faceStatus === "out_over_30") return "out of range";
+      return faceStatus.replaceAll("_", " ");
+    }
+
+    function lookupFaceStatusClass(faceStatus) {
+      if (faceStatus === "ideal_under_25") return "best";
+      if (faceStatus === "acceptable_25_to_30") return "acceptable";
+      return "out_of_range";
+    }
+
+    function setHeight(value) {
+      const next = Math.min(Math.max(Number(value), RULE.minCameraHeightM), RULE.maxCameraHeightM);
+      const rounded = Number(next.toFixed(1));
+      els.heightRange.value = rounded;
+      els.heightInput.value = rounded.toFixed(1);
+      update();
+    }
+
+    function editHeight(value) {
+      const next = Number(value);
+      if (!Number.isFinite(next)) return;
+      const clamped = Math.min(Math.max(next, RULE.minCameraHeightM), RULE.maxCameraHeightM);
+      els.heightRange.value = clamped.toFixed(1);
+      update();
+    }
+
+    function setDistance(value) {
+      const next = Math.min(Math.max(Number(value), Number(els.distanceRange.min)), Number(els.distanceRange.max));
+      els.distanceRange.value = next.toFixed(2);
+      els.distanceInput.value = next.toFixed(2);
+      update();
+    }
+
+    function editDistance(value) {
+      const next = Number(value);
+      if (!Number.isFinite(next)) return;
+      const clamped = Math.min(Math.max(next, Number(els.distanceRange.min)), Number(els.distanceRange.max));
+      els.distanceRange.value = clamped.toFixed(2);
+      update();
+    }
+
+    function syncDistanceForHeight(row) {
+      if (row.recommendedDistanceM) {
+        const maxDistance = Math.max(36, Math.ceil(row.acceptableDistanceMaxM ?? row.recommendedDistanceM) + 2);
+        els.distanceRange.max = String(maxDistance);
+        els.distanceInput.max = String(maxDistance);
+      }
+    }
+
+    function renderTable(rows, selectedHeightM) {
+      els.lookupBody.innerHTML = rows.map((row) => {
+        const selectedClass = row.cameraHeightM === selectedHeightM ? " class=\"is-selected\"" : "";
+        return `<tr${selectedClass}>
+          <td>${fmt(row.cameraHeightM, 1, " m")}</td>
+          <td>${fmt(row.recommendedDistanceM, 2, " m")}</td>
+          <td>${fmt(row.recommendedFeetAngleDeg, 2, " deg")}</td>
+          <td>${fmt(row.recommendedFaceAngleDeg, 2, " deg")}</td>
+          <td><span class="table-pill ${row.recommendationTier}">${row.recommendationTier.replaceAll("_", " ")}</span></td>
+          <td><span class="table-pill ${lookupFaceStatusClass(row.faceStatus)}">${lookupFaceStatusLabel(row.faceStatus)}</span></td>
+          <td>${fmt(row.bestDistanceMinM, 2, " m")}</td>
+          <td>${fmt(row.bestDistanceMaxM, 2, " m")}</td>
+          <td>${fmt(row.acceptableDistanceMinM, 2, " m")}</td>
+          <td>${fmt(row.acceptableDistanceMaxM, 2, " m")}</td>
+        </tr>`;
+      }).join("");
+    }
+
+    function renderDiagram(cameraHeightM, distanceM, feet, face) {
+      const viewWidth = 720;
+      const calloutWidth = 196;
+      const calloutHeight = 90;
+      const calloutX = 34;
+      const calloutY = 104;
+      const plot = {
+        left: calloutX + calloutWidth + 36,
+        right: 660,
+        top: 62,
+        bottom: 288,
+      };
+      const availableWidth = plot.right - plot.left;
+      const availableHeight = plot.bottom - plot.top;
+      const maxHeight = Math.max(cameraHeightM, RULE.humanHeightM, RULE.faceHeightM);
+      const safeDistance = Math.max(distanceM, 0.01);
+      const scale = Math.min(availableWidth / safeDistance, availableHeight / maxHeight);
+      const distancePx = safeDistance * scale;
+      const subjectX = plot.left + Math.max(0, (availableWidth - distancePx) / 2);
+      const cameraX = subjectX + distancePx;
+      const groundY = plot.bottom;
+      const yForHeight = (heightM) => groundY - heightM * scale;
+      const cameraY = yForHeight(cameraHeightM);
+      const faceY = yForHeight(RULE.faceHeightM);
+      const headTopY = yForHeight(RULE.humanHeightM);
+      const headRadius = clamp(scale * 0.105, 6, 12);
+      const headCenterY = headTopY + headRadius;
+      const bodyStroke = clamp(scale * 0.04, 3, 5);
+      const faceDotRadius = clamp(scale * 0.035, 3.5, 5);
+      const cameraBodyWidth = 38;
+      const cameraBodyHeight = 28;
+      const heightBracketX = Math.min(cameraX + 34, viewWidth - 34);
+      const heightLabelY = (cameraY + groundY) / 2;
+      const distanceLabelX = (subjectX + cameraX) / 2;
+      const distanceLineY = groundY + 30;
+      const arcRadius = Math.min(44, Math.max(24, distancePx * 0.28));
+      const faceArcRadius = Math.max(16, arcRadius - 12);
+      const statusWidth = (label) => {
+        if (label === "Out of range") return 86;
+        if (label === "Acceptable") return 78;
+        return 52;
+      };
+      const feetStatusWidth = statusWidth(feet.label);
+      const faceStatusWidth = statusWidth(face.label);
+      const arcPath = (angleDeg, radius) => {
+        const theta = angleDeg * Math.PI / 180;
+        const startX = cameraX - radius;
+        const startY = cameraY;
+        const endX = cameraX - Math.cos(theta) * radius;
+        const endY = cameraY + Math.sin(theta) * radius;
+        return [
+          "M", startX.toFixed(2), startY.toFixed(2),
+          "A", radius.toFixed(2), radius.toFixed(2), "0 0 0",
+          endX.toFixed(2), endY.toFixed(2),
+        ].join(" ");
+      };
+
+      els.diagram.setAttribute(
+        "aria-label",
+        "Side-view camera geometry. Feet angle " + fmt(feet.angle, 1, " deg") + ", " + feet.label + ". Face angle " + fmt(face.angle, 1, " deg") + ", " + face.label + "."
+      );
+
+      els.diagram.innerHTML = `
+        <rect x="0" y="0" width="720" height="360" fill="transparent"></rect>
+        <line x1="${plot.left - 40}" y1="${groundY}" x2="${plot.right + 40}" y2="${groundY}" stroke="var(--line)" stroke-width="2"></line>
+        <line x1="${subjectX}" y1="${groundY}" x2="${cameraX}" y2="${groundY}" class="svg-measure"></line>
+        <line x1="${subjectX}" y1="${cameraY}" x2="${cameraX}" y2="${cameraY}" class="svg-reference"></line>
+        <line x1="${subjectX}" y1="${faceY}" x2="${cameraX}" y2="${faceY}" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="5 6" opacity="0.48"></line>
+
+        <line x1="${cameraX}" y1="${cameraY}" x2="${subjectX}" y2="${groundY}" class="svg-foot-ray"></line>
+        <line x1="${cameraX}" y1="${cameraY}" x2="${subjectX}" y2="${faceY}" class="svg-face-ray"></line>
+        <path d="${arcPath(feet.angle, arcRadius)}" class="svg-foot-ray" stroke-width="2.2"></path>
+        <path d="${arcPath(face.angle, faceArcRadius)}" class="svg-face-ray" stroke-width="2.2"></path>
+
+        <line x1="${subjectX}" y1="${groundY}" x2="${subjectX}" y2="${headCenterY + headRadius}" stroke="var(--ink)" stroke-width="${bodyStroke}" stroke-linecap="round"></line>
+        <circle cx="${subjectX}" cy="${headCenterY}" r="${headRadius}" fill="var(--ink)"></circle>
+        <circle cx="${subjectX}" cy="${faceY}" r="${faceDotRadius}" fill="var(--accent)"></circle>
+        <circle cx="${subjectX}" cy="${groundY}" r="4" fill="var(--ink)"></circle>
+
+        <line x1="${cameraX}" y1="${groundY}" x2="${cameraX}" y2="${cameraY}" stroke="var(--primary-strong)" stroke-width="3.5" stroke-linecap="round"></line>
+        <rect x="${cameraX - cameraBodyWidth / 2}" y="${cameraY - cameraBodyHeight / 2}" width="${cameraBodyWidth}" height="${cameraBodyHeight}" rx="7" fill="var(--primary-strong)"></rect>
+        <circle cx="${cameraX - 7}" cy="${cameraY}" r="7" fill="var(--panel)" opacity="0.96"></circle>
+        <rect x="${cameraX + 5}" y="${cameraY - 5}" width="12" height="10" rx="3" fill="var(--primary)"></rect>
+
+        <line x1="${heightBracketX}" y1="${groundY}" x2="${heightBracketX}" y2="${cameraY}" class="svg-measure"></line>
+        <line x1="${heightBracketX - 8}" y1="${cameraY}" x2="${heightBracketX + 8}" y2="${cameraY}" stroke="var(--muted)" stroke-width="1.5"></line>
+        <line x1="${heightBracketX - 8}" y1="${groundY}" x2="${heightBracketX + 8}" y2="${groundY}" stroke="var(--muted)" stroke-width="1.5"></line>
+        <text x="${heightBracketX - 10}" y="${heightLabelY}" class="svg-muted" text-anchor="end">${fmt(cameraHeightM, 1, " m high")}</text>
+
+        <line x1="${subjectX}" y1="${distanceLineY - 8}" x2="${subjectX}" y2="${distanceLineY + 8}" stroke="var(--muted)" stroke-width="1.5"></line>
+        <line x1="${cameraX}" y1="${distanceLineY - 8}" x2="${cameraX}" y2="${distanceLineY + 8}" stroke="var(--muted)" stroke-width="1.5"></line>
+        <line x1="${subjectX}" y1="${distanceLineY}" x2="${cameraX}" y2="${distanceLineY}" stroke="var(--muted)" stroke-width="1.5"></line>
+        <text x="${distanceLabelX}" y="${distanceLineY + 22}" class="svg-muted" text-anchor="middle">${fmt(distanceM, 2, " m horizontal")}</text>
+
+        <text x="${subjectX}" y="${Math.max(26, headTopY - 10)}" class="svg-label" text-anchor="middle">Human</text>
+        <text x="${subjectX + 14}" y="${clamp(faceY - 8, 28, groundY - 18)}" class="svg-muted">face 1.5 m</text>
+        <text x="${cameraX}" y="${Math.max(26, cameraY - 22)}" class="svg-label" text-anchor="middle">Camera</text>
+        <text x="${cameraX - arcRadius - 10}" y="${cameraY + Math.max(24, arcRadius * 0.72)}" class="svg-small" text-anchor="end">angle from camera level</text>
+
+        <g transform="translate(${calloutX}, ${calloutY})">
+          <rect x="0" y="0" width="${calloutWidth}" height="${calloutHeight}" rx="8" class="svg-callout"></rect>
+          <text x="12" y="18" class="svg-small">Current reading</text>
+          <line x1="12" y1="38" x2="28" y2="38" class="svg-foot-ray" stroke-width="3"></line>
+          <text x="36" y="42" class="svg-value">Feet ${fmt(feet.angle, 1, " deg")}</text>
+          <rect x="110" y="27" width="${feetStatusWidth}" height="22" rx="11" class="svg-status-bg ${feet.status}"></rect>
+          <text x="${110 + feetStatusWidth / 2}" y="42" class="svg-status-text ${feet.status}" text-anchor="middle" font-size="10" font-weight="700">${feet.label}</text>
+          <line x1="12" y1="66" x2="28" y2="66" class="svg-face-ray" stroke-width="3"></line>
+          <text x="36" y="70" class="svg-value">Face ${fmt(face.angle, 1, " deg")}</text>
+          <rect x="110" y="55" width="${faceStatusWidth}" height="22" rx="11" class="svg-status-bg ${face.status}"></rect>
+          <text x="${110 + faceStatusWidth / 2}" y="70" class="svg-status-text ${face.status}" text-anchor="middle" font-size="10" font-weight="700">${face.label}</text>
+        </g>
+      `;
+    }
+
+    function update() {
+      const rawHeightM = Number(els.heightInput.value);
+      if (!Number.isFinite(rawHeightM)) return;
+      const heightM = Math.min(Math.max(rawHeightM, RULE.minCameraHeightM), RULE.maxCameraHeightM);
+      const row = lookupRow(heightM);
+      syncDistanceForHeight(row);
+
+      const rawDistanceM = Number(els.distanceInput.value);
+      if (!Number.isFinite(rawDistanceM)) return;
+      const distanceM = Math.min(Math.max(rawDistanceM, Number(els.distanceRange.min)), Number(els.distanceRange.max));
+      const result = classify(heightM, distanceM);
+
+      els.heightLabel.textContent = fmt(heightM, 1, " m");
+      els.distanceLabel.textContent = fmt(distanceM, 2, " m");
+      els.feetStatusPill.textContent = result.feet.label;
+      els.feetStatusPill.className = "status " + result.feet.status;
+      els.faceStatusPill.textContent = result.face.label;
+      els.faceStatusPill.className = "status " + result.face.status;
+      els.feetAngleValue.textContent = fmt(result.feet.angle, 2, " deg");
+      els.faceAngleValue.textContent = fmt(result.face.angle, 2, " deg");
+      els.recommendedValue.textContent = fmt(row.recommendedDistanceM, 2, " m");
+      els.tierValue.textContent = result.overall.label;
+
+      els.lookupDetails.innerHTML = `
+        <div><strong>Best feet range:</strong> ${fmt(row.bestDistanceMinM, 2, " m")} to ${fmt(row.bestDistanceMaxM, 2, " m")}</div>
+        <div><strong>Face-safe acceptable range:</strong> ${fmt(row.acceptableDistanceMinM, 2, " m")} to ${fmt(row.acceptableDistanceMaxM, 2, " m")}</div>
+      `;
+
+      renderDiagram(heightM, distanceM, result.feet, result.face);
+      renderTable(lookupRows, heightM);
+    }
+
+    const lookupRows = cameraHeightValues().map(lookupRow);
+
+    els.heightRange.addEventListener("input", (event) => setHeight(event.target.value));
+    els.heightInput.addEventListener("input", (event) => editHeight(event.target.value));
+    els.heightInput.addEventListener("change", (event) => setHeight(event.target.value));
+    els.distanceRange.addEventListener("input", (event) => setDistance(event.target.value));
+    els.distanceInput.addEventListener("input", (event) => editDistance(event.target.value));
+    els.distanceInput.addEventListener("change", (event) => setDistance(event.target.value));
+
+    els.snapButton.addEventListener("click", () => {
+      const row = lookupRow(Number(els.heightInput.value));
+      if (row.recommendedDistanceM) setDistance(row.recommendedDistanceM);
+    });
+
+    els.downloadCsvButton.addEventListener("click", () => {
+      const blob = new Blob([CSV_TEXT], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "camera-placement-lookup.csv";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    els.copyRuleButton.addEventListener("click", async () => {
+      const text = JSON.stringify(RULE, null, 2);
+      await navigator.clipboard.writeText(text);
+      els.copyRuleButton.textContent = "Copied rule JSON";
+      setTimeout(() => {
+        els.copyRuleButton.textContent = "Copy rule JSON";
+      }, 1400);
+    });
+
+    const firstRow = lookupRow(Number(els.heightInput.value));
+    if (firstRow.recommendedDistanceM) setDistance(firstRow.recommendedDistanceM);
+    update();
+  </script>
+</body>
+</html>
