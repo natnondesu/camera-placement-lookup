@@ -1996,6 +1996,520 @@ function buildHtml() {
       font-size: 12.5px;
       font-weight: 650;
     }
+
+    /* ---------- Phone and tablet ---------- */
+    .answer,
+    .sheet-bar,
+    .icon-tab {
+      display: none;
+    }
+
+    .rail-more {
+      display: grid;
+      gap: 14px;
+    }
+
+    #visualizerView,
+    #tableView {
+      min-width: 0;
+    }
+
+    .answer-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .answer-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 11px 5px 9px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .answer-pill::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .answer[data-state="best"] .answer-pill {
+      color: var(--best);
+      background: var(--best-bg);
+      border-color: oklch(0.780 0.165 152 / 0.35);
+    }
+
+    .answer[data-state="acceptable"] .answer-pill {
+      color: var(--ok);
+      background: var(--ok-bg);
+      border-color: oklch(0.820 0.140 82 / 0.35);
+    }
+
+    .answer[data-state="out_of_range"] .answer-pill {
+      color: var(--bad);
+      background: var(--bad-bg);
+      border-color: oklch(0.680 0.205 24 / 0.4);
+    }
+
+    .answer-feet {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .answer-feet b {
+      margin-left: 6px;
+      color: var(--ink);
+      font: 650 14px "JetBrains Mono", ui-monospace, monospace;
+    }
+
+    .answer-line {
+      margin: 10px 0 2px;
+      color: var(--ink-soft);
+      font-size: 15px;
+    }
+
+    .answer-distance {
+      margin-left: 4px;
+      color: var(--ink);
+      font: 700 40px/1 "JetBrains Mono", ui-monospace, monospace;
+      letter-spacing: -0.03em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .answer-distance small {
+      margin-left: 3px;
+      color: var(--muted);
+      font-size: 0.5em;
+      font-weight: 500;
+    }
+
+    .answer-sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.4;
+    }
+
+    .answer-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .answer-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-2);
+      color: var(--ink-soft);
+      font-size: 12.5px;
+    }
+
+    .answer-chip[hidden] {
+      display: none;
+    }
+
+    .answer-chip i {
+      width: 8px;
+      height: 2px;
+      border-radius: 2px;
+      background: currentColor;
+    }
+
+    .answer-chip b {
+      color: var(--ink);
+      font: 650 12.5px "JetBrains Mono", ui-monospace, monospace;
+    }
+
+    .answer-chip.face {
+      color: var(--face);
+    }
+
+    .answer-chip[data-state="covered"] {
+      color: var(--best);
+    }
+
+    .answer-chip[data-state="tight"] {
+      color: var(--ok);
+    }
+
+    .answer-chip[data-state="too_wide"] {
+      color: var(--bad);
+      border-color: oklch(0.680 0.205 24 / 0.5);
+    }
+
+    @media (max-width: 1080px) {
+      .answer {
+        position: sticky;
+        top: var(--topbar-h, 64px);
+        z-index: 19;
+        display: block;
+        padding: 14px 22px 12px;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(180deg, oklch(0.205 0.015 256) 0%, var(--bg) 100%);
+      }
+
+      .on-table .answer,
+      .statusbar {
+        display: none;
+      }
+
+      .workspace {
+        padding-bottom: 40px;
+      }
+
+      .verdict-kicker,
+      #verdictHeadline,
+      .verdict-sub {
+        display: none;
+      }
+
+      #visualizerView > .main > .dual {
+        order: -1;
+      }
+
+      .dual > .stage:last-child {
+        order: -1;
+      }
+    }
+
+    @media (max-width: 1080px) and (max-height: 520px) {
+      .answer {
+        position: static;
+      }
+    }
+
+    @media (min-width: 761px) and (max-width: 1080px) {
+      .answer {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 22px;
+      }
+
+      .answer-top {
+        display: contents;
+      }
+
+      .answer-line {
+        order: 1;
+        margin: 0;
+      }
+
+      .answer-feet {
+        order: 2;
+        margin-left: auto;
+      }
+
+      .answer-distance {
+        font-size: 34px;
+      }
+
+      .answer-sub {
+        order: 3;
+        flex-basis: 100%;
+      }
+
+      .answer-chips {
+        order: 4;
+        margin-top: 0;
+      }
+
+      .workspace {
+        grid-template-columns: 290px minmax(0, 1fr);
+      }
+
+      .rail {
+        position: sticky;
+        top: calc(var(--topbar-h, 64px) + var(--answer-h, 120px) + 16px);
+        max-height: calc(100dvh - var(--topbar-h, 64px) - var(--answer-h, 120px) - 32px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .topbar {
+        flex-wrap: nowrap;
+        gap: 10px;
+        padding: 10px 14px;
+      }
+
+      .brand {
+        min-width: 0;
+      }
+
+      .wordmark {
+        min-width: 0;
+      }
+
+      .wordmark b {
+        display: block;
+        overflow: hidden;
+        font-size: 15px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+
+      .tabs {
+        display: none;
+      }
+
+      .icon-tab {
+        display: grid;
+        flex: none;
+        width: 44px;
+        height: 44px;
+        place-items: center;
+        margin-left: auto;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+        color: var(--ink-soft);
+      }
+
+      .icon-tab svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .icon-tab .i-diagram,
+      .icon-tab[aria-pressed="true"] .i-table {
+        display: none;
+      }
+
+      .icon-tab[aria-pressed="true"] .i-diagram {
+        display: block;
+      }
+
+      .lang-seg {
+        flex: none;
+        width: auto;
+        margin-left: 0;
+      }
+
+      .lang-seg button {
+        flex: none;
+        min-width: 44px;
+      }
+
+      .answer {
+        padding: 12px 16px;
+      }
+
+      .workspace {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 12px 12px calc(var(--sheet-h, 170px) + 20px);
+      }
+
+      .rail {
+        position: fixed;
+        top: auto;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 25;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        max-height: calc(var(--sheet-h, 170px) + env(safe-area-inset-bottom, 0px));
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        overflow: hidden;
+        border-top: 1px solid var(--border-strong);
+        border-radius: 22px 22px 0 0;
+        background: var(--surface);
+        box-shadow: 0 -12px 32px oklch(0 0 0 / 0.45);
+        transition: max-height 380ms var(--ease);
+      }
+
+      .rail.open {
+        max-height: 82dvh;
+      }
+
+      .sheet-bar {
+        display: block;
+        flex: none;
+      }
+
+      .rail-more {
+        flex: 1;
+        min-height: 0;
+        padding: 12px 12px 18px;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        border-top: 1px solid var(--border);
+        visibility: hidden;
+      }
+
+      .rail.open .rail-more {
+        visibility: visible;
+      }
+
+      .sheet-handle {
+        display: grid;
+        width: 100%;
+        height: 22px;
+        place-items: center;
+        padding: 0;
+        border: 0;
+        background: transparent;
+      }
+
+      .sheet-handle::before {
+        content: "";
+        width: 40px;
+        height: 5px;
+        border-radius: 3px;
+        background: var(--border-strong);
+      }
+
+      .sheet-quick {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        padding: 2px 14px 10px;
+      }
+
+      .quick-label {
+        display: block;
+        margin: 0 0 6px 2px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .stepper {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) 44px;
+        height: 48px;
+        overflow: hidden;
+        border: 1px solid var(--border-strong);
+        border-radius: 12px;
+        background: var(--surface-2);
+      }
+
+      .stepper button {
+        display: grid;
+        place-items: center;
+        border: 0;
+        background: var(--surface-3);
+        color: var(--ink);
+        transition: background 160ms var(--ease);
+      }
+
+      .stepper button:active {
+        background: var(--border-strong);
+      }
+
+      .stepper button:disabled {
+        opacity: 0.4;
+      }
+
+      .stepper button svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .stepper-value {
+        display: flex;
+        align-items: baseline;
+        justify-content: center;
+        gap: 3px;
+        min-width: 0;
+        align-self: center;
+      }
+
+      .stepper-value input {
+        width: 4.2ch;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--ink);
+        text-align: right;
+        font: 700 19px "JetBrains Mono", ui-monospace, monospace;
+        -moz-appearance: textfield;
+      }
+
+      .stepper-value input::-webkit-inner-spin-button,
+      .stepper-value input::-webkit-outer-spin-button {
+        margin: 0;
+        -webkit-appearance: none;
+      }
+
+      .stepper-value input:disabled {
+        color: var(--muted);
+      }
+
+      .stepper-value span {
+        color: var(--muted);
+        font: 500 12px "JetBrains Mono", ui-monospace, monospace;
+      }
+
+      .sheet-summary {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: calc(100% - 28px);
+        min-height: 44px;
+        margin: 0 14px 12px;
+        padding: 0 10px 0 12px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface-2);
+        color: var(--muted);
+        font-size: 13px;
+        text-align: left;
+      }
+
+      .sheet-summary > span {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+
+      .sheet-summary b {
+        color: var(--ink-soft);
+        font-weight: 650;
+      }
+
+      .sheet-summary svg {
+        width: 18px;
+        height: 18px;
+        flex: none;
+        transition: transform 300ms var(--ease);
+      }
+
+      .rail.open .sheet-summary svg {
+        transform: rotate(180deg);
+      }
+
+      .table-head {
+        flex-wrap: wrap;
+      }
+
+      .stage-title h2 {
+        white-space: nowrap;
+      }
+
+      .table-scroll {
+        max-height: calc(100dvh - var(--topbar-h, 64px) - var(--sheet-h, 170px) - 150px);
+      }
+    }
   </style>
 </head>
 <body>
@@ -2018,11 +2532,25 @@ function buildHtml() {
         <button type="button" role="tab" aria-selected="true" aria-controls="visualizerView" id="visualizerTab" tabindex="0" data-tab="visualizer" data-i18n="visualizer">Visualizer</button>
         <button type="button" role="tab" aria-selected="false" aria-controls="tableView" id="tableTab" tabindex="-1" data-tab="table" data-i18n="ruleTable">Rule table</button>
       </div>
+      <button type="button" class="icon-tab" id="tableToggle" aria-pressed="false" aria-label="Rule table" data-i18n-attr="aria-label:ruleTable"><svg class="i-table" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><path d="M3.5 9.5h17M3.5 14.5h17M9.5 9.5v10"></path></svg><svg class="i-diagram" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19 13 5l7 14"></path><path d="M3 19h18"></path></svg></button>
       <div class="solve-seg lang-seg" role="group" aria-label="Language" data-i18n-attr="aria-label:language">
         <button type="button" data-lang="en" aria-pressed="true">EN</button>
         <button type="button" data-lang="th" aria-pressed="false">ไทย</button>
       </div>
     </header>
+    <section class="answer" id="answer" data-state="best" aria-label="Placement answer" data-i18n-attr="aria-label:placementVerdict">
+      <div class="answer-top">
+        <span class="answer-pill" id="answerPill">Best</span>
+        <span class="answer-feet"><span data-i18n="feetAngle">feet angle</span><b id="answerFeet"></b></span>
+      </div>
+      <p class="answer-line"><span data-i18n="countingLineAt">Counting line at</span> <span class="answer-distance"><b id="answerDistance"></b><small>m</small></span></p>
+      <p class="answer-sub" id="answerSub"></p>
+      <div class="answer-chips">
+        <span class="answer-chip face"><i></i><span data-i18n="faceLine">Face line</span> <b id="answerFace"></b></span>
+        <span class="answer-chip entry" id="answerEntry" data-state="covered"><i></i><span data-i18n="entranceShort">Entrance</span> <b id="answerEntryWidth"></b> <span id="answerEntryState"></span></span>
+        <span class="answer-chip"><i></i><b id="answerPpm"></b> px/m</span>
+      </div>
+    </section>
     <div class="mobile-answer" id="mobileAnswer" data-state="best" aria-hidden="true">
       <span class="sb-dot"></span>
       <span class="mobile-answer-main" id="mobileAnswerOverall">Best</span>
@@ -2033,7 +2561,30 @@ function buildHtml() {
       <span class="mobile-answer-distance" id="mobileAnswerDistance"></span>
     </div>
     <div class="workspace">
-      <aside class="rail" aria-label="Placement controls" data-i18n-attr="aria-label:placementControls">
+      <aside class="rail" id="rail" aria-label="Placement controls" data-i18n-attr="aria-label:placementControls">
+        <div class="sheet-bar" id="sheetBar">
+          <button type="button" class="sheet-handle" id="sheetHandle" aria-expanded="false" aria-controls="railMore" aria-label="All controls" data-i18n-attr="aria-label:allControls"></button>
+          <div class="sheet-quick">
+            <div>
+              <label class="quick-label" for="quickHeight" data-i18n="mountingHeight">Mounting height</label>
+              <div class="stepper" id="quickHeightStepper">
+                <button type="button" data-quick="height" data-dir="-1" aria-label="Lower" data-i18n-attr="aria-label:lower"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+                <span class="stepper-value"><input id="quickHeight" type="number" inputmode="decimal" step="0.1"><span>m</span></span>
+                <button type="button" data-quick="height" data-dir="1" aria-label="Raise" data-i18n-attr="aria-label:raise"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+              </div>
+            </div>
+            <div>
+              <label class="quick-label" for="quickEntrance" data-i18n="entranceWidth">Entrance width</label>
+              <div class="stepper">
+                <button type="button" data-quick="entrance" data-dir="-1" aria-label="Lower" data-i18n-attr="aria-label:lower"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+                <span class="stepper-value"><input id="quickEntrance" type="number" inputmode="decimal" step="0.1" placeholder="none" data-i18n-attr="placeholder:none"><span>m</span></span>
+                <button type="button" data-quick="entrance" data-dir="1" aria-label="Raise" data-i18n-attr="aria-label:raise"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></button>
+              </div>
+            </div>
+          </div>
+          <button type="button" class="sheet-summary" id="sheetSummary" aria-expanded="false" aria-controls="railMore"><span><b id="sheetScene"></b> · <span id="sheetCamera"></span></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"></path></svg></button>
+        </div>
+        <div class="rail-more" id="railMore">
         <section class="panel">
           <div class="panel-head">
             <h2 data-i18n="scene">Scene</h2>
@@ -2158,6 +2709,7 @@ function buildHtml() {
             </details>
           </div>
         </section>
+        </div>
       </aside>
       <main class="main">
         <section id="visualizerView" role="tabpanel" aria-labelledby="visualizerTab">
@@ -2405,7 +2957,8 @@ ${engineSource}
 
     const I18N = {
       en: {
-        subtitle: "Geometry console", viewTabs: "View", visualizer: "Visualizer", ruleTable: "Rule table", language: "Language",
+        subtitle: "Geometry console", countingLineAt: "Counting line at", entranceShort: "Entrance", entryCovered: "in view",
+        entryTight: "edges at frame rim", entryTooWide: "too wide", allControls: "All controls", lower: "Lower", raise: "Raise", viewTabs: "View", visualizer: "Visualizer", ruleTable: "Rule table", language: "Language",
         placementControls: "Placement controls", scene: "Scene", rulesVersion: "rules {version}",
         cameraPreset: "Camera preset", optics: "optics", geometry: "Geometry", dragOrType: "drag or type",
         solveFor: "Solve for", manual: "Manual", distance: "Distance", height: "Height",
@@ -2478,7 +3031,8 @@ ${engineSource}
         sceneDesc_corridor: "People can only move in one direction through the view, e.g. a mall entrance or an escalator."
       },
       th: {
-        subtitle: "เครื่องมือคำนวณตำแหน่งกล้อง", viewTabs: "มุมมอง", visualizer: "แผนภาพ", ruleTable: "ตารางกฎ", language: "ภาษา",
+        subtitle: "เครื่องมือคำนวณตำแหน่งกล้อง", countingLineAt: "เส้นนับที่", entranceShort: "ทางเข้า", entryCovered: "อยู่ในภาพ",
+        entryTight: "ขอบอยู่ริมภาพ", entryTooWide: "กว้างเกินภาพ", allControls: "ตั้งค่าทั้งหมด", lower: "ลด", raise: "เพิ่ม", viewTabs: "มุมมอง", visualizer: "แผนภาพ", ruleTable: "ตารางกฎ", language: "ภาษา",
         placementControls: "ตั้งค่าตำแหน่ง", scene: "ลักษณะพื้นที่", rulesVersion: "กฎ {version}",
         cameraPreset: "รุ่นกล้อง", optics: "เลนส์", geometry: "ความสูงและระยะ", dragOrType: "ลากหรือพิมพ์",
         solveFor: "คำนวณ", manual: "กำหนดเอง", distance: "ระยะ", height: "ความสูง",
@@ -2658,6 +3212,11 @@ ${engineSource}
       fullWidthMetric: byId("fullWidthMetric"), effectiveWidthMetric: byId("effectiveWidthMetric"),
       horizontalPpmMetric: byId("horizontalPpmMetric"), verticalPpmMetric: byId("verticalPpmMetric"),
       tableMeta: byId("tableMeta"), copyCsv: byId("copyCsv"), lookupBody: byId("lookupBody"),
+      answer: byId("answer"), answerPill: byId("answerPill"), answerFeet: byId("answerFeet"), answerDistance: byId("answerDistance"),
+      answerSub: byId("answerSub"), answerFace: byId("answerFace"), answerEntry: byId("answerEntry"), answerEntryWidth: byId("answerEntryWidth"),
+      answerEntryState: byId("answerEntryState"), answerPpm: byId("answerPpm"), rail: byId("rail"), sheetBar: byId("sheetBar"),
+      sheetHandle: byId("sheetHandle"), sheetSummary: byId("sheetSummary"), sheetScene: byId("sheetScene"), sheetCamera: byId("sheetCamera"),
+      quickHeight: byId("quickHeight"), quickHeightStepper: byId("quickHeightStepper"), quickEntrance: byId("quickEntrance"), tableToggle: byId("tableToggle"),
       mobileAnswer: byId("mobileAnswer"), mobileAnswerOverall: byId("mobileAnswerOverall"), mobileAnswerFeet: byId("mobileAnswerFeet"),
       mobileAnswerFace: byId("mobileAnswerFace"), mobileAnswerDistance: byId("mobileAnswerDistance"),
       statusbar: byId("statusbar"), sbOverall: byId("sbOverall"), sbFeet: byId("sbFeet"), sbFace: byId("sbFace"), sbDistance: byId("sbDistance"),
@@ -3737,6 +4296,7 @@ ${engineSource}
       }
       if (!els.tableView.hidden) renderTable(p);
 
+      updateAnswer(p, verdictLabel);
       els.mobileAnswer.dataset.state = r.verdict;
       els.mobileAnswerOverall.textContent = verdictLabel;
       els.mobileAnswerFeet.textContent = STATUS_LABEL[r.feet.status];
@@ -3757,9 +4317,70 @@ ${engineSource}
       state.announceTimer = window.setTimeout(() => { els.placementAnnouncement.textContent = announcement; }, 240);
     }
 
+    // ---------- Phone and tablet ----------
+    const ENTRY_STATE = { covered: "entryCovered", tight: "entryTight", too_wide: "entryTooWide" };
+
+    function updateAnswer(p, verdictLabel) {
+      const r = p.result;
+      els.answer.dataset.state = r.verdict;
+      els.answerPill.textContent = verdictLabel;
+      els.answerFeet.textContent = fmt(r.feet.angleDeg, 1, " deg");
+      els.answerDistance.textContent = fmt(p.distanceM, 2);
+      els.answerSub.textContent = verdictCopy(p);
+      els.answerFace.textContent = r.faceLine.distanceM === null ? t("none") : fmt(r.faceLine.distanceM, 2, " m");
+      els.answerEntry.hidden = r.entrance === null;
+      if (r.entrance !== null) {
+        els.answerEntry.dataset.state = r.entrance.status;
+        els.answerEntryWidth.textContent = fmt(r.entrance.widthM, 1, " m");
+        els.answerEntryState.textContent = t(ENTRY_STATE[r.entrance.status]);
+      }
+      els.answerPpm.textContent = fmt(r.optics.pixelsPerMetre, 0);
+      els.sheetScene.textContent = sceneName(p.profile);
+      els.sheetCamera.textContent = els.presetSelect.selectedOptions[0] ? els.presetSelect.selectedOptions[0].textContent : "";
+      if (document.activeElement !== els.quickHeight) els.quickHeight.value = fmt(p.heightM, 1);
+      if (document.activeElement !== els.quickEntrance) els.quickEntrance.value = state.entranceM === null ? "" : String(state.entranceM);
+      // In height mode the height is the answer, so the quick height control is read-only.
+      const heightSolved = state.solveMode === "height";
+      els.quickHeight.disabled = heightSolved;
+      els.quickHeightStepper.querySelectorAll("button").forEach((button) => { button.disabled = heightSolved; });
+    }
+
+    function setQuickEntrance(value) {
+      els.entranceInput.value = value;
+      setEntrance(value);
+    }
+
+    function stepQuick(target, direction) {
+      if (target === "height") {
+        setHeight(Number(els.heightInput.value) + direction * RULE.cameraHeightStepM);
+        return;
+      }
+      const next = Math.max(0.5, Math.round(((state.entranceM === null ? 0 : state.entranceM) + direction * 0.5) * 10) / 10);
+      setQuickEntrance(String(next));
+    }
+
+    function setSheet(open) {
+      els.rail.classList.toggle("open", open);
+      els.sheetHandle.setAttribute("aria-expanded", String(open));
+      els.sheetSummary.setAttribute("aria-expanded", String(open));
+    }
+
+    // Sticky offsets and the sheet's resting height follow the real rendered sizes, which change with language and wrapping.
+    function trackHeights() {
+      const pairs = [[document.querySelector(".topbar"), "--topbar-h"], [els.answer, "--answer-h"], [els.sheetBar, "--sheet-h"]];
+      const apply = () => pairs.forEach((pair) => document.documentElement.style.setProperty(pair[1], pair[0].offsetHeight + "px"));
+      if ("ResizeObserver" in window) {
+        const observer = new ResizeObserver(apply);
+        pairs.forEach((pair) => observer.observe(pair[0]));
+      }
+      apply();
+    }
+
     // ---------- Tabs and tip ----------
     function setTab(tab) {
       const isTable = tab === "table";
+      els.tableToggle.setAttribute("aria-pressed", String(isTable));
+      document.body.classList.toggle("on-table", isTable);
       els.visualizerView.hidden = isTable;
       els.tableView.hidden = !isTable;
       els.visualizerTab.setAttribute("aria-selected", String(!isTable));
@@ -3809,6 +4430,14 @@ ${engineSource}
       if (button) setTab(button.dataset.tab);
     });
     els.viewTabs.addEventListener("keydown", onTabKey);
+    els.tableToggle.addEventListener("click", () => setTab(els.tableView.hidden ? "table" : "visualizer"));
+    [els.sheetHandle, els.sheetSummary].forEach((button) => button.addEventListener("click", () => setSheet(!els.rail.classList.contains("open"))));
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && els.rail.classList.contains("open")) setSheet(false);
+    });
+    document.querySelectorAll("[data-quick]").forEach((button) => button.addEventListener("click", () => stepQuick(button.dataset.quick, Number(button.dataset.dir))));
+    els.quickHeight.addEventListener("change", (event) => setHeight(event.target.value));
+    els.quickEntrance.addEventListener("change", (event) => setQuickEntrance(event.target.value));
     els.sceneSeg.addEventListener("click", (event) => {
       const button = event.target.closest("[data-scene]");
       if (button) setScene(button.dataset.scene);
@@ -3916,6 +4545,7 @@ ${engineSource}
     document.querySelectorAll("[data-lang]").forEach((button) => button.addEventListener("click", () => setLanguage(button.dataset.lang)));
 
     // ---------- Start ----------
+    trackHeights();
     applyStaticText();
     populateScenes();
     populatePresets();
