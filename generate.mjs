@@ -1981,8 +1981,8 @@ function buildHtml() {
             <div class="solve">
               <span class="solve-label">Solve for</span>
               <div class="solve-seg" role="group" aria-label="Solve mode">
-                <button type="button" data-solve="manual" aria-pressed="true">Manual</button>
-                <button type="button" data-solve="distance" aria-pressed="false">Distance</button>
+                <button type="button" data-solve="manual" aria-pressed="false">Manual</button>
+                <button type="button" data-solve="distance" aria-pressed="true">Distance</button>
                 <button type="button" data-solve="height" aria-pressed="false">Height</button>
               </div>
             </div>
@@ -2351,7 +2351,7 @@ ${engineSource}
 
     const state = {
       profileId: RULES.defaultProfile,
-      solveMode: "manual",
+      solveMode: "distance",
       depthM: null,
       topView: "top",
       tiltUserAdjusted: false,
@@ -3273,7 +3273,8 @@ ${engineSource}
     els.lookupBody.addEventListener("click", (event) => {
       const row = event.target.closest("tr[data-height]");
       if (!row) return;
-      setSolveMode("manual");
+      // Height mode solves the height, so a table row can only load in another mode.
+      if (state.solveMode === "height") setSolveMode("distance");
       setFieldValue(els.heightInput, els.heightRange, Number(row.dataset.height), 1);
       setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(Number(row.dataset.height), currentProfile()), 2);
       setTab("visualizer");
@@ -3341,7 +3342,7 @@ ${engineSource}
     setFieldValue(els.focalInput, els.focalRange, startPreset.focalDefaultMm, 1);
     setFieldValue(els.heightInput, els.heightRange, RULE.defaultCameraHeightM, 1);
     setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(RULE.defaultCameraHeightM, currentProfile()), 2);
-    update();
+    setSolveMode(state.solveMode);
   </script>
 </body>
 </html>
