@@ -1,0 +1,40 @@
+{
+  "version": "2026-10-27",
+  "defaultProfile": "open_door",
+  "profiles": [
+    {
+      "id": "open_door",
+      "name": "Open door",
+      "description": "People can also walk across the front of the counted doorway, e.g. a store entrance.",
+      "heightRangeM": { "min": 2.0, "max": 10.0, "step": 0.1 },
+      "facePointM": 1.5,
+      "humanHeightM": 1.7,
+      "feetAngleDeg": {
+        "target": 41,
+        "best": { "min": 38, "max": 43 },
+        "acceptable": { "min": 38, "max": 48 }
+      },
+      "faceAngleDeg": {
+        "best": { "min": 10, "max": 25 },
+        "acceptableMax": 30
+      }
+    },
+    {
+      "id": "corridor",
+      "name": "Corridor",
+      "description": "People can only move in one direction through the view, e.g. a mall entrance or an escalator.",
+      "heightRangeM": { "min": 2.0, "max": 10.0, "step": 0.1 },
+      "facePointM": 1.5,
+      "humanHeightM": 1.7,
+      "feetAngleDeg": {
+        "target": 38,
+        "best": { "min": 35, "max": 43 },
+        "acceptable": { "min": 33, "max": 48 }
+      },
+      "faceAngleDeg": {
+        "best": { "min": 10, "max": 25 },
+        "acceptableMax": 30
+      }
+    }
+  ]
+}

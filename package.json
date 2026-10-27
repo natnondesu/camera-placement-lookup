@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "check": "node --check generate.mjs",
-    "build": "node generate.mjs"
+    "build": "node generate.mjs",
+    "test": "node --test src/"
   }
 }
