@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-27T00:00:00Z",
+  "title": "Design System: Camera Placement Console",
+  "extensions": {
+    "colorMeta": {
+      "cover-yellow": { "role": "primary", "displayName": "Field-Book Cover Yellow", "canonical": "#f2c230", "tonalRamp": ["oklch(15% 0.03 88)", "oklch(27% 0.06 88)", "oklch(39% 0.09 88)", "oklch(51% 0.12 88)", "oklch(63% 0.14 88)", "oklch(75% 0.16 88)", "oklch(86% 0.15 88)", "oklch(95% 0.06 88)"] },
+      "cover-ink": { "role": "primary", "displayName": "Cover Ink", "canonical": "#3a2e05", "tonalRamp": ["oklch(15% 0.03 88)", "oklch(27% 0.05 88)", "oklch(39% 0.06 88)", "oklch(51% 0.06 88)", "oklch(63% 0.05 88)", "oklch(75% 0.04 88)", "oklch(86% 0.03 88)", "oklch(95% 0.015 88)"] },
+      "rule-blue": { "role": "secondary", "displayName": "Rule Blue (counting line, station 1)", "canonical": "#2659a8", "tonalRamp": ["oklch(15% 0.05 258)", "oklch(27% 0.09 258)", "oklch(39% 0.12 258)", "oklch(48% 0.14 258)", "oklch(63% 0.12 258)", "oklch(75% 0.08 258)", "oklch(86% 0.04 258)", "oklch(95% 0.02 258)"] },
+      "rule-blue-tint": { "role": "secondary", "displayName": "Rule Blue Tint", "canonical": "#e6eef9", "tonalRamp": ["oklch(15% 0.05 258)", "oklch(27% 0.09 258)", "oklch(39% 0.12 258)", "oklch(48% 0.14 258)", "oklch(63% 0.12 258)", "oklch(75% 0.08 258)", "oklch(86% 0.04 258)", "oklch(95% 0.02 258)"] },
+      "face-violet": { "role": "secondary", "displayName": "Face Violet (face line, station 2)", "canonical": "#6a3db0", "tonalRamp": ["oklch(15% 0.06 297)", "oklch(27% 0.11 297)", "oklch(39% 0.15 297)", "oklch(47% 0.18 297)", "oklch(63% 0.14 297)", "oklch(75% 0.09 297)", "oklch(86% 0.05 297)", "oklch(95% 0.02 297)"] },
+      "face-violet-tint": { "role": "secondary", "displayName": "Face Violet Tint", "canonical": "#f0e9f9", "tonalRamp": ["oklch(15% 0.06 297)", "oklch(27% 0.11 297)", "oklch(39% 0.15 297)", "oklch(47% 0.18 297)", "oklch(63% 0.14 297)", "oklch(75% 0.09 297)", "oklch(86% 0.05 297)", "oklch(95% 0.02 297)"] },
+      "ochre": { "role": "tertiary", "displayName": "Ochre (Acceptable, forced adaptation)", "canonical": "#855d00", "tonalRamp": ["oklch(15% 0.03 78)", "oklch(27% 0.06 78)", "oklch(39% 0.09 78)", "oklch(50% 0.11 78)", "oklch(63% 0.12 78)", "oklch(75% 0.10 78)", "oklch(86% 0.06 78)", "oklch(95% 0.03 78)"] },
+      "ochre-tint": { "role": "tertiary", "displayName": "Ochre Tint", "canonical": "#fbf0d2", "tonalRamp": ["oklch(15% 0.03 78)", "oklch(27% 0.06 78)", "oklch(39% 0.09 78)", "oklch(50% 0.11 78)", "oklch(63% 0.12 78)", "oklch(75% 0.10 78)", "oklch(86% 0.06 78)", "oklch(95% 0.03 78)"] },
+      "margin-red": { "role": "tertiary", "displayName": "Margin Red (failure only)", "canonical": "#b3302a", "tonalRamp": ["oklch(15% 0.05 28)", "oklch(27% 0.10 28)", "oklch(39% 0.14 28)", "oklch(51% 0.17 28)", "oklch(63% 0.14 28)", "oklch(75% 0.09 28)", "oklch(86% 0.05 28)", "oklch(95% 0.02 28)"] },
+      "graphite-ink": { "role": "neutral", "displayName": "Graphite Ink", "canonical": "#23262a", "tonalRamp": ["oklch(15% 0.008 250)", "oklch(27% 0.008 250)", "oklch(39% 0.008 250)", "oklch(51% 0.008 250)", "oklch(63% 0.008 250)", "oklch(75% 0.006 250)", "oklch(86% 0.004 250)", "oklch(95% 0.002 250)"] },
+      "graphite-2": { "role": "neutral", "displayName": "Graphite 2", "canonical": "#4f545a", "tonalRamp": ["oklch(15% 0.008 250)", "oklch(27% 0.008 250)", "oklch(39% 0.008 250)", "oklch(51% 0.008 250)", "oklch(63% 0.008 250)", "oklch(75% 0.006 250)", "oklch(86% 0.004 250)", "oklch(95% 0.002 250)"] },
+      "graphite-3": { "role": "neutral", "displayName": "Graphite 3", "canonical": "#6b7076", "tonalRamp": ["oklch(15% 0.008 250)", "oklch(27% 0.008 250)", "oklch(39% 0.008 250)", "oklch(51% 0.008 250)", "oklch(63% 0.008 250)", "oklch(75% 0.006 250)", "oklch(86% 0.004 250)", "oklch(95% 0.002 250)"] },
+      "page-white": { "role": "neutral", "displayName": "Page White", "canonical": "#fbfcf8", "tonalRamp": ["oklch(15% 0.006 120)", "oklch(27% 0.006 120)", "oklch(39% 0.006 120)", "oklch(51% 0.006 120)", "oklch(63% 0.006 120)", "oklch(75% 0.006 120)", "oklch(86% 0.005 120)", "oklch(99% 0.004 120)"] },
+      "sheet-white": { "role": "neutral", "displayName": "Sheet White", "canonical": "#ffffff", "tonalRamp": ["oklch(15% 0 0)", "oklch(27% 0 0)", "oklch(39% 0 0)", "oklch(51% 0 0)", "oklch(63% 0 0)", "oklch(75% 0 0)", "oklch(86% 0 0)", "oklch(100% 0 0)"] },
+      "hairline": { "role": "neutral", "displayName": "Hairline", "canonical": "#c9cec2", "tonalRamp": ["oklch(15% 0.014 125)", "oklch(27% 0.014 125)", "oklch(39% 0.014 125)", "oklch(51% 0.014 125)", "oklch(63% 0.014 125)", "oklch(75% 0.014 125)", "oklch(84% 0.014 125)", "oklch(95% 0.008 125)"] },
+      "hairline-soft": { "role": "neutral", "displayName": "Hairline Soft", "canonical": "#e3e6de", "tonalRamp": ["oklch(15% 0.010 125)", "oklch(27% 0.010 125)", "oklch(39% 0.010 125)", "oklch(51% 0.010 125)", "oklch(63% 0.010 125)", "oklch(75% 0.010 125)", "oklch(92% 0.010 125)", "oklch(97% 0.005 125)"] },
+      "ruled-line": { "role": "neutral", "displayName": "Ruled Line (sketch stage only)", "canonical": "rgba(46, 109, 180, 0.12)", "tonalRamp": ["rgba(46,109,180,0.04)", "rgba(46,109,180,0.06)", "rgba(46,109,180,0.08)", "rgba(46,109,180,0.10)", "rgba(46,109,180,0.12)", "rgba(46,109,180,0.16)", "rgba(46,109,180,0.20)", "rgba(46,109,180,0.28)"] }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "Verdict headline only; margin red when Out of range." },
+      "reading-value": { "displayName": "Reading Value", "purpose": "Values in reading rows; the station's lead value takes its station hue; units 15px/600 graphite-3." },
+      "control-value": { "displayName": "Control Value", "purpose": "The number inside a stepper." },
+      "title": { "displayName": "Title", "purpose": "Reading row titles; module headings at 15px/700, masthead 17px/700." },
+      "body": { "displayName": "Body", "purpose": "Default text; inputs 16px/600 to avoid mobile zoom." },
+      "callout": { "displayName": "Sketch Callout", "purpose": "Numbers drawn on the sketch, with a 3px white halo via paint-order stroke." },
+      "label": { "displayName": "Label", "purpose": "Field labels, value labels, table headers; sentence case." },
+      "fontLoading": { "displayName": "Font dependency", "purpose": "Noto Sans 400/500/600/700 and Noto Sans Thai 400/600/700 from fonts.googleapis.com (display=swap, preconnect to fonts.googleapis.com and fonts.gstatic.com). Online-only; falls back to system-ui offline. Self-hosting woff2 subsets declined because the artifact is served from claude.ai." }
+    },
+    "shadows": [
+      { "name": "grip-lift", "value": "0 2px 6px rgba(35, 38, 42, 0.35)", "purpose": "Only on the counting-line drag grip; the single lifted element." },
+      { "name": "state-ring-1", "value": "inset 0 0 0 1px currentColor", "purpose": "Chip rings for Acceptable (ochre), Visible (violet), Hidden and Neutral (hairline). A border, not elevation." },
+      { "name": "state-ring-2", "value": "inset 0 0 0 2px #855d00", "purpose": "Acceptable verdict mark ring." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "All transitions and the changed-value underline." },
+      { "name": "state-change", "value": "160ms", "purpose": "Background color on controls, rows; grip scale 1.12." },
+      { "name": "disclosure", "value": "200ms", "purpose": "Lookup table chevron rotation." },
+      { "name": "changed-underline", "value": "900ms background-size 100% 0.32em -> 100% 0, cover yellow", "purpose": "Value changed in its fixed slot (not during drag). Only under prefers-reduced-motion: no-preference; reduced motion also removes all transitions." },
+      { "name": "station-dim", "value": "opacity 0.6", "purpose": "Non-active station line groups on the sketch when a station is selected. Numeric callouts and station tags never dim." }
+    ],
+    "breakpoints": [
+      { "name": "phone", "value": "390px", "purpose": "Design baseline; single column." },
+      { "name": "tablet", "value": "720px", "purpose": "Band fields in three columns; masthead shown." },
+      { "name": "desktop", "value": "1024px", "purpose": "Two-column page: 360-420px readings column, fluid sketch column." },
+      { "name": "max-content", "value": "1280px" }
+    ],
+    "theme": { "mode": "light-only", "reason": "On-site use on phones and tablets in bright store light; color-scheme: light, no dark theme by choice." }
+  },
+  "components": [
+    {
+      "name": "Height Stepper",
+      "kind": "input",
+      "refersTo": "stepper",
+      "description": "The primary control: 44px, ink border, sheet-white value well, tabular 18px value.",
+      "html": "<div class=\"ds-stepper\"><button type=\"button\" aria-label=\"Lower by 0.1 m\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"><path d=\"M5 12h14\"/></svg></button><label><input value=\"3.2\" inputmode=\"decimal\" aria-label=\"Mount height\"><span>m</span></label><button type=\"button\" aria-label=\"Raise by 0.1 m\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"><path d=\"M12 5v14M5 12h14\"/></svg></button></div>",
+      "css": ".ds-stepper { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; width: 220px; height: 44px; border: 1px solid #23262a; border-radius: 6px; background: #fbfcf8; overflow: hidden; font-family: 'Noto Sans', 'Noto Sans Thai', system-ui, sans-serif; color: #23262a; } .ds-stepper button { border: 0; background: transparent; display: grid; place-items: center; color: #23262a; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-stepper button:hover { background: #e3e6de; } .ds-stepper button:active { background: #c9cec2; } .ds-stepper label { display: flex; align-items: baseline; justify-content: center; gap: 3px; border-inline: 1px solid #23262a; background: #ffffff; } .ds-stepper input { width: 4.4ch; border: 0; background: transparent; text-align: right; font: 700 18px/1 inherit; font-family: inherit; height: 42px; padding: 0; font-variant-numeric: tabular-nums; color: inherit; } .ds-stepper input:focus { outline: none; } .ds-stepper:focus-within { outline: 2px solid #2659a8; outline-offset: 2px; } .ds-stepper span { font-size: 14px; font-weight: 600; color: #6b7076; }"
+    },
+    {
+      "name": "Scene Segmented Control",
+      "kind": "nav",
+      "refersTo": "segmented",
+      "description": "Equal segments with ink dividers; selected segment is solid graphite.",
+      "html": "<div class=\"ds-seg\" role=\"group\" aria-label=\"Scene\"><button type=\"button\" aria-pressed=\"true\">Entrance</button><button type=\"button\" aria-pressed=\"false\">Aisle</button></div>",
+      "css": ".ds-seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; width: 240px; height: 44px; border: 1px solid #23262a; border-radius: 6px; overflow: hidden; background: #fbfcf8; font-family: 'Noto Sans', 'Noto Sans Thai', system-ui, sans-serif; } .ds-seg button { border: 0; background: transparent; font: inherit; font-weight: 600; font-size: 15px; color: #23262a; padding: 0 12px; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-seg button + button { border-left: 1px solid #23262a; } .ds-seg button[aria-pressed='true'] { background: #23262a; color: #fbfcf8; } .ds-seg button:not([aria-pressed='true']):hover { background: #e3e6de; } .ds-seg button:focus-visible { outline: 2px solid #2659a8; outline-offset: -4px; }"
+    },
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "36px ink-bordered action with a leading stroke icon; used for Copy readings.",
+      "html": "<button type=\"button\" class=\"ds-btn\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"8\" y=\"8\" width=\"12\" height=\"12\" rx=\"2\"/><path d=\"M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8\"/></svg>Copy readings</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px; border: 1px solid #23262a; border-radius: 6px; background: #fbfcf8; color: #23262a; font: 600 14px 'Noto Sans', 'Noto Sans Thai', system-ui, sans-serif; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn:hover { background: #e3e6de; } .ds-btn:active { background: #c9cec2; } .ds-btn:focus-visible { outline: 2px solid #2659a8; outline-offset: 2px; }"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Hairline-bordered secondary action: Use recommended, Clear, Copy CSV.",
+      "html": "<button type=\"button\" class=\"ds-btn-quiet\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 12a8 8 0 1 0 2.4-5.7\"/><path d=\"M4 4v4.5h4.5\"/></svg>Use recommended</button>",
+      "css": ".ds-btn-quiet { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px; border: 1px solid #c9cec2; border-radius: 6px; background: #fbfcf8; color: #4f545a; font: 600 14px 'Noto Sans', 'Noto Sans Thai', system-ui, sans-serif; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-quiet:hover { background: #e3e6de; } .ds-btn-quiet:active { background: #c9cec2; } .ds-btn-quiet:focus-visible { outline: 2px solid #2659a8; outline-offset: 2px; }"
+    },
+    {
+      "name": "Verdict Chips",
+      "kind": "chip",
+      "refersTo": "chip-best",
+      "description": "Three-state ladder plus face visibility; color always paired with an icon and a word. Acceptable is the forced ochre rung.",
+      "html": "<div class=\"ds-chips\"><span class=\"ds-chip ds-chip-best\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m5 12.5 4.5 4.5L19 7.5\"/></svg>Best</span><span class=\"ds-chip ds-chip-ok\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 4 21 19H3Z\"/><path d=\"M12 10v4M12 16.5v.5\"/></svg>Acceptable</span><span class=\"ds-chip ds-chip-out\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"m6 6 12 12M18 6 6 18\"/></svg>Out of range</span><span class=\"ds-chip ds-chip-face\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z\"/><circle cx=\"12\" cy=\"12\" r=\"2.8\"/></svg>Visible</span></div>",
+      "css": ".ds-chips { display: flex; flex-wrap: wrap; gap: 8px; font-family: 'Noto Sans', 'Noto Sans Thai', system-ui, sans-serif; } .ds-chip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px 0 7px; border-radius: 13px; font-size: 13px; font-weight: 700; white-space: nowrap; } .ds-chip-best { background: #2659a8; color: #ffffff; } .ds-chip-ok { background: #fbf0d2; color: #855d00; box-shadow: inset 0 0 0 1px #855d00; } .ds-chip-out { background: #b3302a; color: #ffffff; } .ds-chip-face { background: #f0e9f9; color: #6a3db0; box-shadow: inset 0 0 0 1px #6a3db0; }"
+    },
+    {
+      "name": "Station Tags",
+      "kind": "custom",
+      "refersTo": "station-tag-1",
+      "description": "Circled 1 (counting, rule blue, 3px ring), 2 (face, violet), C (camera, ink); active fills solid with a white numeral. Never dimmed.",
+      "html": "<div class=\"ds-tags\"><span class=\"ds-tag ds-tag-1\">1</span><span class=\"ds-tag ds-tag-2\">2</span><span class=\"ds-tag ds-tag-c\">C</span><span class=\"ds-tag ds-tag-1 is-active\">1</span></div>",
+      "css": ".ds-tags { display: flex; gap: 10px; font-family: 'Noto Sans', 'Noto Sans Thai', system-ui, sans-serif; } .ds-tag { width: 32px; height: 32px; border-radius: 50%; border: 2px solid currentColor; display: grid; place-items: center; font-weight: 700; font-size: 15px; background: #ffffff; } .ds-tag-1 { color: #2659a8; border-width: 3px; } .ds-tag-2 { color: #6a3db0; } .ds-tag-c { color: #23262a; } .ds-tag-1.is-active { background: #2659a8; color: #ffffff; border-color: #2659a8; }"
+    },
+    {
+      "name": "Reading Row",
+      "kind": "card",
+      "refersTo": "reading-row-1-active",
+      "description": "Fixed-slot reading keyed by its station tag; the lead value takes the station hue; a changed value underlines briefly in cover yellow (not under reduced motion).",
+      "html": "<article class=\"ds-reading is-active\" tabindex=\"0\"><span class=\"ds-reading-tag\">1</span><div><h3>Counting line</h3><dl><div><dt>Distance</dt><dd class=\"ds-lead\"><span class=\"ds-slot\">4.85</span><small>m</small></dd></div><div><dt>Feet angle</dt><dd><span class=\"ds-slot\">33.4</span><small>°</small></dd></div></dl></div></article>",
+      "css": ".ds-reading { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 0 12px; padding: 12px 14px; width: 360px; background: #ffffff; border: 1px solid #c9cec2; border-radius: 6px; font-family: 'Noto Sans', 'Noto Sans Thai', system-ui, sans-serif; color: #23262a; font-variant-numeric: tabular-nums; cursor: pointer; transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-reading:hover { background: #fbfcf8; } .ds-reading.is-active { background: #e6eef9; } .ds-reading:focus-visible { outline: 2px solid #2659a8; outline-offset: 2px; } .ds-reading-tag { width: 32px; height: 32px; border-radius: 50%; border: 3px solid #2659a8; display: grid; place-items: center; font-weight: 700; font-size: 15px; background: #2659a8; color: #ffffff; } .ds-reading h3 { margin: 0; font-size: 16px; font-weight: 700; line-height: 32px; } .ds-reading dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; margin: 6px 0 0; } .ds-reading dt { font-size: 12.5px; font-weight: 600; color: #6b7076; } .ds-reading dd { margin: 0; font-size: 26px; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; } .ds-reading dd small { font-size: 15px; font-weight: 600; color: #6b7076; margin-left: 2px; letter-spacing: 0; } .ds-lead { color: #2659a8; } .ds-slot { background-image: linear-gradient(#f2c230, #f2c230); background-repeat: no-repeat; background-position: 0 100%; background-size: 100% 0; } @media (prefers-reduced-motion: no-preference) { .ds-reading:hover .ds-slot { animation: ds-changed 900ms cubic-bezier(0.16, 1, 0.3, 1); } @keyframes ds-changed { from { background-size: 100% 0.32em; } to { background-size: 100% 0; } } }"
+    },
+    {
+      "name": "Cover Band",
+      "kind": "nav",
+      "refersTo": "cover-band",
+      "description": "Field-book yellow shell holding scene, height and camera; cover-ink labels; 1px ink rule at its foot.",
+      "html": "<header class=\"ds-band\"><div class=\"ds-band-field\"><span>Mount height</span><b>3.2 m</b></div><div class=\"ds-band-field\"><span>Camera</span><b>Dome 2.8 mm</b></div></header>",
+      "css": ".ds-band { display: flex; gap: 12px; padding: 14px 16px 16px; background: #f2c230; border-bottom: 1px solid #23262a; font-family: 'Noto Sans', 'Noto Sans Thai', system-ui, sans-serif; color: #23262a; } .ds-band-field { display: grid; gap: 5px; } .ds-band-field span { font-size: 12.5px; font-weight: 600; color: #3a2e05; } .ds-band-field b { display: flex; align-items: center; height: 44px; padding: 0 12px; border: 1px solid #23262a; border-radius: 6px; background: #fbfcf8; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Surveyor's Field Book",
+    "overview": "The console reads like a surveyor's field book that has been opened on site. A field-book yellow cover band runs across the top and holds the three inputs that define a placement: scene, mount height and camera. Below it is the page, a near-white ground carrying a side-view sketch and the readings taken from it. Each reading is keyed to a circled station tag (1, 2, C) that appears both on the sketch and on its reading row, so every number points back to the spot where it was measured. The readings are not a floating result card next to an unrelated diagram.\n\nThe system is calm and instrument-like. Inputs use one control vocabulary (44px tall, 1px ink border, 6px radius). Modules are white sheets edged with one hairline. Color carries meaning and nothing else: rule blue is the counting line, violet is the face line, ochre is the Acceptable middle state, margin red is failure, and graphite is everything else. Faint blue ruled lines appear only behind the sketch, where the field-book page shows through. Motion is limited to what a pencil would do. A changed value gets a brief underline in cover yellow, and nothing moves or reflows.\n\nThe world is single-theme light by choice. The tool is used on site on a phone or tablet in bright store light, where a light page with dark ink reads best. There is no dark theme, and `color-scheme: light` is declared.",
+    "keyCharacteristics": [
+      "Yellow cover band as the input shell, with a 1px graphite rule at its bottom edge.",
+      "Circled station tags 1, 2, C link sketch marks to reading rows.",
+      "Fixed reading slots. Values change in place and the layout never reflows.",
+      "One hairline border system (1px, 6px radius). Flat, with a single soft shadow on the drag grip.",
+      "Noto Sans with Noto Sans Thai, tabular figures throughout, no monospace.",
+      "Single light theme, tuned for bright on-site light."
+    ],
+    "rules": [
+      { "name": "The Survey Color Rule", "body": "Rule blue means counting line, violet means face line, and graphite means camera. These hues are never used for decoration, and a station keeps its hue everywhere it appears: line, tag, value, row tint and chip.", "section": "colors" },
+      { "name": "The Forced Ochre Rule", "body": "The verdict ladder has three states (Best, Acceptable, Out of range), but the world supplied only blue and red. Ochre is a forced adaptation to fill the middle rung. It is used for Acceptable and the height warning and nothing else. It is always ochre text on ochre-tint with an inset ochre ring, never a solid ochre fill, so it stays visibly weaker than Best and Out of range.", "section": "colors" },
+      { "name": "The Margin Red Rule", "body": "Red marks failure: Out of range, a figure outside the frame, invalid input. It never marks emphasis, a selection or a warning.", "section": "colors" },
+      { "name": "The Never Color Alone Rule", "body": "Every state chip and verdict mark pairs its color with a drawn shape (check, triangle, cross, eye, eye-off, dot) and a word.", "section": "colors" },
+      { "name": "The Tabular Figures Rule", "body": "Every number uses tabular figures in the body face. Monospace is not used. (PRODUCT.md's principle mentions monospace for measurements. The build replaced it with tabular Noto Sans, and the build is authoritative.)", "section": "typography" },
+      { "name": "The Fixed Slot Rule", "body": "Every value lives in a fixed slot. When inputs change, text is replaced in place and the layout does not move. The sketch resizes to its content, but readings never reflow.", "section": "layout" },
+      { "name": "The One Lift Rule", "body": "The drag grip is the only element with a drop shadow. Everything else sits flat on the page.", "section": "elevation" },
+      { "name": "The Never Dim Numbers Rule", "body": "When a station is active, the line groups of the other stations dim to 60% opacity. Numeric callouts and station tags are drawn outside the dimmed groups and always stay at full strength, so every number on the sketch stays readable whichever station is selected.", "section": "components" }
+    ],
+    "dos": [
+      "Do keep scene, height and camera in the cover-yellow band, with the height stepper as the primary action.",
+      "Do key every measured value to its station tag and hue: 1 in rule blue, 2 in violet, C in graphite.",
+      "Do keep numeric callouts and station tags at full opacity when other stations dim to 60%.",
+      "Do update values in fixed slots with the cover-yellow underline, and drop it under reduced motion.",
+      "Do use one control vocabulary: 44px height, 1px graphite-ink border, 6px radius, 2px rule-blue focus ring.",
+      "Do pair every state color with an icon and a word.",
+      "Do use tabular figures in Noto Sans for all numbers."
+    ],
+    "donts": [
+      "Don't use rule blue, violet, ochre or margin red for decoration or emphasis. They are reserved for stations and states.",
+      "Don't fill a surface with solid ochre. Acceptable is always ochre on ochre-tint with a ring.",
+      "Don't draw the blue ruled lines anywhere except behind the sketch.",
+      "Don't add drop shadows beyond the drag grip.",
+      "Don't introduce a monospace face or a dark theme. The world is single-theme light for bright on-site use.",
+      "Don't animate layout. Changed values never shift, grow or reflow."
+    ]
+  }
+}

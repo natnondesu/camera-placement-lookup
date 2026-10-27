@@ -6,223 +6,437 @@
 <title>Camera Placement Console</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-/* Layout idea: a survey drawing on drafting film. The geometry is the hero; numbers sit beside it like dimension callouts. */
+/* A surveyor's field book: yellow cover band holds the inputs, the page holds a keyed sketch and its readings. */
 :root {
-  --paper: #eef1ef;
-  --sheet: #f9faf9;
-  --ink: #17201c;
-  --ink-soft: #4b5751;
-  --rule: #cfd6d2;
-  --counting: #2448c8;
-  --face: #7a3fc4;
-  --best: #1d7a45;
-  --acceptable: #a86a0c;
-  --out: #b8322a;
-  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
-  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --cover: #f2c230;
+  --cover-deep: #d9a913;
+  --cover-ink: #3a2e05;
+  --page: #fbfcf8;
+  --sheet: #ffffff;
+  --rule: rgba(46, 109, 180, 0.11);
+  --ink: #23262a;
+  --ink-2: #4f545a;
+  --ink-3: #6b7076;
+  --hair: #c9cec2;
+  --hair-soft: #e3e6de;
+  --count: #2659a8;
+  --count-tint: #e6eef9;
+  --face: #6a3db0;
+  --face-tint: #f0e9f9;
+  --ochre: #855d00;
+  --ochre-tint: #fbf0d2;
+  --red: #b3302a;
+  --red-tint: #fbe6e4;
+  --font: "Noto Sans", "Noto Sans Thai", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --radius: 6px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
   color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --paper: #101513;
-    --sheet: #171d1a;
-    --ink: #e6ece9;
-    --ink-soft: #9aa7a0;
-    --rule: #2c3631;
-    --counting: #7d9bff;
-    --face: #c39bff;
-    --best: #4cc884;
-    --acceptable: #e6a93f;
-    --out: #ff7a6e;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --paper: #101513;
-  --sheet: #171d1a;
-  --ink: #e6ece9;
-  --ink-soft: #9aa7a0;
-  --rule: #2c3631;
-  --counting: #7d9bff;
-  --face: #c39bff;
-  --best: #4cc884;
-  --acceptable: #e6a93f;
-  --out: #ff7a6e;
-  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body {
-  background: var(--paper);
-  background-image: linear-gradient(var(--rule) 1px, transparent 1px), linear-gradient(90deg, var(--rule) 1px, transparent 1px);
-  background-size: 24px 24px;
-  background-position: -1px -1px;
+  background: var(--page);
   color: var(--ink);
-  font: 15px/1.45 var(--font-body);
-  padding-bottom: 88px;
+  font: 400 15px/1.45 var(--font);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
 }
-h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
-.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-button, input, select { font: inherit; color: inherit; }
-:focus-visible { outline: 2px solid var(--counting); outline-offset: 2px; }
+::selection { background: var(--cover); color: var(--ink); }
+input, select, button, textarea { font: inherit; color: inherit; caret-color: var(--count); }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--count); outline-offset: 2px; }
+* { scrollbar-width: thin; scrollbar-color: var(--hair) transparent; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+p { margin: 0; }
+.icon { width: 18px; height: 18px; flex: none; stroke: currentColor; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+[hidden] { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- Cover band ---------- */
+.band { background: var(--cover); border-bottom: 1px solid var(--ink); }
+.band-inner { max-width: 1280px; margin: 0 auto; padding: 14px 16px 16px; display: grid; gap: 12px; }
+.masthead { display: none; align-items: baseline; gap: 10px; }
+.masthead h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
+.masthead .version { font-size: 12.5px; color: var(--cover-ink); }
+@media (min-width: 720px) { .masthead { display: flex; } }
+.band-fields { display: grid; grid-template-columns: max-content minmax(140px, 1fr); gap: 10px 12px; }
+.seg button { white-space: nowrap; padding: 0 12px; }
+.band .stepper { grid-template-columns: 40px minmax(64px, 1fr) 40px; }
+
+.band-fields .field-camera { grid-column: 1 / -1; }
+.field { display: grid; gap: 5px; min-width: 0; }
+.field-label { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.band .field-label { color: var(--cover-ink); }
+
+/* Controls share one vocabulary: 44px tall, 1px ink border, page-white fill */
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--ink); border-radius: var(--radius); overflow: hidden; background: var(--page); height: 44px; }
+.seg button { border: 0; background: transparent; font-weight: 600; font-size: 15px; padding: 0 10px; transition: background-color 160ms var(--ease), color 160ms var(--ease); }
+.seg button + button { border-left: 1px solid var(--ink); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--page); }
+.seg button:not([aria-pressed="true"]):hover { background: var(--hair-soft); }
+.stepper { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; height: 44px; border: 1px solid var(--ink); border-radius: var(--radius); background: var(--page); overflow: hidden; }
+.stepper button { border: 0; background: transparent; display: grid; place-items: center; color: var(--ink); transition: background-color 160ms var(--ease); }
+.stepper button:hover { background: var(--hair-soft); }
+.stepper button:active { background: var(--hair); }
+.stepper label { display: flex; align-items: baseline; justify-content: center; gap: 3px; border-inline: 1px solid var(--ink); background: var(--sheet); min-width: 0; padding-inline: 4px; }
+.stepper input { width: 4.4ch; flex: 0 1 auto; min-width: 0; border: 0; background: transparent; text-align: right; font-size: 18px; font-weight: 700; padding: 0; height: 42px; font-variant-numeric: tabular-nums; }
+.stepper input:focus { outline: none; }
+.stepper:focus-within { outline: 2px solid var(--count); outline-offset: 2px; }
+.stepper .unit { flex: 0 0 auto; font-size: 14px; font-weight: 600; color: var(--ink-3); }
+.stepper[aria-invalid="true"] { border-color: var(--red); }
+.select { position: relative; }
+.select select { appearance: none; width: 100%; height: 44px; border: 1px solid var(--ink); border-radius: var(--radius); background: var(--page); padding: 0 40px 0 12px; font-size: 16px; font-weight: 600; text-overflow: ellipsis; }
+.select .icon { position: absolute; right: 12px; top: 13px; pointer-events: none; }
+.text-input { height: 44px; border: 1px solid var(--ink); border-radius: var(--radius); background: var(--sheet); display: flex; align-items: baseline; gap: 4px; padding: 0 12px; }
+.text-input input { flex: 1; min-width: 0; border: 0; background: transparent; font-size: 16px; font-weight: 600; height: 42px; padding: 0; }
+.text-input input:focus { outline: none; }
+.text-input:focus-within { outline: 2px solid var(--count); outline-offset: 2px; }
+.text-input .unit { color: var(--ink-3); font-weight: 600; font-size: 14px; }
+.btn { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px; border: 1px solid var(--ink); border-radius: var(--radius); background: var(--page); font-size: 14px; font-weight: 600; white-space: nowrap; transition: background-color 160ms var(--ease); }
+.btn:hover { background: var(--hair-soft); }
+.btn:active { background: var(--hair); }
+.btn.quiet { border-color: var(--hair); color: var(--ink-2); }
+.btn[hidden] { display: none; }
+.field-error { font-size: 13px; color: var(--red); font-weight: 600; }
+.field-error:empty { display: none; }
+.hint { font-size: 13px; color: var(--ink-2); }
+
+/* ---------- Page and modules ---------- */
+.page { max-width: 1280px; margin: 0 auto; padding: 14px 16px 40px; display: flex; flex-direction: column; gap: 12px; }
+.col { display: contents; }
+.verdict { order: 1; } .sketch { order: 2; } .readings { order: 3; } .tune { order: 4; } .table-mod { order: 5; }
+.mod { background: var(--sheet); border: 1px solid var(--hair); border-radius: var(--radius); min-width: 0; }
+.mod-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 0; }
+.mod-head h2 { font-size: 15px; font-weight: 700; }
+.mod-head .end { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+
+/* Verdict */
+.verdict { padding: 14px; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; }
+.verdict-mark { grid-row: span 2; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
+.verdict-mark .icon { width: 22px; height: 22px; stroke-width: 2.4; }
+.verdict[data-state="best"] .verdict-mark { background: var(--count); color: #fff; }
+.verdict[data-state="acceptable"] .verdict-mark { background: var(--ochre-tint); color: var(--ochre); box-shadow: inset 0 0 0 2px var(--ochre); }
+.verdict[data-state="out_of_range"] .verdict-mark { background: var(--red); color: #fff; }
+.verdict h2 { font-size: 26px; line-height: 1.1; font-weight: 700; letter-spacing: -0.015em; }
+.verdict[data-state="out_of_range"] h2 { color: var(--red); }
+.verdict-why { color: var(--ink-2); font-size: 14px; }
+.verdict-warn { grid-column: 1 / -1; display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; padding: 8px 10px; border-radius: var(--radius); background: var(--ochre-tint); color: var(--ochre); font-size: 13.5px; font-weight: 600; }
+.verdict-warn[hidden] { display: none; }
+
+/* Chips: colour plus a drawn shape, never colour alone */
+.chip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px 0 7px; border-radius: 13px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.chip .icon { width: 14px; height: 14px; stroke-width: 2.4; }
+.chip[data-state="best"] { background: var(--count); color: #fff; }
+.chip[data-state="acceptable"] { background: var(--ochre-tint); color: var(--ochre); box-shadow: inset 0 0 0 1px var(--ochre); }
+.chip[data-state="out_of_range"] { background: var(--red); color: #fff; }
+.chip[data-state="visible"] { background: var(--face-tint); color: var(--face); box-shadow: inset 0 0 0 1px var(--face); }
+.chip[data-state="hidden"] { background: var(--page); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--hair); }
+.chip[data-state="neutral"] { background: var(--page); color: var(--ink); box-shadow: inset 0 0 0 1px var(--hair); }
+
+/* Sketch */
+.sketch-tabs { display: inline-grid; grid-auto-flow: column; border: 1px solid var(--hair); border-radius: var(--radius); overflow: hidden; }
+.sketch-tabs button { border: 0; background: var(--sheet); height: 34px; padding: 0 12px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+.sketch-tabs button + button { border-left: 1px solid var(--hair); }
+.sketch-tabs button[aria-selected="true"] { background: var(--ink); color: var(--page); }
+.stage { position: relative; margin: 10px 0 0; border-top: 1px solid var(--hair-soft); display: flex; flex-direction: column; justify-content: flex-end; background: repeating-linear-gradient(to bottom, transparent 0 21px, rgba(46, 109, 180, 0.12) 21px 22px); }
+.stage svg { display: block; width: 100%; height: auto; touch-action: none; user-select: none; -webkit-user-select: none; }
+.grip { position: absolute; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; display: grid; place-items: center; cursor: ew-resize; touch-action: none; }
+.grip::before { content: ""; position: absolute; inset: 9px; border-radius: 50%; background: var(--count); box-shadow: 0 2px 6px rgba(35, 38, 42, 0.35); transition: transform 160ms var(--ease); }
+.grip .icon { position: relative; color: #fff; width: 16px; height: 16px; stroke-width: 2.4; }
+.grip:hover::before, .grip:focus-visible::before, .grip.dragging::before { transform: scale(1.12); }
+.grip[hidden] { display: none; }
+.sketch-foot { padding: 8px 14px 12px; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--ink-2); border-top: 1px solid var(--hair-soft); }
+.key { display: inline-flex; align-items: center; gap: 6px; }
+.key i { width: 16px; height: 3px; border-radius: 2px; background: var(--count); }
+.key.face i { background: var(--face); height: 2px; }
+.svg-tag { cursor: pointer; }
+.callout { paint-order: stroke; stroke: #ffffff; stroke-width: 3px; stroke-linejoin: round; }
+
+/* Readings: fixed slots keyed by station tags */
+.readings .mod-head { padding-bottom: 4px; }
+.reading { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 0 12px; padding: 12px 14px; border-top: 1px solid var(--hair-soft); cursor: pointer; transition: background-color 160ms var(--ease); }
+.reading:first-of-type { border-top: 0; }
+.reading:hover { background: var(--page); }
+.reading[data-tag="1"].is-active { background: var(--count-tint); }
+.reading[data-tag="2"].is-active { background: var(--face-tint); }
+.reading[data-tag="c"].is-active { background: var(--hair-soft); }
+.reading.is-active .tag-1 { background: var(--count); color: #fff; border-color: var(--count); }
+.reading.is-active .tag-2 { background: var(--face); color: #fff; border-color: var(--face); }
+.reading.is-active .tag-c { background: var(--ink); color: #fff; border-color: var(--ink); }
+.tag { width: 32px; height: 32px; border-radius: 50%; border: 2px solid currentColor; display: grid; place-items: center; font-weight: 700; font-size: 15px; background: var(--sheet); }
+.tag-1 { color: var(--count); border-width: 3px; }
+.tag-2 { color: var(--face); }
+.tag-c { color: var(--ink); }
+.reading-head { display: flex; align-items: center; gap: 10px; min-height: 32px; }
+.reading-head h3 { font-size: 16px; font-weight: 700; }
+.reading-head .chip { margin-left: auto; }
+.vals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; margin: 6px 0 0; }
+.vals div { min-width: 0; }
+.vals dt { font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
+.vals dd { margin: 0; font-size: 26px; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; white-space: nowrap; }
+.vals dd small { font-size: 15px; font-weight: 600; color: var(--ink-3); margin-left: 2px; letter-spacing: 0; }
+.reading[data-tag="1"] .vals dd:first-child, .reading[data-tag="1"] .lead { color: var(--count); }
+.reading[data-tag="2"] .lead { color: var(--face); }
+.reading-note { margin-top: 6px; font-size: 13.5px; color: var(--ink-2); }
+.reading-note.bad { color: var(--red); font-weight: 600; }
+.copy-out { margin: 0 14px 14px; }
+.copy-out textarea { width: 100%; min-height: 120px; border: 1px solid var(--hair); border-radius: var(--radius); padding: 10px; font-size: 13.5px; background: var(--page); }
+.copy-out[hidden] { display: none; }
+
+/* Changed values underline briefly in cover yellow; nothing reflows */
+[data-slot] { background-image: linear-gradient(var(--cover), var(--cover)); background-repeat: no-repeat; background-position: 0 100%; background-size: 100% 0; }
 @media (prefers-reduced-motion: no-preference) {
-  .anim { transition: background-color .18s ease, color .18s ease, border-color .18s ease, transform .18s ease; }
+  [data-slot].changed { animation: changed 900ms var(--ease); }
+  @keyframes changed { from { background-size: 100% 0.32em; } to { background-size: 100% 0; } }
 }
 
-.app { max-width: 1320px; margin: 0 auto; padding: 20px 20px 0; display: grid; gap: 16px; }
-.masthead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; }
-.masthead h1 { font-size: 22px; font-weight: 700; }
-.masthead .sub { color: var(--ink-soft); font-size: 13px; }
-.masthead .ver { margin-left: auto; color: var(--ink-soft); font: 12px var(--font-mono); }
+/* Fine-tune */
+.tune-body { padding: 12px 14px 14px; display: grid; gap: 16px; }
+.tune-row { display: grid; gap: 6px; }
+.tune-row .line { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tune-row .line > .stepper { flex: 1 1 180px; max-width: 240px; }
+.tune-row .line > .select { flex: 1 1 200px; }
+.tune-row .line > .text-input { flex: 1 1 160px; max-width: 240px; }
+.fixed-lens { height: 44px; display: inline-flex; align-items: center; padding: 0 12px; border: 1px dashed var(--hair); border-radius: var(--radius); font-weight: 600; color: var(--ink-2); }
 
-.sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; }
-.sheet-pad { padding: 16px; }
-.label { font: 600 11px/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); }
-
-/* Controls */
-.field { display: grid; gap: 6px; }
-.field + .field { margin-top: 14px; }
-.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
-.seg button { border: 0; background: transparent; padding: 7px 12px; cursor: pointer; min-height: 36px; }
-.seg button + button { border-left: 1px solid var(--rule); }
-.seg button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); }
-.seg button:hover:not([aria-pressed="true"]) { background: color-mix(in srgb, var(--ink) 8%, transparent); }
-.stepper { display: inline-flex; align-items: stretch; border: 1px solid var(--rule); border-radius: 4px; background: var(--sheet); }
-.stepper button { width: 36px; border: 0; background: transparent; cursor: pointer; font: 600 16px var(--font-mono); }
-.stepper button:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
-.stepper input { width: 84px; border: 0; border-inline: 1px solid var(--rule); text-align: center; padding: 7px 4px; background: transparent; font: 500 16px var(--font-mono); font-variant-numeric: tabular-nums; }
-.stepper .unit { align-self: center; padding: 0 8px 0 2px; color: var(--ink-soft); font: 13px var(--font-mono); }
-select { border: 1px solid var(--rule); border-radius: 4px; padding: 8px 10px; background: var(--sheet); min-height: 38px; max-width: 100%; }
-input[type="number"] { -moz-appearance: textfield; }
-input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.plain-input { border: 1px solid var(--rule); border-radius: 4px; padding: 7px 10px; width: 110px; background: var(--sheet); font: 500 15px var(--font-mono); }
-.link-btn { border: 1px solid var(--counting); color: var(--counting); background: transparent; border-radius: 4px; padding: 6px 10px; cursor: pointer; font-size: 13px; font-weight: 600; }
-.link-btn:hover { background: color-mix(in srgb, var(--counting) 10%, transparent); }
-.link-btn[disabled] { opacity: .45; cursor: default; }
-.hint { color: var(--ink-soft); font-size: 12.5px; }
-
-/* Status encoding: colour plus a shape glyph, never colour alone */
-.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px 2px 7px; border-radius: 999px; font: 600 12px/1.6 var(--font-body); border: 1px solid currentColor; white-space: nowrap; }
-.chip::before { content: ""; width: 8px; height: 8px; background: currentColor; }
-.chip.best { color: var(--best); }
-.chip.best::before { border-radius: 50%; }
-.chip.acceptable { color: var(--acceptable); }
-.chip.acceptable::before { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
-.chip.out_of_range { color: var(--out); }
-.chip.out_of_range::before { clip-path: polygon(20% 0, 50% 30%, 80% 0, 100% 20%, 70% 50%, 100% 80%, 80% 100%, 50% 70%, 20% 100%, 0 80%, 30% 50%, 0 20%); }
-.chip.muted { color: var(--ink-soft); }
-.chip.muted::before { border-radius: 50%; background: transparent; border: 1.5px solid currentColor; }
-
-.verdict { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; padding: 14px 18px; border-left: 6px solid var(--best); }
-.verdict .why { flex: 1 1 220px; }
-.verdict.acceptable { border-left-color: var(--acceptable); }
-.verdict.out_of_range { border-left-color: var(--out); }
-.verdict .big { font: 700 30px/1 var(--font-display); }
-.verdict.best .big { color: var(--best); }
-.verdict.acceptable .big { color: var(--acceptable); }
-.verdict.out_of_range .big { color: var(--out); }
-.verdict .why { color: var(--ink-soft); }
-.warn { display: inline-flex; gap: 6px; align-items: center; color: var(--acceptable); font-size: 12.5px; font-weight: 600; }
-
-.callouts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.callout { padding: 14px 16px; border-top: 4px solid var(--counting); display: grid; gap: 6px; align-content: start; }
-.callout.face { border-top-color: var(--face); }
-.callout .dist { font: 600 28px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
-.callout .dist small { font-size: 14px; color: var(--ink-soft); font-weight: 500; }
-.kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 13px; }
-.kv dt { color: var(--ink-soft); }
-.kv dd { margin: 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-
-.optics { display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 12px 16px; font-size: 13px; }
-.optics span b { font: 500 14px var(--font-mono); margin-left: 6px; }
-
-svg text { font-family: var(--font-mono); }
-.diagram { width: 100%; height: auto; display: block; touch-action: none; }
-.drag-handle { cursor: ew-resize; }
-
-/* Variant A: console */
-.console { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: start; }
-.console .stage { position: relative; }
-.console .eye { position: absolute; right: 14px; top: 14px; width: 232px; box-shadow: 0 10px 30px -12px rgb(0 0 0 / .45); }
-.console .eye .label { padding: 6px 8px 0; }
-.console .main { display: grid; gap: 12px; }
-
-/* Variant B: ladder */
-.ladder { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
-.ladder .toolbar { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: end; padding: 14px 16px; border-bottom: 1px solid var(--rule); }
-.table-wrap { overflow-x: auto; max-height: 68vh; }
-table { border-collapse: collapse; width: 100%; font-size: 13px; }
-th { position: sticky; top: 0; background: var(--sheet); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); font: 600 11px var(--font-display); text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); z-index: 1; }
-td { padding: 4px 10px; border-bottom: 1px solid color-mix(in srgb, var(--rule) 60%, transparent); font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Lookup table */
+.table-mod > summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; min-height: 48px; }
+.table-mod > summary::-webkit-details-marker { display: none; }
+.table-mod > summary h2 { font-size: 15px; font-weight: 700; }
+.table-mod > summary .hint { margin-left: 4px; }
+.table-mod > summary .chev { margin-left: auto; transition: transform 200ms var(--ease); }
+.table-mod[open] > summary .chev { transform: rotate(180deg); }
+.table-tools { display: flex; gap: 8px; align-items: center; padding: 0 14px 10px; }
+.table-scroll { overflow: auto; max-height: 420px; border-top: 1px solid var(--hair-soft); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { position: sticky; top: 0; background: var(--sheet); text-align: right; font-size: 12.5px; font-weight: 600; color: var(--ink-3); padding: 8px 14px; border-bottom: 1px solid var(--hair); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+td { padding: 7px 14px; border-bottom: 1px solid var(--hair-soft); text-align: right; white-space: nowrap; }
 tbody tr { cursor: pointer; }
-tbody tr:hover { background: color-mix(in srgb, var(--counting) 6%, transparent); }
-tbody tr.sel { background: color-mix(in srgb, var(--counting) 14%, transparent); }
-tbody tr.sel td:first-child { box-shadow: inset 4px 0 0 var(--counting); }
-.ladder aside { position: sticky; top: 16px; display: grid; gap: 12px; }
+tbody tr:hover td { background: var(--page); }
+tbody tr.is-current td { background: var(--count-tint); font-weight: 700; }
+td .chip { height: 22px; font-size: 12px; padding: 0 8px 0 5px; }
+td .chip .icon { width: 12px; height: 12px; }
 
-/* Variant C: field sheet */
-.field-sheet { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); gap: 16px; align-items: start; }
-.steps { counter-reset: step; display: grid; }
-.step { display: grid; grid-template-columns: 34px 1fr; gap: 4px 12px; padding: 14px 16px; border-bottom: 1px solid var(--rule); }
-.step::before { counter-increment: step; content: counter(step); grid-row: span 2; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--ink); display: grid; place-items: center; font: 600 13px var(--font-mono); }
-.step h3 { font-size: 16px; font-weight: 600; }
-.mark { padding: 18px; display: grid; gap: 14px; }
-.mark-line { display: grid; grid-template-columns: 10px 1fr auto; gap: 12px; align-items: center; }
-.mark-line i { width: 10px; align-self: stretch; border-radius: 2px; background: var(--counting); }
-.mark-line.face i { background: var(--face); }
-.mark-line .dist { font: 600 34px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
-.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 14px; }
-.checklist li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; }
-
-/* Prototype switcher, deliberately not part of the design under review */
-.switcher { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 999px; background: #111; color: #fff; box-shadow: 0 8px 30px rgb(0 0 0 / .35); font: 600 13px system-ui, sans-serif; }
-.switcher button { width: 34px; height: 34px; border-radius: 50%; border: 0; background: #2a2a2a; color: #fff; cursor: pointer; font-size: 16px; }
-.switcher button:hover { background: #444; }
-.switcher .name { padding: 0 12px; min-width: 210px; text-align: center; }
-.switcher .tag { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #ffcf4a; margin-right: 6px; }
-
-@media (max-width: 980px) {
-  .console, .ladder, .field-sheet { grid-template-columns: 1fr; }
-  .console .eye { position: static; width: 100%; margin-top: 12px; box-shadow: none; }
-  .ladder aside { position: static; }
+/* ---------- Wider screens ---------- */
+@media (min-width: 720px) {
+  .band-fields { grid-template-columns: minmax(200px, 1fr) minmax(180px, 220px) minmax(260px, 1.4fr); }
+  .band-fields .field-camera { grid-column: auto; }
 }
-@media (max-width: 520px) {
-  .app { padding: 12px 16px 0; }
-  .callouts { grid-template-columns: 1fr; }
-  .verdict { grid-template-columns: 1fr; }
-  .switcher .name { min-width: 150px; }
+@media (min-width: 1024px) {
+  .band-inner { grid-template-columns: auto 1fr; align-items: end; gap: 24px; padding: 16px 24px 18px; }
+  .masthead { align-self: center; }
+  .masthead .version { margin-left: 12px; }
+  .page { padding: 20px 24px 48px; display: grid; gap: 16px; grid-template-columns: minmax(360px, 420px) minmax(0, 1fr); align-items: start; }
+  .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
 }
 </style>
 </head>
 <body>
-<div class="app">
-  <header class="masthead">
-    <h1>Camera Placement Console</h1>
-    <span class="sub">Counting line by feet angle, face line by face angle. Prototype for review.</span>
-    <span class="ver" id="rulesVersion"></span>
-  </header>
-  <main id="view"></main>
-</div>
-<nav class="switcher" aria-label="Prototype layout switcher">
-  <button type="button" id="prevVariant" aria-label="Previous layout">&#8249;</button>
-  <span class="name"><span class="tag">Prototype</span><span id="variantName"></span></span>
-  <button type="button" id="nextVariant" aria-label="Next layout">&#8250;</button>
-</nav>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-tri" viewBox="0 0 24 24"><path d="M12 4 21 19H3Z"/><path d="M12 10v4M12 16.5v.5"/></symbol>
+  <symbol id="i-cross" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 5.6A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-3 3.7M6.4 6.5C3.9 8.2 2.5 12 2.5 12S6 18.5 12 18.5a9 9 0 0 0 4.2-1"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"/></symbol>
+  <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></symbol>
+  <symbol id="i-drag" viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></symbol>
+  <symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/></symbol>
+</svg>
+
+<header class="band">
+  <div class="band-inner">
+    <div class="masthead">
+      <h1>Placement Console</h1>
+      <span class="version" id="rulesVersion"></span>
+    </div>
+    <div class="band-fields">
+      <div class="field">
+        <span class="field-label" id="sceneLabel">Scene</span>
+        <div class="seg" role="group" aria-labelledby="sceneLabel" id="sceneSeg"></div>
+      </div>
+      <div class="field">
+        <span class="field-label" id="heightLabel">Mount height</span>
+        <div class="stepper" id="heightStepper">
+          <button type="button" data-step="heightM" data-delta="-0.1" aria-label="Lower by 0.1 m"><svg class="icon"><use href="#i-minus"/></svg></button>
+          <label><input id="heightIn" inputmode="decimal" autocomplete="off" aria-labelledby="heightLabel" aria-describedby="heightErr" data-bind="heightM"><span class="unit">m</span></label>
+          <button type="button" data-step="heightM" data-delta="0.1" aria-label="Raise by 0.1 m"><svg class="icon"><use href="#i-plus"/></svg></button>
+        </div>
+        <span class="field-error" id="heightErr" role="alert"></span>
+      </div>
+      <div class="field field-camera">
+        <label class="field-label" for="cameraSel">Camera</label>
+        <div class="select"><select id="cameraSel" data-bind="cameraId"></select><svg class="icon"><use href="#i-chevron"/></svg></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+  <div class="col col-left">
+  <section class="mod verdict" id="verdict" data-state="best" aria-live="polite">
+    <span class="verdict-mark" aria-hidden="true"><svg class="icon"><use id="verdictIcon" href="#i-check"/></svg></span>
+    <h2 data-slot="verdict-head">Placement works</h2>
+    <p class="verdict-why" data-slot="verdict-why"></p>
+    <p class="verdict-warn" id="heightWarn" hidden><svg class="icon"><use href="#i-tri"/></svg><span data-slot="height-warn"></span></p>
+  </section>
+
+  <section class="mod readings" aria-labelledby="readingsTitle">
+    <div class="mod-head">
+      <h2 id="readingsTitle">Readings</h2>
+      <div class="end"><button type="button" class="btn" id="copyReadings"><svg class="icon"><use href="#i-copy"/></svg><span>Copy readings</span></button></div>
+    </div>
+    <article class="reading" data-tag="1" tabindex="0" aria-labelledby="r1Title">
+      <span class="tag tag-1" aria-hidden="true">1</span>
+      <div>
+        <div class="reading-head"><h3 id="r1Title">Counting line</h3><span class="chip" id="feetChip"><svg class="icon"><use href="#i-dot"/></svg><span></span></span></div>
+        <dl class="vals">
+          <div><dt>Distance</dt><dd class="lead"><span data-slot="count-dist"></span><small>m</small></dd></div>
+          <div><dt>Feet angle</dt><dd><span data-slot="feet-angle"></span><small>°</small></dd></div>
+        </dl>
+        <p class="reading-note" id="countNote" data-slot="count-note"></p>
+      </div>
+    </article>
+    <article class="reading" data-tag="2" tabindex="0" aria-labelledby="r2Title">
+      <span class="tag tag-2" aria-hidden="true">2</span>
+      <div>
+        <div class="reading-head"><h3 id="r2Title">Face line</h3><span class="chip" id="faceChip"><svg class="icon"><use href="#i-eye"/></svg><span></span></span></div>
+        <dl class="vals">
+          <div><dt>Distance</dt><dd class="lead"><span data-slot="face-dist"></span><small>m</small></dd></div>
+          <div><dt>Face angle</dt><dd><span data-slot="face-angle"></span><small>°</small></dd></div>
+        </dl>
+        <p class="reading-note" data-slot="face-note"></p>
+      </div>
+    </article>
+    <article class="reading" data-tag="c" tabindex="0" aria-labelledby="rcTitle">
+      <span class="tag tag-c" aria-hidden="true">C</span>
+      <div>
+        <div class="reading-head"><h3 id="rcTitle">Camera</h3><span class="chip" id="tiltChip" data-state="neutral"><svg class="icon"><use href="#i-dot"/></svg><span></span></span></div>
+        <dl class="vals">
+          <div><dt>Tilt down</dt><dd><span data-slot="tilt"></span><small>°</small></dd></div>
+          <div><dt>Vertical view</dt><dd><span data-slot="vfov"></span><small>°</small></dd></div>
+        </dl>
+        <p class="reading-note" data-slot="camera-note"></p>
+      </div>
+    </article>
+    <div class="copy-out" id="copyOut" hidden>
+      <label class="hint" for="copyText">Copy was blocked by the browser. Select the text and copy it.</label>
+      <textarea id="copyText" readonly></textarea>
+    </div>
+  </section>
+
+  <section class="mod tune" aria-labelledby="tuneTitle">
+    <div class="mod-head"><h2 id="tuneTitle">Fine-tune</h2></div>
+    <div class="tune-body">
+      <div class="tune-row">
+        <span class="field-label" id="distLabel">Counting line distance</span>
+        <div class="line">
+          <div class="stepper" id="distStepper">
+            <button type="button" data-step="distanceM" data-delta="-0.05" aria-label="Closer by 5 cm"><svg class="icon"><use href="#i-minus"/></svg></button>
+            <label><input id="distIn" inputmode="decimal" autocomplete="off" aria-labelledby="distLabel" aria-describedby="distHint" data-bind="distanceM"><span class="unit">m</span></label>
+            <button type="button" data-step="distanceM" data-delta="0.05" aria-label="Farther by 5 cm"><svg class="icon"><use href="#i-plus"/></svg></button>
+          </div>
+          <button type="button" class="btn quiet" id="resetDist"><svg class="icon"><use href="#i-reset"/></svg>Use recommended</button>
+        </div>
+        <span class="hint" id="distHint" data-slot="dist-hint"></span>
+      </div>
+      <div class="tune-row">
+        <span class="field-label" id="tiltLabel">Tilt down</span>
+        <div class="line">
+          <div class="stepper" id="tiltStepper">
+            <button type="button" data-step="tiltDeg" data-delta="-0.5" aria-label="Tilt up by half a degree"><svg class="icon"><use href="#i-minus"/></svg></button>
+            <label><input id="tiltIn" inputmode="decimal" autocomplete="off" aria-labelledby="tiltLabel" aria-describedby="tiltHint" data-bind="tiltDeg"><span class="unit">°</span></label>
+            <button type="button" data-step="tiltDeg" data-delta="0.5" aria-label="Tilt down by half a degree"><svg class="icon"><use href="#i-plus"/></svg></button>
+          </div>
+          <button type="button" class="btn quiet" id="resetTilt"><svg class="icon"><use href="#i-reset"/></svg>Use recommended</button>
+        </div>
+        <span class="hint" id="tiltHint" data-slot="tilt-hint"></span>
+      </div>
+      <div class="tune-row">
+        <span class="field-label" id="lensLabel">Lens and resolution</span>
+        <div class="line" id="lensLine">
+          <div class="stepper" id="focalStepper">
+            <button type="button" data-step="focalMm" data-delta="-0.1" aria-label="Wider by 0.1 mm"><svg class="icon"><use href="#i-minus"/></svg></button>
+            <label><input id="focalIn" inputmode="decimal" autocomplete="off" aria-label="Focal length" data-bind="focalMm"><span class="unit">mm</span></label>
+            <button type="button" data-step="focalMm" data-delta="0.1" aria-label="Narrower by 0.1 mm"><svg class="icon"><use href="#i-plus"/></svg></button>
+          </div>
+          <span class="fixed-lens" id="fixedLens" hidden></span>
+          <div class="select"><select id="resSel" aria-label="Resolution" data-bind="resIndex"></select><svg class="icon"><use href="#i-chevron"/></svg></div>
+        </div>
+        <span class="hint" data-slot="lens-hint"></span>
+      </div>
+      <div class="tune-row">
+        <label class="field-label" for="depthIn">Floor depth in view</label>
+        <div class="line">
+          <div class="text-input"><input id="depthIn" inputmode="decimal" autocomplete="off" placeholder="Not measured" aria-describedby="depthHint depthErr" data-bind="depthM"><span class="unit">m</span></div>
+          <button type="button" class="btn quiet" id="clearDepth" hidden><svg class="icon"><use href="#i-cross"/></svg>Clear</button>
+        </div>
+        <span class="hint" id="depthHint">From below the camera to the farthest floor where people can stand. Optional.</span>
+        <span class="field-error" id="depthErr" role="alert"></span>
+      </div>
+    </div>
+  </section>
+
+  </div>
+  <div class="col col-right">
+  <section class="mod sketch" aria-labelledby="sketchTitle">
+    <div class="mod-head">
+      <h2 id="sketchTitle">Side view</h2>
+      <div class="end">
+        <div class="sketch-tabs" role="tablist" aria-label="Drawing">
+          <button type="button" role="tab" id="tabSide" aria-selected="true" aria-controls="stage" data-view="side">Side</button>
+          <button type="button" role="tab" id="tabCamera" aria-selected="false" aria-controls="stage" data-view="camera">Camera view</button>
+        </div>
+      </div>
+    </div>
+    <div class="stage" id="stage" role="tabpanel" aria-labelledby="tabSide">
+      <div id="drawing"></div>
+      <div class="grip" id="grip" role="slider" tabindex="0" aria-label="Counting line distance" aria-valuemin="0.3" aria-valuemax="80"><svg class="icon"><use href="#i-drag"/></svg></div>
+    </div>
+    <p class="sketch-foot" id="sketchFoot">
+      <span class="key"><i></i>Counting line</span>
+      <span class="key face"><i></i>Face line</span>
+      <span>Drag the counting line along the floor, or tap a tag to find its reading.</span>
+    </p>
+  </section>
+
+  <details class="mod table-mod" id="tableMod">
+    <summary><h2>Lookup table</h2><span class="hint" data-slot="table-meta"></span><svg class="icon chev"><use href="#i-chevron"/></svg></summary>
+    <div class="table-tools">
+      <span class="hint">Valid for any camera. Tap a height to load it.</span>
+      <button type="button" class="btn quiet" id="copyCsv" style="margin-left:auto"><svg class="icon"><use href="#i-copy"/></svg><span>Copy CSV</span></button>
+    </div>
+    <div class="table-scroll"><table><thead><tr><th scope="col">Height</th><th scope="col">Counting line</th><th scope="col">Feet</th><th scope="col">Face there</th><th scope="col">Face line</th></tr></thead><tbody id="tableBody"></tbody></table></div>
+  </details>
+  </div>
+</main>
 
 <script>
-// ---- Engine and rules: inlined verbatim from src/placement-rule.js and rules/*.json by build-prototype.mjs ----
+// Engine and rules are inlined verbatim from src/placement-rule.js and rules/*.json by build-prototype.mjs.
 /*__ENGINE__*/
 const RULES = /*__RULES__*/null;
 const CAMERAS = /*__CAMERAS__*/null;
 
-// ---- Prototype state ----
 const profiles = RULES.profiles;
 const byId = (list, id) => list.find((item) => item.id === id);
+const STATUS_LABEL = { best: "Best", acceptable: "Acceptable", out_of_range: "Out of range" };
+const STATUS_ICON = { best: "#i-check", acceptable: "#i-tri", out_of_range: "#i-cross" };
+const f1 = (n) => n.toFixed(1);
+const f2 = (n) => n.toFixed(2);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const $ = (id) => document.getElementById(id);
+
 const state = {
   profileId: RULES.defaultProfile,
   heightM: 4.0,
@@ -230,16 +444,13 @@ const state = {
   cameraId: CAMERAS.defaultCamera,
   focalMm: byId(CAMERAS.cameras, CAMERAS.defaultCamera).focalLengthMm.default,
   resIndex: 0,
-  tiltMode: "recommended",
   tiltDeg: null,
   depthM: null,
+  view: "side",
+  activeTag: null,
 };
-
-const STATUS_LABEL = { best: "Best", acceptable: "Acceptable", out_of_range: "Out of range" };
-const f1 = (n) => n.toFixed(1);
-const f2 = (n) => n.toFixed(2);
-const chip = (status, text) => `<span class="chip ${status}">${text ?? STATUS_LABEL[status]}</span>`;
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+let ready = false;
+let dragging = false;
 
 function compute() {
   const profile = byId(profiles, state.profileId);
@@ -249,519 +460,489 @@ function compute() {
   const following = state.distanceM === null;
   const distanceM = following ? recommendedDistance(state.heightM, profile) : state.distanceM;
   const result = evaluatePlacement({
-    profile,
-    heightM: state.heightM,
-    distanceM,
-    camera: optics,
-    tiltDeg: state.tiltMode === "manual" && state.tiltDeg !== null ? state.tiltDeg : undefined,
+    profile, heightM: state.heightM, distanceM, camera: optics,
+    tiltDeg: state.tiltDeg ?? undefined,
     availableDepthM: state.depthM ?? undefined,
   });
   return { profile, camera, optics, distanceM, following, result };
 }
 
-function verdictCopy(ctx) {
-  const { result } = ctx;
-  if (!result.countingLine.framed) return { head: "Placement fails", why: "The person at the counting line is cut off in the frame." };
-  if (result.verdict === "best") return { head: "Placement works", why: `Feet angle ${f1(result.feet.angleDeg)}° is inside the Best band.` };
-  if (result.verdict === "acceptable") return { head: "Works, not ideal", why: `Feet angle ${f1(result.feet.angleDeg)}° is only Acceptable.` };
-  return { head: "Placement fails", why: `Feet angle ${f1(result.feet.angleDeg)}° is outside the ${ctx.profile.name} bands.` };
+// ---------- Words ----------
+function verdictWords(ctx) {
+  const { result, profile } = ctx;
+  const band = profile.feetAngleDeg.best;
+  if (!result.countingLine.framed) {
+    return { head: "Placement fails", why: `A ${f2(profile.humanHeightM)} m person at the counting line does not fit in the frame. Tilt or lens needs to change.` };
+  }
+  const angle = `Feet angle ${f1(result.feet.angleDeg)}°`;
+  if (result.verdict === "best") return { head: "Placement works", why: `${angle} is inside the Best band (${band.min}–${band.max}°). Decided by the counting line only.` };
+  if (result.verdict === "acceptable") return { head: "Works, not ideal", why: `${angle} is Acceptable but outside the Best band (${band.min}–${band.max}°). Move the counting line toward ${f2(recommendedDistance(state.heightM, profile))} m.` };
+  const tooClose = result.feet.angleDeg > profile.feetAngleDeg.acceptable.max;
+  return { head: "Placement fails", why: `${angle} is too ${tooClose ? "steep: move the counting line farther away" : "flat: move the counting line closer"}. ${profile.name} accepts ${profile.feetAngleDeg.acceptable.min}–${profile.feetAngleDeg.acceptable.max}°.` };
 }
 
-function faceLineCopy(ctx) {
+function faceWords(ctx) {
   const { result, profile } = ctx;
   const fl = result.faceLine;
   const vFov = result.optics.verticalFovDeg;
-  if (fl.reason === "camera_below_face_point") return { state: "Not visible", text: `The camera is not above the ${f2(profile.facePointM)} m face point.` };
-  if (fl.reason === "beyond_available_depth") {
-    return { state: "Not visible", text: `The face line needs ${f2(fl.distanceM)} m of floor; the site has ${f2(state.depthM)} m. Mount lower to bring it closer.` };
-  }
+  if (fl.reason === "camera_below_face_point") return { visible: false, label: "Not visible", note: `The camera is not above the ${f2(profile.facePointM)} m face point.` };
+  if (fl.reason === "beyond_available_depth") return { visible: false, label: "Not visible", note: `Needs ${f2(fl.distanceM)} m of floor; you measured ${f2(state.depthM)} m. Mount lower to bring it closer.` };
   if (fl.reason === "outside_frame") {
-    const lo = result.feet.angleDeg - vFov / 2;
+    const lo = Math.max(0, result.feet.angleDeg - vFov / 2);
     const hi = Math.min(fl.angleDeg + vFov / 2, result.countingLine.headAngleDeg + vFov / 2);
-    const canFix = lo <= hi;
     return {
-      state: "Not visible",
-      text: canFix
-        ? `The face line is outside the frame. A tilt between ${f1(Math.max(lo, 0))}° and ${f1(hi)}° frames both lines.`
-        : `No single tilt frames both lines. Use a wider lens (shorter focal length) to see the face line.`,
+      visible: false,
+      label: "Not visible",
+      note: lo <= hi
+        ? `Outside the frame. A tilt between ${f1(lo)}° and ${f1(hi)}° shows both lines.`
+        : "Outside the frame, and no single tilt shows both lines. Use a shorter focal length.",
     };
   }
-  if (fl.coincides) return { state: "Visible", text: "The face is already Best at the counting line, so both lines coincide." };
+  if (fl.coincides) return { visible: true, label: "Visible", note: "Face is already Best at the counting line, so both lines are the same." };
   const gap = fl.distanceM - ctx.distanceM;
-  return { state: "Visible", text: `${f2(Math.abs(gap))} m ${gap > 0 ? "beyond" : "in front of"} the counting line, face angle ${f1(fl.angleDeg)}°.` };
+  return { visible: true, label: "Visible", note: `${f2(Math.abs(gap))} m ${gap > 0 ? "beyond" : "in front of"} the counting line. Demographics only; never fails the placement.` };
 }
 
-// ---- Side elevation drawing ----
-let sideFrame = null;
-
-function person(x, groundY, s, heightM, color, opacity) {
-  const headR = 0.11 * s;
-  const bodyTop = groundY - (heightM - 0.24) * s;
-  const w = 0.36 * s;
-  return `<g fill="${color}" fill-opacity="${opacity}">
-    <circle cx="${x}" cy="${groundY - (heightM - 0.11) * s}" r="${headR}"/>
-    <rect x="${x - w / 2}" y="${bodyTop}" width="${w}" height="${groundY - bodyTop}" rx="${w / 2.6}"/>
-  </g>`;
+// ---------- Slots: fixed positions, values change in place ----------
+function slot(name, text) {
+  document.querySelectorAll(`[data-slot="${name}"]`).forEach((el) => {
+    if (el.textContent === text) return;
+    el.textContent = text;
+    if (ready && !dragging) {
+      el.classList.remove("changed");
+      void el.offsetWidth;
+      el.classList.add("changed");
+    }
+  });
+}
+function setChip(el, stateName, label, icon) {
+  el.dataset.state = stateName;
+  el.querySelector("use").setAttribute("href", icon);
+  el.querySelector("span").textContent = label;
+}
+function setInput(el, text) {
+  if (el !== document.activeElement) el.value = text;
 }
 
-function sideView(ctx, W = 920, H = 470, compact = false) {
+// ---------- Side view ----------
+let geom = null;
+
+// A stick figure standing on the floor line: feet planted, head around the face point.
+function figure(x, gy, s, heightM, color, opacity, weight) {
+  const at = (m) => gy - m * s;
+  const headR = Math.max(3.5, 0.11 * s);
+  const neck = at(heightM - 2 * headR / s), hip = at(heightM * 0.52), shoulder = at(heightM * 0.78);
+  const stride = Math.max(3, 0.14 * s), reach = Math.max(4, 0.2 * s);
+  return `<g stroke="${color}" stroke-opacity="${opacity}" stroke-width="${weight}" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <circle cx="${x}" cy="${at(heightM) + headR}" r="${headR}" fill="${color}" fill-opacity="${opacity}"/>
+    <path d="M${x} ${neck}V${hip}M${x} ${hip}L${x - stride} ${gy}M${x} ${hip}L${x + stride} ${gy}M${x - reach} ${at(heightM * 0.6)}L${x} ${shoulder}L${x + reach} ${at(heightM * 0.6)}"/></g>`;
+}
+function tagMark(id, x, y, color, active, heavy) {
+  return `<g class="svg-tag" data-tag="${id}" role="button" aria-label="Show reading ${id === "c" ? "C" : id}">
+    <circle cx="${x}" cy="${y}" r="22" fill="transparent" pointer-events="all"/>
+    <circle cx="${x}" cy="${y}" r="14" fill="${active ? color : "#ffffff"}" stroke="${color}" stroke-width="${heavy ? 3 : 2.4}"/>
+    <text x="${x}" y="${y + 5}" text-anchor="middle" font-size="14" font-weight="700" fill="${active ? "#ffffff" : color}">${id === "c" ? "C" : id}</text></g>`;
+}
+
+function drawSide(ctx, W) {
   const { result, profile } = ctx;
-  const h = state.heightM;
-  const d = ctx.distanceM;
-  const fl = result.faceLine;
-  const needed = Math.max(d, fl.distanceM ?? 0, state.depthM ?? 0, 3) * 1.16;
-  const padL = compact ? 44 : 64, padR = 24, padT = compact ? 20 : 30, padB = 64;
-  const s = Math.min((W - padL - padR) / needed, (H - padT - padB) / (Math.max(h, profile.humanHeightM) * 1.12));
-  // When height limits the scale, extend the floor to use the full width.
+  const h = state.heightM, d = ctx.distanceM, fl = result.faceLine;
+  const padL = 54, padR = 18, padT = 40, padB = 36;
+  const needed = Math.max(d, fl.distanceM ?? 0, state.depthM ?? 0, 3) * 1.12;
+  const tall = Math.max(h, profile.humanHeightM) * 1.08;
+  // Size the drawing to its content so narrow screens carry no empty sky.
+  const fitWidth = (W - padL - padR) / needed;
+  const H = Math.round(clamp(padT + padB + tall * fitWidth, 220, Math.max(260, W * 0.56)));
+  const s = Math.min(fitWidth, (H - padT - padB) / tall);
   const extent = (W - padL - padR) / s;
-  const x0 = padL, gy = H - padB;
-  const X = (m) => x0 + m * s, Y = (m) => gy - m * s;
-  sideFrame = { x0, s, W };
+  const X = (m) => padL + m * s, gy = H - padB, Y = (m) => gy - m * s;
+  geom = { padL, s, gy, W, H };
+  const active = state.activeTag;
+  const dim = (tag) => (active && active !== tag ? 0.6 : 1);
   const camX = X(0), camY = Y(h);
   const tilt = result.tilt.value, v = result.optics.verticalFovDeg;
   const ray = (deg) => {
     const r = deg * Math.PI / 180;
-    if (deg > 0.5) {
-      const reach = Math.min(h / Math.tan(r), extent);
-      return [X(reach), Y(h - reach * Math.tan(r))];
-    }
+    if (deg > 0.3) { const reach = Math.min(h / Math.tan(r), extent); return [X(reach), Y(h - reach * Math.tan(r))]; }
     return [X(extent), Y(h - extent * Math.tan(r))];
   };
   const [tx, ty] = ray(tilt - v / 2), [bx, by] = ray(tilt + v / 2);
-  const step = extent > 16 ? 4 : extent > 8 ? 2 : 1;
-  let ticks = "";
+  const step = extent > 18 ? 4 : extent > 9 ? 2 : 1;
   const lastTick = Math.floor(extent / step) * step;
-  for (let m = 0; m <= extent; m += step) {
-    ticks += `<line x1="${X(m)}" x2="${X(m)}" y1="${gy}" y2="${gy + 6}" stroke="var(--ink-soft)"/><text x="${X(m)}" y="${gy + 20}" text-anchor="middle" font-size="11" fill="var(--ink-soft)">${m === lastTick ? `${m} m` : m}</text>`;
+  let ticks = "";
+  for (let m = 0; m <= extent + 1e-9; m += step) {
+    ticks += `<line x1="${X(m)}" x2="${X(m)}" y1="${gy}" y2="${gy + 5}" stroke="#23262a"/><text x="${X(m)}" y="${gy + 19}" text-anchor="middle" font-size="12" fill="#4f545a">${m === lastTick ? `${m} m` : m}</text>`;
   }
-  // Stack the two line labels when they would collide.
-  const faceLabelY = fl.distanceM !== null && Math.abs(X(fl.distanceM) - X(d)) < 170 ? gy + 54 : gy + 36;
-  const depth = state.depthM !== null
-    ? `<g><line x1="${X(state.depthM)}" x2="${X(state.depthM)}" y1="${gy}" y2="${padT}" stroke="var(--ink)" stroke-width="2"/>
-        <text x="${X(state.depthM) - 6}" y="${padT + 12}" text-anchor="end" font-size="11" fill="var(--ink)">available depth ${f2(state.depthM)} m</text></g>`
-    : "";
-  const countColor = "var(--counting)", faceColor = "var(--face)";
-  const feetX = X(d);
-  const faceLine = fl.distanceM !== null && !fl.coincides
-    ? `<g>
-        <line x1="${X(fl.distanceM)}" x2="${X(fl.distanceM)}" y1="${gy - 4}" y2="${gy + 4}" stroke="${faceColor}" stroke-width="6"/>
-        ${person(X(fl.distanceM), gy, s, profile.humanHeightM, faceColor, fl.visible ? 0.55 : 0.2)}
-        <line x1="${camX}" y1="${camY}" x2="${X(fl.distanceM)}" y2="${Y(profile.facePointM)}" stroke="${faceColor}" stroke-width="1.5" stroke-dasharray="${fl.visible ? "6 4" : "2 4"}"/>
-        <text x="${X(fl.distanceM)}" y="${faceLabelY}" text-anchor="middle" font-size="12" font-weight="600" fill="${faceColor}">face line ${f2(fl.distanceM)} m${fl.visible ? "" : " · not visible"}</text>
-      </g>`
-    : "";
-  const faceRay = fl.coincides
-    ? `<line x1="${camX}" y1="${camY}" x2="${feetX}" y2="${Y(profile.facePointM)}" stroke="${faceColor}" stroke-width="1.5" stroke-dasharray="6 4"/>`
-    : "";
-  return `<svg class="diagram" viewBox="0 0 ${W} ${H}" role="img" aria-label="Side view: camera at ${f2(h)} m, counting line at ${f2(d)} m${fl.distanceM ? `, face line at ${f2(fl.distanceM)} m` : ""}">
-    <polygon points="${camX},${camY} ${tx},${ty} ${bx},${by}" fill="var(--counting)" fill-opacity="0.07" stroke="var(--counting)" stroke-opacity="0.35"/>
-    <line x1="${X(0)}" x2="${X(extent)}" y1="${gy}" y2="${gy}" stroke="var(--ink)" stroke-width="1.5"/>
-    ${ticks}
-    <line x1="${camX}" x2="${camX}" y1="${gy}" y2="${camY}" stroke="var(--ink)" stroke-width="3"/>
-    <g transform="translate(${camX} ${camY}) rotate(${tilt})"><rect x="-2" y="-7" width="30" height="14" rx="3" fill="var(--ink)"/><rect x="26" y="-5" width="6" height="10" fill="var(--ink-soft)"/></g>
-    <line x1="${padL - 28}" x2="${padL - 28}" y1="${gy}" y2="${camY}" stroke="var(--ink-soft)" marker-start="url(#tick)" marker-end="url(#tick)"/>
-    <text x="${padL - 34}" y="${(gy + camY) / 2}" text-anchor="middle" font-size="12" fill="var(--ink)" transform="rotate(-90 ${padL - 34} ${(gy + camY) / 2})">${f2(h)} m</text>
+  const countX = X(d);
+  const faceX = fl.distanceM === null ? null : X(fl.distanceM);
+  const close = faceX !== null && !fl.coincides && Math.abs(faceX - countX) < 64;
+  const countLabelRight = !(close && faceX > countX);
+  const framedColor = result.countingLine.framed ? "#23262a" : "#b3302a";
+  const lineTop = Y(profile.humanHeightM) - 14;
+  const tagY = Math.max(16, lineTop - 14);
+
+  const depth = state.depthM !== null ? `<g>
+      <rect x="${X(state.depthM)}" y="${padT - 18}" width="${Math.max(0, W - padR - X(state.depthM))}" height="${gy - padT + 18}" fill="url(#hatch)"/>
+      <line x1="${X(state.depthM)}" x2="${X(state.depthM)}" y1="${padT - 18}" y2="${gy}" stroke="#23262a" stroke-width="2"/>
+      <text x="${X(state.depthM) - 6}" y="${padT - 4}" text-anchor="end" class="callout" font-size="12.5" font-weight="600" fill="#23262a">floor ends ${f2(state.depthM)} m</text></g>` : "";
+
+  const face = faceX === null ? "" : fl.coincides
+    ? `<g opacity="${dim("2")}"><line x1="${camX}" y1="${camY}" x2="${countX}" y2="${Y(profile.facePointM)}" stroke="#6a3db0" stroke-width="1.6" stroke-dasharray="5 4"/></g>`
+    : `<g opacity="${dim("2")}">
+        <line x1="${camX}" y1="${camY}" x2="${faceX}" y2="${Y(profile.facePointM)}" stroke="#6a3db0" stroke-width="1.6" stroke-dasharray="${fl.visible ? "5 4" : "2 5"}"/>
+        <line x1="${faceX}" x2="${faceX}" y1="${gy}" y2="${lineTop}" stroke="#6a3db0" stroke-width="${active === "2" ? 3 : 1.8}" stroke-dasharray="${fl.visible ? "none" : "4 4"}"/>
+        ${figure(faceX, gy, s, profile.humanHeightM, "#6a3db0", fl.visible ? 0.45 : 0.2, 2)}
+</g>`;
+  const faceLabels = faceX === null ? "" : fl.coincides
+    ? tagMark("2", countX + 30, tagY, "#6a3db0", active === "2", false)
+    : `<text x="${faceX + 10}" y="${gy - 9}" class="callout" font-size="13" font-weight="700" fill="#6a3db0">${f2(fl.distanceM)}</text>${tagMark("2", faceX, tagY, "#6a3db0", active === "2", false)}`;
+
+  const arcR = 34, tr = tilt * Math.PI / 180;
+  const arc = `<path d="M${camX + arcR} ${camY} A${arcR} ${arcR} 0 0 1 ${camX + arcR * Math.cos(tr)} ${camY + arcR * Math.sin(tr)}" fill="none" stroke="#23262a" stroke-width="1"/>
+    <line x1="${camX}" x2="${camX + arcR + 10}" y1="${camY}" y2="${camY}" stroke="#23262a" stroke-width="1" stroke-dasharray="2 3"/>
+`;
+  const tiltLabel = `<text x="${camX + arcR + 14}" y="${camY + 15}" class="callout" font-size="13" font-weight="700" fill="#23262a">${f1(tilt)}°</text>`;
+
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Side view. Camera at ${f1(h)} metres, counting line at ${f2(d)} metres${fl.distanceM !== null ? `, face line at ${f2(fl.distanceM)} metres` : ""}.">
+    <defs>
+      <pattern id="ruled" width="8" height="22" patternUnits="userSpaceOnUse"><line x1="0" x2="8" y1="21.5" y2="21.5" stroke="rgba(46,109,180,0.12)"/></pattern>
+      <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" x2="0" y1="0" y2="7" stroke="rgba(35,38,42,0.16)" stroke-width="2"/></pattern>
+    </defs>
+    <polygon points="${camX},${camY} ${tx},${ty} ${bx},${by}" fill="#2659a8" fill-opacity="0.07" stroke="#2659a8" stroke-opacity="0.28"/>
     ${depth}
-    ${faceLine}
-    <g class="drag-handle" data-drag="counting">
-      <rect x="${feetX - 18}" y="${Y(profile.humanHeightM) - 8}" width="36" height="${profile.humanHeightM * s + 16}" fill="transparent"/>
-      <line x1="${feetX}" x2="${feetX}" y1="${gy - 4}" y2="${gy + 4}" stroke="${countColor}" stroke-width="6"/>
-      ${person(feetX, gy, s, profile.humanHeightM, result.countingLine.framed ? "var(--ink)" : "var(--out)", 0.78)}
+    <line x1="${padL - 10}" x2="${W - padR}" y1="${gy}" y2="${gy}" stroke="#23262a" stroke-width="1.6"/>
+    ${ticks}
+    <line x1="${padL - 26}" x2="${padL - 26}" y1="${gy}" y2="${camY}" stroke="#6b7076"/>
+    <line x1="${padL - 31}" x2="${padL - 21}" y1="${camY}" y2="${camY}" stroke="#6b7076"/><line x1="${padL - 31}" x2="${padL - 21}" y1="${gy}" y2="${gy}" stroke="#6b7076"/>
+    <text transform="translate(${padL - 32} ${(gy + camY) / 2}) rotate(-90)" text-anchor="middle" font-size="13" font-weight="700" fill="#23262a">${f1(h)} m</text>
+    ${face}
+    <g opacity="${dim("1")}">
+      <line x1="${camX}" y1="${camY}" x2="${countX}" y2="${gy}" stroke="#2659a8" stroke-width="2" stroke-dasharray="7 4"/>
+      <line x1="${countX}" x2="${countX}" y1="${gy}" y2="${lineTop}" stroke="#2659a8" stroke-width="${active === "1" ? 5 : 3.5}"/>
+      ${figure(countX, gy, s, profile.humanHeightM, framedColor, 1, 2.4)}
     </g>
-    <line x1="${camX}" y1="${camY}" x2="${feetX}" y2="${gy}" stroke="${countColor}" stroke-width="1.8" stroke-dasharray="6 4"/>
-    ${faceRay}
-    <text x="${feetX}" y="${gy + 36}" text-anchor="middle" font-size="12" font-weight="600" fill="${countColor}">counting line ${f2(d)} m</text>
-    <text x="${camX + 40}" y="${camY - 10}" font-size="12" fill="var(--ink)">feet ${f1(result.feet.angleDeg)}° · tilt ${f1(tilt)}°</text>
-    <defs><marker id="tick" viewBox="0 0 10 2" refX="5" refY="1" markerWidth="10" markerHeight="2" orient="auto"><rect width="10" height="2" fill="var(--ink-soft)"/></marker></defs>
+    <line x1="${camX}" x2="${camX}" y1="${gy}" y2="${camY}" stroke="#23262a" stroke-width="3.5" stroke-linecap="round"/>
+    <g opacity="${dim("c")}">
+      ${arc}
+      <g transform="translate(${camX} ${camY}) rotate(${tilt})"><rect x="-4" y="-7" width="30" height="14" rx="3" fill="#f2c230" stroke="#23262a" stroke-width="1.6"/><rect x="25" y="-4.5" width="5" height="9" rx="1" fill="#23262a"/></g>
+    </g>
+    ${faceLabels}
+    <text x="${countLabelRight ? countX + 22 : countX - 22}" y="${gy - 9}" text-anchor="${countLabelRight ? "start" : "end"}" class="callout" font-size="13" font-weight="700" fill="#2659a8">${f2(d)}</text>
+    ${tagMark("1", countX, tagY, "#2659a8", active === "1", true)}
+    ${tiltLabel}
+    ${tagMark("c", camX + 2, Math.max(16, camY - 22), "#23262a", active === "c", false)}
   </svg>`;
 }
 
-// ---- Camera's-eye view ----
-function eyeView(ctx, W = 232) {
+// ---------- Camera view ----------
+function drawCamera(ctx, W) {
   const { result, profile, optics } = ctx;
-  const aspect = optics.resolution.h / optics.resolution.w;
-  const H = Math.round(W * aspect);
+  const H = Math.round(W * optics.resolution.h / optics.resolution.w);
   const tilt = result.tilt.value, v = result.optics.verticalFovDeg, hf = result.optics.horizontalFovDeg;
-  const rad = Math.PI / 180;
+  const rad = Math.PI / 180, h = state.heightM;
   const y = (deg) => H * (0.5 + Math.tan((deg - tilt) * rad) / (2 * Math.tan((v / 2) * rad)));
-  const h = state.heightM;
   const pxPerM = (dist) => W / (2 * Math.hypot(h, dist) * Math.tan((hf / 2) * rad));
-  const figure = (dist, color, op) => {
+  const fl = result.faceLine;
+  const figure = (dist, color, fill, tag, opacity) => {
     const feetY = y(feetAngle(h, dist));
     const headY = y(Math.atan2(h - profile.humanHeightM, dist) / rad);
-    const w = 0.45 * pxPerM(dist);
-    return `<line x1="0" x2="${W}" y1="${feetY}" y2="${feetY}" stroke="${color}" stroke-width="2"/>
-      <rect x="${W / 2 - w / 2}" y="${headY}" width="${w}" height="${Math.max(2, feetY - headY)}" rx="${w / 3}" fill="${color}" fill-opacity="${op}"/>`;
+    const w = 0.42 * pxPerM(dist);
+    return `<g opacity="${opacity}"><line x1="0" x2="${W}" y1="${feetY}" y2="${feetY}" stroke="${color}" stroke-width="${tag === "1" ? 3.5 : 2}"/>
+      <rect x="${W / 2 - w / 2}" y="${headY}" width="${w}" height="${Math.max(2, feetY - headY)}" rx="${w / 2.6}" fill="${fill}" fill-opacity="0.75"/>
+      ${feetY > 12 && feetY < H - 4 ? tagMark(tag, W - 22, feetY - 16, color, state.activeTag === tag, tag === "1") : ""}</g>`;
   };
-  const fl = result.faceLine;
-  const faceFig = fl.distanceM !== null && !fl.coincides ? figure(fl.distanceM, "var(--face)", 0.45) : "";
-  const offTop = fl.reason === "outside_frame" ? `<text x="${W / 2}" y="14" text-anchor="middle" font-size="11" fill="var(--face)">face line above frame ↑</text>` : "";
-  const horizonY = y(0);
-  const farthest = Math.ceil(Math.max(ctx.distanceM, fl.distanceM ?? 0) * 2.5);
-  let floorLines = "";
-  for (let m = 1; m <= farthest; m += 1) {
+  let floor = "";
+  const far = Math.ceil(Math.max(ctx.distanceM, fl.distanceM ?? 0) * 2.5);
+  for (let m = 1; m <= far; m += 1) {
     const ly = y(feetAngle(h, m));
-    if (ly < 0 || ly > H) continue;
-    floorLines += `<line x1="0" x2="${W}" y1="${ly}" y2="${ly}" stroke="var(--ink-soft)" stroke-opacity="0.22"/><text x="4" y="${ly - 2}" font-size="9" fill="var(--ink-soft)">${m} m</text>`;
+    if (ly < 4 || ly > H - 2) continue;
+    floor += `<line x1="0" x2="${W}" y1="${ly}" y2="${ly}" stroke="rgba(35,38,42,0.13)"/><text x="8" y="${ly - 4}" font-size="11" fill="#6b7076">${m} m</text>`;
   }
-  return `<svg class="diagram" viewBox="0 0 ${W} ${H}" role="img" aria-label="What the camera sees at ${f1(tilt)} degrees tilt">
-    <defs><clipPath id="eyeclip"><rect width="${W}" height="${H}"/></clipPath></defs>
-    <rect width="${W}" height="${H}" fill="var(--paper)"/>
-    <g clip-path="url(#eyeclip)">
-      <rect x="0" y="${Math.max(0, horizonY)}" width="${W}" height="${H}" fill="var(--ink)" fill-opacity="0.07"/>
-      ${floorLines}${faceFig}${figure(ctx.distanceM, "var(--counting)", 0.7)}
-    </g>
-    <rect width="${W}" height="${H}" fill="none" stroke="var(--rule)"/>
-    ${offTop}
+  const horizon = y(0);
+  const dim = (tag) => (state.activeTag && state.activeTag !== tag ? 0.6 : 1);
+  const faceFig = fl.distanceM !== null && !fl.coincides ? figure(fl.distanceM, "#6a3db0", "#6a3db0", "2", dim("2")) : "";
+  const above = fl.reason === "outside_frame" ? `<text x="${W / 2}" y="20" text-anchor="middle" font-size="12.5" font-weight="700" fill="#6a3db0">Face line is above the frame</text>` : "";
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="What the camera sees at ${f1(tilt)} degrees tilt">
+    <defs><clipPath id="frameClip"><rect width="${W}" height="${H}"/></clipPath></defs>
+    <rect width="${W}" height="${H}" fill="#fbfcf8"/>
+    <g clip-path="url(#frameClip)">
+      <rect x="0" y="${Math.max(0, horizon)}" width="${W}" height="${H}" fill="rgba(35,38,42,0.06)"/>
+      ${floor}${faceFig}${figure(ctx.distanceM, "#2659a8", result.countingLine.framed ? "#23262a" : "#b3302a", "1", dim("1"))}
+    </g>${above}
   </svg>`;
 }
 
-// ---- Shared control markup ----
-function profileSeg() {
-  return `<div class="seg" role="group" aria-label="Scene profile">${profiles.map((p) =>
-    `<button type="button" class="anim" data-action="profile" data-id="${p.id}" aria-pressed="${p.id === state.profileId}" title="${p.description}">${p.name}</button>`).join("")}</div>`;
-}
-function stepper(id, key, step, unit, label) {
-  return `<span class="stepper"><button type="button" data-step="${key}" data-delta="${-step}" aria-label="Decrease ${label}">−</button><input id="${id}" type="number" inputmode="decimal" step="${step}" data-bind="${key}" aria-label="${label}"><button type="button" data-step="${key}" data-delta="${step}" aria-label="Increase ${label}">+</button><span class="unit">${unit}</span></span>`;
-}
-function cameraFields() {
-  const camera = byId(CAMERAS.cameras, state.cameraId);
-  const varifocal = camera.focalLengthMm.min < camera.focalLengthMm.max;
-  return `<div class="field"><label class="label" for="cameraSel">Camera model</label>
-      <select id="cameraSel" data-bind="cameraId">${CAMERAS.cameras.map((c) => `<option value="${c.id}">${c.name}</option>`).join("")}</select>
-      <span class="hint">${camera.description}</span></div>
-    <div class="field"><span class="label">Lens and resolution</span><div class="row">
-      ${varifocal ? stepper("focalIn", "focalMm", 0.1, "mm", "Focal length") : `<span class="mono">${f1(camera.focalLengthMm.default)} mm fixed</span>`}
-      <select id="resSel" data-bind="resIndex" aria-label="Resolution">${camera.resolutions.map((r, i) => `<option value="${i}">${r.label} · ${r.w}×${r.h}</option>`).join("")}</select>
-    </div></div>`;
-}
-function tiltField() {
-  return `<div class="field"><span class="label">Tilt</span><div class="row">
-      <div class="seg" role="group" aria-label="Tilt mode">
-        <button type="button" data-action="tilt" data-mode="recommended" aria-pressed="${state.tiltMode === "recommended"}">Recommended</button>
-        <button type="button" data-action="tilt" data-mode="manual" aria-pressed="${state.tiltMode === "manual"}">Manual</button>
-      </div>
-      ${state.tiltMode === "manual" ? stepper("tiltIn", "tiltDeg", 0.5, "°", "Tilt angle") : `<span class="mono" data-out="tiltRec"></span>`}
-    </div><span class="hint">Recommended aims at the middle of a person standing at the counting line.</span></div>`;
-}
-function depthField() {
-  return `<div class="field"><label class="label" for="depthIn">Available depth (optional)</label>
-    <div class="row"><input id="depthIn" class="plain-input" type="number" step="0.1" min="0" placeholder="unknown" data-bind="depthM"><span class="hint">metres of floor in view, from below the camera</span></div></div>`;
-}
-function distanceField() {
-  return `<div class="field"><span class="label">Counting line distance</span>
-    <div class="row">${stepper("distIn", "distanceM", 0.05, "m", "Counting line distance")}
-      <button type="button" class="link-btn" data-action="useRecommended" data-out="recBtn">Use recommended</button></div>
-    <span class="hint" data-out="distHint"></span></div>`;
+function drawStage(ctx) {
+  const box = $("drawing");
+  const W = Math.max(300, Math.round(box.clientWidth || 600));
+  box.innerHTML = state.view === "side" ? drawSide(ctx, W) : drawCamera(ctx, W);
+  const grip = $("grip");
+  grip.hidden = state.view !== "side";
+  if (state.view === "side" && geom) {
+    grip.style.left = `${geom.padL + ctx.distanceM * geom.s}px`;
+    grip.style.top = `${$("drawing").offsetTop + geom.gy}px`;
+    grip.setAttribute("aria-valuenow", f2(ctx.distanceM));
+    grip.setAttribute("aria-valuetext", `${f2(ctx.distanceM)} metres, feet angle ${f1(ctx.result.feet.angleDeg)} degrees`);
+  }
 }
 
-// ---- Variants ----
-const VARIANTS = [
-  { key: "console", name: "A · Console", mount: mountConsole, update: updateConsole },
-  { key: "ladder", name: "B · Height ladder", mount: mountLadder, update: updateLadder },
-  { key: "field", name: "C · Field sheet", mount: mountField, update: updateField },
-];
-
-function verdictBlock(ctx) {
-  const v = verdictCopy(ctx);
-  const warn = ctx.result.warnings.includes("height_outside_range")
-    ? `<span class="warn">▲ ${f2(state.heightM)} m is outside the ${ctx.profile.name} height range (${f1(ctx.profile.heightRangeM.min)}–${f1(ctx.profile.heightRangeM.max)} m)</span>`
-    : "";
-  return `<section class="sheet verdict ${ctx.result.verdict}" aria-live="polite">
-    <span class="big">${v.head}</span><span class="why">${v.why} ${warn}</span>
-    <span class="row">${chip(ctx.result.feet.status, `Feet ${STATUS_LABEL[ctx.result.feet.status]}`)}${chip(ctx.result.faceLine.visible ? "best" : "muted", ctx.result.faceLine.visible ? "Face line visible" : "Face line not visible")}</span>
-  </section>`;
-}
-
-function calloutsBlock(ctx) {
-  const { result } = ctx;
-  const fc = faceLineCopy(ctx);
-  return `<div class="callouts">
-    <section class="sheet callout">
-      <span class="label">Counting line · decides the verdict</span>
-      <span class="dist">${f2(ctx.distanceM)}<small> m</small></span>
-      <dl class="kv"><dt>Feet angle</dt><dd>${f1(result.feet.angleDeg)}° ${chip(result.feet.status)}</dd>
-        <dt>Face here</dt><dd>${f1(result.face.angleDeg)}° ${chip(result.face.status)}</dd>
-        <dt>Framed</dt><dd>${result.countingLine.framed ? "whole person in frame" : "person cut off"}</dd>
-        <dt>Coverage</dt><dd>${f1(result.optics.coverageWidthM)} m wide · ${Math.round(result.optics.pixelsPerMetre)} px/m</dd></dl>
-    </section>
-    <section class="sheet callout face">
-      <span class="label">Face line · demographics only</span>
-      <span class="dist">${result.faceLine.distanceM === null ? "—" : f2(result.faceLine.distanceM)}<small> m</small></span>
-      <div class="row">${chip(result.faceLine.visible ? "best" : "muted", fc.state)}</div>
-      <span class="hint">${fc.text}</span>
-    </section>
-  </div>`;
-}
-
-function opticsStrip(ctx) {
-  const o = ctx.result.optics;
-  return `<div class="sheet optics"><span class="label">Optics</span>
-    <span>Vertical FOV<b>${f1(o.verticalFovDeg)}°</b></span><span>Horizontal FOV<b>${f1(o.horizontalFovDeg)}°</b></span>
-    <span>Tilt<b>${f1(ctx.result.tilt.value)}°${state.tiltMode === "manual" ? " manual" : ""}</b></span>
-    <span>Bands<b>feet ${ctx.profile.feetAngleDeg.best.min}–${ctx.profile.feetAngleDeg.best.max}° best, target ${ctx.profile.feetAngleDeg.target}°</b></span></div>`;
-}
-
-function mountConsole() {
-  return `<div class="console">
-    <aside class="sheet sheet-pad">
-      <div class="field"><span class="label">Scene profile</span>${profileSeg()}<span class="hint" data-out="profileDesc"></span></div>
-      <div class="field"><span class="label">Mount height</span>${stepper("heightIn", "heightM", 0.1, "m", "Mount height")}</div>
-      ${distanceField()}
-      ${cameraFields()}
-      ${tiltField()}
-      ${depthField()}
-    </aside>
-    <div class="main">
-      <div data-out="verdict"></div>
-      <section class="sheet stage"><div data-out="side"></div>
-        <div class="sheet eye"><div class="label">Camera's eye</div><div data-out="eye"></div></div></section>
-      <div data-out="callouts"></div>
-      <div data-out="optics"></div>
-    </div>
-  </div>`;
-}
-function updateConsole(ctx) {
-  out("profileDesc", ctx.profile.description);
-  out("verdict", verdictBlock(ctx));
-  out("side", sideView(ctx));
-  out("eye", eyeView(ctx));
-  out("callouts", calloutsBlock(ctx));
-  out("optics", opticsStrip(ctx));
-}
-
-function mountLadder() {
-  return `<div class="ladder">
-    <section class="sheet">
-      <div class="toolbar">
-        <div class="field"><span class="label">Scene profile</span>${profileSeg()}</div>
-        <div class="field"><span class="label">Lookup table</span><span class="hint" data-out="tableMeta"></span></div>
-        <div class="field" style="margin-left:auto"><button type="button" class="link-btn" data-action="copyCsv">Copy CSV</button><span class="hint" data-out="copyMsg"></span></div>
-      </div>
-      <div class="table-wrap" data-out="table"></div>
-    </section>
-    <aside>
-      <div data-out="verdict"></div>
-      <section class="sheet sheet-pad">
-        <div class="field"><span class="label">Selected height</span>${stepper("heightIn", "heightM", 0.1, "m", "Mount height")}</div>
-        ${cameraFields()}
-        ${tiltField()}
-        ${depthField()}
-      </section>
-      <section class="sheet"><div data-out="side"></div></section>
-      <div data-out="faceNote"></div>
-    </aside>
-  </div>`;
-}
-let ladderProfile = null;
-let ladderScrolledTo = null;
-function updateLadder(ctx) {
-  const rows = lookupTable(ctx.profile);
-  const maxD = Math.max(...rows.map((r) => Math.max(r.recommendedDistanceM, r.faceLineDistanceM ?? 0)));
-  const BW = 220, xs = (m) => 6 + (m / maxD) * (BW - 12);
-  if (ladderProfile !== ctx.profile.id) {
-    ladderProfile = ctx.profile.id;
-    out("tableMeta", `${rows.length} heights, ${f1(ctx.profile.heightRangeM.min)}–${f1(ctx.profile.heightRangeM.max)} m. Valid for any camera.`);
-    out("table", `<table><thead><tr><th>Height</th><th>Counting line</th><th>Feet</th><th>Face there</th><th>Face line</th><th>Both lines on the floor (0–${Math.ceil(maxD)} m)</th></tr></thead><tbody>${rows.map((r) => {
-      const fx = r.faceLineDistanceM === null ? null : xs(r.faceLineDistanceM);
-      return `<tr data-height="${f1(r.heightM)}"><td>${f1(r.heightM)} m</td><td>${f2(r.recommendedDistanceM)} m</td><td>${f1(r.feetAngleDeg)}°</td><td>${f1(r.faceAngleDeg)}° ${chip(r.faceStatus)}</td><td>${r.faceLineDistanceM === null ? "—" : f2(r.faceLineDistanceM) + " m"}</td>
-        <td><svg width="${BW}" height="16" viewBox="0 0 ${BW} 16" aria-hidden="true"><line x1="6" x2="${BW - 6}" y1="8" y2="8" stroke="var(--rule)"/>${fx === null ? "" : `<line x1="${xs(r.recommendedDistanceM)}" x2="${fx}" y1="8" y2="8" stroke="var(--face)" stroke-width="2" stroke-opacity=".5"/><circle cx="${fx}" cy="8" r="4" fill="var(--face)"/>`}<circle cx="${xs(r.recommendedDistanceM)}" cy="8" r="4.5" fill="var(--counting)"/></svg></td></tr>`;
-    }).join("")}</tbody></table>`);
+// ---------- Lookup table ----------
+let tableFor = null;
+function renderTable(ctx) {
+  if (tableFor !== ctx.profile.id) {
+    tableFor = ctx.profile.id;
+    const rows = lookupTable(ctx.profile);
+    slot("table-meta", `${ctx.profile.name}, ${rows.length} heights, rules ${RULES.version}`);
+    const chip = (status) => `<span class="chip" data-state="${status}"><svg class="icon"><use href="${STATUS_ICON[status]}"/></svg><span>${STATUS_LABEL[status]}</span></span>`;
+    $("tableBody").innerHTML = rows.map((r) => `<tr data-height="${f1(r.heightM)}"><td>${f1(r.heightM)} m</td><td>${f2(r.recommendedDistanceM)} m</td><td>${f1(r.feetAngleDeg)}°</td><td>${f1(r.faceAngleDeg)}° ${chip(r.faceStatus)}</td><td>${r.faceLineDistanceM === null ? "None" : `${f2(r.faceLineDistanceM)} m`}</td></tr>`).join("");
   }
   const key = f1(state.heightM);
-  document.querySelectorAll("tbody tr").forEach((tr) => tr.classList.toggle("sel", tr.dataset.height === key));
-  if (ladderScrolledTo !== key) {
-    ladderScrolledTo = key;
-    const row = document.querySelector("tbody tr.sel");
-    if (row) row.scrollIntoView({ block: "nearest" });
-  }
-  out("verdict", verdictBlock(ctx));
-  out("side", sideView(ctx, 680, 360, true));
-  const fc = faceLineCopy(ctx);
-  out("faceNote", `<section class="sheet sheet-pad"><span class="label">Face line at this camera</span><p style="margin:6px 0 0">${chip(ctx.result.faceLine.visible ? "best" : "muted", fc.state)} ${fc.text}</p></section>`);
+  document.querySelectorAll("#tableBody tr").forEach((tr) => tr.classList.toggle("is-current", tr.dataset.height === key));
 }
 
-function mountField() {
-  return `<div class="field-sheet">
-    <section class="sheet steps">
-      <div class="step"><h3>Pick the scene</h3><div class="row">${profileSeg()}<span class="hint" data-out="profileDesc"></span></div></div>
-      <div class="step"><h3>Measure the mount height</h3><div>${stepper("heightIn", "heightM", 0.1, "m", "Mount height")}</div></div>
-      <div class="step"><h3>Choose the camera</h3><div>${cameraFields()}</div></div>
-      <div class="step"><h3>Measure the floor in view</h3><div>${depthField()}</div></div>
-      <div class="step"><h3>Set the tilt</h3><div>${tiltField()}</div></div>
-    </section>
-    <div style="display:grid;gap:16px">
-      <div data-out="verdict"></div>
-      <section class="sheet mark" data-out="mark"></section>
-      <section class="sheet sheet-pad"><span class="label">What the camera will see</span><div data-out="eye" style="margin-top:8px;max-width:420px"></div></section>
-    </div>
-  </div>`;
-}
-function updateField(ctx) {
-  const { result } = ctx;
-  const fc = faceLineCopy(ctx);
-  out("profileDesc", ctx.profile.description);
-  out("verdict", verdictBlock(ctx));
-  out("eye", eyeView(ctx, 420));
-  out("mark", `<span class="label">Mark on the floor, measured from directly below the camera</span>
-    <div class="mark-line"><i></i><div><b>Counting line</b><div class="hint">Feet angle ${f1(result.feet.angleDeg)}°</div></div><span class="dist">${f2(ctx.distanceM)} m</span></div>
-    <div class="mark-line face"><i></i><div><b>Face line</b><div class="hint">${fc.text}</div></div><span class="dist">${result.faceLine.distanceM === null ? "—" : f2(result.faceLine.distanceM) + " m"}</span></div>
-    <span class="label">Before you leave the site</span>
-    <ul class="checklist">
-      <li>${chip(result.feet.status, STATUS_LABEL[result.feet.status])}<span>Feet angle at the counting line is ${f1(result.feet.angleDeg)}° (Best ${ctx.profile.feetAngleDeg.best.min}–${ctx.profile.feetAngleDeg.best.max}°).</span></li>
-      <li>${chip(result.countingLine.framed ? "best" : "out_of_range", result.countingLine.framed ? "Framed" : "Cut off")}<span>A ${f2(ctx.profile.humanHeightM)} m person at the counting line fits in the frame.</span></li>
-      <li>${chip(result.faceLine.visible ? "best" : "muted", fc.state)}<span>Face line for demographics. Never fails the placement.</span></li>
-      <li>${chip("best", `Aim ${f1(result.tilt.value)}°`)}<span>Tilt the camera ${f1(result.tilt.value)}° below horizontal${state.tiltMode === "manual" ? " (your manual setting)" : ""}.</span></li>
-    </ul>`);
-}
-
-// ---- Wiring ----
-const view = document.getElementById("view");
-let current = 0;
-const out = (name, html) => document.querySelectorAll(`[data-out="${name}"]`).forEach((el) => { el.innerHTML = html; });
-
-function syncControls(ctx) {
-  const values = {
-    heightM: f1(state.heightM),
-    distanceM: f2(ctx.distanceM),
-    cameraId: state.cameraId,
-    focalMm: f1(state.focalMm),
-    resIndex: String(state.resIndex),
-    tiltDeg: state.tiltDeg === null ? f1(ctx.result.tilt.recommended) : f1(state.tiltDeg),
-    depthM: state.depthM === null ? "" : String(state.depthM),
-  };
-  document.querySelectorAll("[data-bind]").forEach((el) => {
-    if (el === document.activeElement) return;
-    el.value = values[el.dataset.bind];
-  });
-  document.querySelectorAll('[data-action="profile"]').forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === state.profileId)));
-  out("tiltRec", `${f1(ctx.result.tilt.recommended)}°`);
-  out("distHint", ctx.following ? "Following the recommended distance for this height." : `Recommended is ${f2(recommendedDistance(state.heightM, ctx.profile))} m.`);
-  document.querySelectorAll('[data-out="recBtn"]').forEach((b) => { b.disabled = ctx.following; });
-}
-
+// ---------- Render ----------
 function render() {
   const ctx = compute();
-  VARIANTS[current].update(ctx);
-  syncControls(ctx);
-}
-function mount() {
-  view.innerHTML = VARIANTS[current].mount();
-  ladderProfile = null;
-  ladderScrolledTo = null;
-  document.getElementById("variantName").textContent = VARIANTS[current].name;
-  render();
-}
-function remount() { mount(); }
+  const { result, profile, camera } = ctx;
 
-function setValue(key, raw) {
+  document.querySelectorAll("#sceneSeg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === state.profileId)));
+  setInput($("heightIn"), f1(state.heightM));
+  $("cameraSel").value = state.cameraId;
+
+  const words = verdictWords(ctx);
+  $("verdict").dataset.state = result.verdict;
+  $("verdictIcon").setAttribute("href", STATUS_ICON[result.verdict]);
+  slot("verdict-head", words.head);
+  slot("verdict-why", words.why);
+  const outside = result.warnings.includes("height_outside_range");
+  $("heightWarn").hidden = !outside;
+  slot("height-warn", outside ? `${f1(state.heightM)} m is outside the ${profile.name} height range (${f1(profile.heightRangeM.min)}–${f1(profile.heightRangeM.max)} m). Judged anyway.` : "");
+
+  setChip($("feetChip"), result.feet.status, `Feet ${STATUS_LABEL[result.feet.status]}`, STATUS_ICON[result.feet.status]);
+  slot("count-dist", f2(ctx.distanceM));
+  slot("feet-angle", f1(result.feet.angleDeg));
+  const framed = result.countingLine.framed;
+  $("countNote").classList.toggle("bad", !framed);
+  slot("count-note", framed
+    ? `Decides the verdict. Whole person in frame. ${ctx.following ? "Recommended distance." : `Recommended is ${f2(result.countingLine.recommendedDistanceM)} m.`}`
+    : "Decides the verdict. The person here is cut off in the frame.");
+
+  const fw = faceWords(ctx);
+  setChip($("faceChip"), fw.visible ? "visible" : "hidden", fw.label, fw.visible ? "#i-eye" : "#i-eye-off");
+  slot("face-dist", result.faceLine.distanceM === null ? "None" : f2(result.faceLine.distanceM));
+  slot("face-angle", result.faceLine.angleDeg === null ? "None" : f1(result.faceLine.angleDeg));
+  slot("face-note", fw.note);
+
+  const manualTilt = state.tiltDeg !== null;
+  setChip($("tiltChip"), "neutral", manualTilt ? "Manual tilt" : "Recommended", manualTilt ? "#i-dot" : "#i-check");
+  slot("tilt", f1(result.tilt.value));
+  slot("vfov", f1(result.optics.verticalFovDeg));
+  slot("camera-note", `${camera.name}, ${f1(state.focalMm)} mm, ${ctx.optics.resolution.label}. Covers ${f1(result.optics.coverageWidthM)} m across at the counting line, ${Math.round(result.optics.pixelsPerMetre)} px/m.`);
+
+  setInput($("distIn"), f2(ctx.distanceM));
+  $("resetDist").hidden = ctx.following;
+  slot("dist-hint", ctx.following ? `Following the recommended ${f2(ctx.distanceM)} m for ${f1(state.heightM)} m (feet ${profile.feetAngleDeg.target}°).` : `Recommended is ${f2(result.countingLine.recommendedDistanceM)} m for ${f1(state.heightM)} m.`);
+  setInput($("tiltIn"), f1(result.tilt.value));
+  $("resetTilt").hidden = !manualTilt;
+  slot("tilt-hint", manualTilt ? `Recommended is ${f1(result.tilt.recommended)}°, aimed at the middle of a person on the counting line.` : "Aimed at the middle of a person standing on the counting line.");
+  const varifocal = camera.focalLengthMm.min < camera.focalLengthMm.max;
+  $("focalStepper").hidden = !varifocal;
+  $("fixedLens").hidden = varifocal;
+  $("fixedLens").textContent = `${f1(camera.focalLengthMm.default)} mm fixed lens`;
+  setInput($("focalIn"), f1(state.focalMm));
+  $("resSel").value = String(state.resIndex);
+  slot("lens-hint", varifocal ? `This lens zooms from ${f1(camera.focalLengthMm.min)} to ${f1(camera.focalLengthMm.max)} mm. Shorter sees more.` : camera.description);
+  setInput($("depthIn"), state.depthM === null ? "" : String(state.depthM));
+  $("clearDepth").hidden = state.depthM === null;
+
+  document.querySelectorAll(".reading").forEach((r) => r.classList.toggle("is-active", r.dataset.tag === state.activeTag));
+  drawStage(ctx);
+  renderTable(ctx);
+}
+
+// ---------- Inputs ----------
+const LIMITS = { heightM: [1.6, 25, 1], distanceM: [0.3, 80, 2], tiltDeg: [0, 90, 1] };
+function apply(key, value) {
   const camera = byId(CAMERAS.cameras, state.cameraId);
-  if (key === "cameraId") {
-    const next = byId(CAMERAS.cameras, raw);
-    state.cameraId = raw;
-    state.focalMm = next.focalLengthMm.default;
-    state.resIndex = 0;
-    remount();
-    return;
-  }
-  if (key === "resIndex") { state.resIndex = Number(raw); render(); return; }
+  if (key === "focalMm") { state.focalMm = clamp(Math.round(value * 10) / 10, camera.focalLengthMm.min, camera.focalLengthMm.max); return; }
+  const [lo, hi, dp] = LIMITS[key];
+  const p = 10 ** dp;
+  state[key] = clamp(Math.round(value * p) / p, lo, hi);
+}
+function currentValue(key) {
+  const ctx = compute();
+  return { heightM: state.heightM, distanceM: ctx.distanceM, tiltDeg: ctx.result.tilt.value, focalMm: state.focalMm }[key];
+}
+
+document.addEventListener("input", (e) => {
+  const key = e.target.dataset && e.target.dataset.bind;
+  if (!key || e.target.tagName !== "INPUT") return;
+  const raw = e.target.value.trim().replace(",", ".");
   if (key === "depthM") {
     const v = parseFloat(raw);
+    $("depthErr").textContent = raw && (Number.isNaN(v) || v <= 0) ? "Enter a floor depth in metres, for example 8.5." : "";
     state.depthM = raw === "" || Number.isNaN(v) || v <= 0 ? null : v;
     render();
     return;
   }
   const v = parseFloat(raw);
+  if (key === "heightM") {
+    const bad = Number.isNaN(v) || v < LIMITS.heightM[0] || v > LIMITS.heightM[1];
+    $("heightErr").textContent = raw && bad ? `Enter a height from ${LIMITS.heightM[0]} to ${LIMITS.heightM[1]} m.` : "";
+    $("heightStepper").setAttribute("aria-invalid", String(Boolean(raw && bad)));
+    if (bad) return;
+  }
   if (Number.isNaN(v)) return;
-  if (key === "heightM") state.heightM = clamp(Math.round(v * 10) / 10, 1.6, 25);
-  if (key === "distanceM") state.distanceM = clamp(Math.round(v * 100) / 100, 0.3, 80);
-  if (key === "focalMm") state.focalMm = clamp(Math.round(v * 10) / 10, camera.focalLengthMm.min, camera.focalLengthMm.max);
-  if (key === "tiltDeg") state.tiltDeg = clamp(v, 0, 90);
+  apply(key, v);
   render();
-}
-
-document.addEventListener("input", (e) => {
-  const key = e.target.dataset && e.target.dataset.bind;
-  if (key && e.target.tagName === "INPUT") setValue(key, e.target.value);
 });
 document.addEventListener("change", (e) => {
   const key = e.target.dataset && e.target.dataset.bind;
-  if (key && e.target.tagName === "SELECT") setValue(key, e.target.value);
-  if (key && e.target.tagName === "INPUT") render();
+  if (!key) return;
+  if (key === "cameraId") {
+    const next = byId(CAMERAS.cameras, e.target.value);
+    state.cameraId = next.id;
+    state.focalMm = next.focalLengthMm.default;
+    state.resIndex = 0;
+    fillResolutions();
+  } else if (key === "resIndex") {
+    state.resIndex = Number(e.target.value);
+  }
+  render();
 });
+document.addEventListener("focusout", (e) => {
+  if (e.target.matches && e.target.matches("input[data-bind]")) {
+    if (e.target.id === "heightIn") { $("heightErr").textContent = ""; $("heightStepper").setAttribute("aria-invalid", "false"); }
+    e.target.value = "";
+    render();
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && e.target.matches && e.target.matches("input[data-bind]")) e.target.blur();
+});
+
 document.addEventListener("click", (e) => {
   const stepBtn = e.target.closest("[data-step]");
   if (stepBtn) {
     const key = stepBtn.dataset.step;
-    const ctx = compute();
-    const now = { heightM: state.heightM, distanceM: ctx.distanceM, focalMm: state.focalMm, tiltDeg: ctx.result.tilt.value }[key];
-    setValue(key, String(now + Number(stepBtn.dataset.delta)));
+    apply(key, currentValue(key) + Number(stepBtn.dataset.delta));
+    render();
     return;
   }
-  const btn = e.target.closest("[data-action]");
-  if (!btn) {
-    const tr = e.target.closest("tbody tr[data-height]");
-    if (tr) { state.heightM = Number(tr.dataset.height); state.distanceM = null; render(); }
+  const sceneBtn = e.target.closest("#sceneSeg button");
+  if (sceneBtn) { state.profileId = sceneBtn.dataset.id; state.distanceM = null; render(); return; }
+  const tab = e.target.closest("[data-view]");
+  if (tab) { setView(tab.dataset.view); return; }
+  const tag = e.target.closest("[data-tag]");
+  if (tag) {
+    state.activeTag = state.activeTag === tag.dataset.tag ? null : tag.dataset.tag;
+    render();
+    if (tag.classList.contains("svg-tag")) {
+      const row = document.querySelector(`.reading[data-tag="${tag.dataset.tag}"]`);
+      if (row && state.activeTag) row.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    }
     return;
   }
-  const action = btn.dataset.action;
-  if (action === "profile") { state.profileId = btn.dataset.id; state.distanceM = null; render(); }
-  if (action === "useRecommended") { state.distanceM = null; render(); }
-  if (action === "tilt") {
-    if (btn.dataset.mode === "manual" && state.tiltMode !== "manual") state.tiltDeg = Math.round(compute().result.tilt.recommended * 10) / 10;
-    state.tiltMode = btn.dataset.mode;
-    remount();
-  }
-  if (action === "copyCsv") {
-    const csv = toCsv(lookupTable(compute().profile));
-    navigator.clipboard.writeText(csv)
-      .then(() => out("copyMsg", "Copied."))
-      .catch(() => out("copyMsg", "Copy was blocked by the browser. Select and copy the table instead."));
-  }
+  const tr = e.target.closest("#tableBody tr");
+  if (tr) { state.heightM = Number(tr.dataset.height); state.distanceM = null; render(); return; }
+});
+$("resetDist").addEventListener("click", () => { state.distanceM = null; render(); });
+$("resetTilt").addEventListener("click", () => { state.tiltDeg = null; render(); });
+$("clearDepth").addEventListener("click", () => { state.depthM = null; $("depthIn").value = ""; $("depthErr").textContent = ""; render(); });
+document.querySelectorAll(".reading").forEach((row) => {
+  row.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); state.activeTag = state.activeTag === row.dataset.tag ? null : row.dataset.tag; render(); }
+  });
 });
 
-// Drag the counting line along the floor in the side view.
-let dragging = false;
-document.addEventListener("pointerdown", (e) => {
-  if (!e.target.closest('[data-drag="counting"]')) return;
+function setView(view) {
+  state.view = view;
+  document.querySelectorAll("[data-view]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.view === view)));
+  $("stage").setAttribute("aria-labelledby", view === "side" ? "tabSide" : "tabCamera");
+  $("sketchTitle").textContent = view === "side" ? "Side view" : "Camera view";
+  render();
+}
+
+// Counting line: drag on the floor or use the grip; arrows nudge by 5 cm.
+function metresAt(clientX) {
+  const rect = $("drawing").getBoundingClientRect();
+  return (clientX - rect.left - geom.padL) / geom.s;
+}
+function startDrag(e) {
+  if (state.view !== "side" || !geom) return;
   dragging = true;
+  $("grip").classList.add("dragging");
+  apply("distanceM", metresAt(e.clientX));
+  render();
   e.preventDefault();
-});
-document.addEventListener("pointermove", (e) => {
-  if (!dragging || !sideFrame) return;
-  const svg = document.querySelector('[data-out="side"] svg');
-  if (!svg) return;
-  const pt = svg.createSVGPoint();
-  pt.x = e.clientX; pt.y = e.clientY;
-  const local = pt.matrixTransform(svg.getScreenCTM().inverse());
-  const metres = (local.x - sideFrame.x0) / sideFrame.s;
-  setValue("distanceM", String(metres));
-});
-document.addEventListener("pointerup", () => { dragging = false; });
-
-function go(delta) {
-  current = (current + delta + VARIANTS.length) % VARIANTS.length;
-  history.replaceState(null, "", `#${VARIANTS[current].key}`);
-  mount();
 }
-document.getElementById("prevVariant").addEventListener("click", () => go(-1));
-document.getElementById("nextVariant").addEventListener("click", () => go(1));
-document.addEventListener("keydown", (e) => {
-  const t = e.target;
-  if (t.closest && t.closest("input, textarea, select, [contenteditable]")) return;
-  if (e.key === "ArrowLeft") go(-1);
-  if (e.key === "ArrowRight") go(1);
+$("grip").addEventListener("pointerdown", startDrag);
+$("drawing").addEventListener("pointerdown", (e) => {
+  if (e.target.closest(".svg-tag")) return;
+  const rect = $("drawing").getBoundingClientRect();
+  if (geom && e.clientY - rect.top > geom.gy - 60 * (rect.width / geom.W)) startDrag(e);
 });
-function fromHash() {
-  const i = VARIANTS.findIndex((v) => `#${v.key}` === location.hash);
-  current = i < 0 ? 0 : i;
-  mount();
-}
-window.addEventListener("hashchange", fromHash);
+window.addEventListener("pointermove", (e) => {
+  if (!dragging) return;
+  apply("distanceM", metresAt(e.clientX));
+  render();
+});
+window.addEventListener("pointerup", () => {
+  if (!dragging) return;
+  dragging = false;
+  $("grip").classList.remove("dragging");
+  render();
+});
+$("grip").addEventListener("keydown", (e) => {
+  const delta = { ArrowLeft: -0.05, ArrowDown: -0.05, ArrowRight: 0.05, ArrowUp: 0.05, PageDown: -0.5, PageUp: 0.5 }[e.key];
+  if (delta === undefined) return;
+  e.preventDefault();
+  apply("distanceM", currentValue("distanceM") + delta);
+  render();
+});
 
+// Copy hand-off text
+function copyText(text, button) {
+  const label = button.querySelector("span");
+  const original = label.textContent;
+  const fallback = () => { $("copyOut").hidden = false; $("copyText").value = text; $("copyText").select(); };
+  if (!navigator.clipboard) { fallback(); return; }
+  navigator.clipboard.writeText(text).then(() => {
+    $("copyOut").hidden = true;
+    label.textContent = "Copied";
+    setTimeout(() => { label.textContent = original; }, 1600);
+  }).catch(fallback);
+}
+$("copyReadings").addEventListener("click", (e) => {
+  const ctx = compute();
+  const { result, profile } = ctx;
+  const fw = faceWords(ctx);
+  const text = [
+    `${profile.name}, mount height ${f1(state.heightM)} m, ${ctx.camera.name} at ${f1(state.focalMm)} mm`,
+    `Verdict: ${verdictWords(ctx).head} (feet angle ${f1(result.feet.angleDeg)}°, ${STATUS_LABEL[result.feet.status]})`,
+    `1 Counting line: ${f2(ctx.distanceM)} m from below the camera`,
+    `2 Face line: ${result.faceLine.distanceM === null ? "none" : `${f2(result.faceLine.distanceM)} m`} (${fw.label.toLowerCase()})`,
+    `C Tilt: ${f1(result.tilt.value)}° down`,
+    `Rules ${RULES.version}`,
+  ].join("\n");
+  copyText(text, e.currentTarget);
+});
+$("copyCsv").addEventListener("click", (e) => { e.preventDefault(); copyText(toCsv(lookupTable(compute().profile)), e.currentTarget); });
+
+// ---------- Init ----------
+function fillResolutions() {
+  const camera = byId(CAMERAS.cameras, state.cameraId);
+  $("resSel").innerHTML = camera.resolutions.map((r, i) => `<option value="${i}">${r.label}, ${r.w} × ${r.h}</option>`).join("");
+}
 profiles.forEach(validateProfile);
-document.getElementById("rulesVersion").textContent = `rules ${RULES.version}`;
-fromHash();
+$("rulesVersion").textContent = `Rules ${RULES.version}`;
+$("sceneSeg").innerHTML = profiles.map((p) => `<button type="button" data-id="${p.id}" aria-pressed="false" title="${p.description}">${p.name}</button>`).join("");
+$("cameraSel").innerHTML = CAMERAS.cameras.map((c) => `<option value="${c.id}">${c.name}</option>`).join("");
+fillResolutions();
+if (matchMedia("(min-width: 1024px)").matches) $("tableMod").open = true;
+render();
+ready = true;
+new ResizeObserver(() => drawStage(compute())).observe($("drawing"));
 </script>
 </body>
 </html>
