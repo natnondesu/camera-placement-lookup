@@ -22,8 +22,8 @@ const SHEET_TEXT = {
     shTiltFisheye: "Point the camera straight down", shTiltFisheyeHint: "Ceiling fisheye: the lens faces the floor.",
     shZoomWide: "Set the zoom to the widest end", shZoomTele: "Set the zoom to the longest end", shZoom: "Set the zoom",
     shLensFixed: "Fixed lens", shFisheyeLens: "Fisheye lens, no zoom to set", shStream: "Main stream {w} × {h}.",
-    shSideTitle: "Side elevation", shCamTitle: "Camera view at the entrance (simulated)",
-    shKeyCount: "counting line {d} m", shKeyFace: "face line {d} m", shFaceLineLabel: "face line",
+    shSideTitle: "Side elevation", shCamTitle: "Camera view (simulated)", shKeyEffective: "effective 80%",
+    shKeyCount: "counting line", shKeyFace: "face line", shFaceLineLabel: "face line",
     shThReading: "Reading", shThValue: "Value", shThMeaning: "Meaning",
     shRowCount: "feet {angle}°, best band {near}–{far} m from the camera, {ppm} px/m",
     shRowFace: "face {angle}°, {ppm} px/m at the face.", shFaceFloor: "Below the {min} px/m face floor; demographics only, never fails the placement.",
@@ -55,8 +55,8 @@ const SHEET_TEXT = {
     shTiltFisheye: "หันกล้องลงตรงๆ", shTiltFisheyeHint: "ฟิชอายติดเพดาน เลนส์หันลงพื้น",
     shZoomWide: "ตั้งซูมที่ระยะกว้างสุด", shZoomTele: "ตั้งซูมที่ระยะไกลสุด", shZoom: "ตั้งซูม",
     shLensFixed: "เลนส์ตายตัว", shFisheyeLens: "เลนส์ฟิชอาย ไม่ต้องตั้งซูม", shStream: "สตรีมหลัก {w} × {h}",
-    shSideTitle: "มุมมองด้านข้าง", shCamTitle: "ภาพจากกล้องที่ทางเข้า (จำลอง)",
-    shKeyCount: "เส้นนับ {d} m", shKeyFace: "เส้นจับใบหน้า {d} m", shFaceLineLabel: "เส้นจับใบหน้า",
+    shSideTitle: "มุมมองด้านข้าง", shCamTitle: "ภาพจากกล้อง (จำลอง)", shKeyEffective: "ใช้งานได้ 80%",
+    shKeyCount: "เส้นนับ", shKeyFace: "เส้นจับใบหน้า", shFaceLineLabel: "เส้นจับใบหน้า",
     shThReading: "รายการ", shThValue: "ค่า", shThMeaning: "ความหมาย",
     shRowCount: "มุมเท้า {angle}° ช่วงดีที่สุด {near}–{far} m จากกล้อง {ppm} px/m",
     shRowFace: "มุมใบหน้า {angle}° ที่ใบหน้า {ppm} px/m", shFaceFloor: "ต่ำกว่าเกณฑ์ใบหน้า {min} px/m ใช้เก็บข้อมูลเพศ/อายุเท่านั้น ไม่ทำให้ตำแหน่งไม่ผ่าน",
@@ -465,7 +465,8 @@ function renderSheet(p) {
   const cameraView = snap
     ? '<figure class="draw cam"><figcaption>' + escapeHtml(t("shCamTitle")) + '</figcaption><img src="' + snap.url + '" alt="' + escapeHtml(t("shCamTitle")) + '">' +
       '<span class="cam-key"><i class="k-count"></i>' + escapeHtml(t("shKeyCount", { d: fmt(p.distanceM, 2) })) +
-      (r.faceLine.distanceM !== null && !r.faceLine.coincides ? '<i class="k-face"></i>' + escapeHtml(t("shKeyFace", { d: fmt(r.faceLine.distanceM, 2) })) : "") + "</span></figure>"
+      (r.faceLine.distanceM !== null && !r.faceLine.coincides ? '<i class="k-face"></i>' + escapeHtml(t("shKeyFace", { d: fmt(r.faceLine.distanceM, 2) })) : "") +
+      '<i class="k-eff"></i>' + escapeHtml(t("shKeyEffective")) + "</span></figure>"
     : "";
 
   els.sheetPage.lang = lang;

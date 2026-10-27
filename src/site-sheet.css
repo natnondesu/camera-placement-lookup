@@ -510,12 +510,14 @@
       padding-bottom: 10px;
     }
 
+    /* The whole camera frame, letterboxed: never cropped, so it matches what the installed camera shows. */
     .sheet figure.cam img {
       display: block;
       width: 100%;
       height: 176px;
-      object-fit: cover;
+      object-fit: contain;
       border-radius: 6px;
+      background: oklch(0.13 0.012 256);
     }
 
     .sheet .cam-key {
@@ -524,12 +526,13 @@
       left: 20px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       padding: 3px 8px;
       border-radius: 5px;
       background: oklch(0.13 0.012 256 / 0.82);
       color: oklch(0.92 0.006 256);
-      font-size: 10.5px;
+      font-size: 10px;
+      white-space: nowrap;
     }
 
     .sheet .cam-key i {
@@ -545,6 +548,13 @@
     .sheet .cam-key i.k-face {
       margin-left: 6px;
       background: oklch(0.74 0.15 305);
+    }
+
+    .sheet .cam-key i.k-eff {
+      height: 0;
+      margin-left: 6px;
+      border-top: 2px dashed oklch(0.78 0.165 152);
+      border-radius: 0;
     }
 
     .sheet svg text {

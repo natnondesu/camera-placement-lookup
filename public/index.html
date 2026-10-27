@@ -3093,12 +3093,14 @@
       padding-bottom: 10px;
     }
 
+    /* The whole camera frame, letterboxed: never cropped, so it matches what the installed camera shows. */
     .sheet figure.cam img {
       display: block;
       width: 100%;
       height: 176px;
-      object-fit: cover;
+      object-fit: contain;
       border-radius: 6px;
+      background: oklch(0.13 0.012 256);
     }
 
     .sheet .cam-key {
@@ -3107,12 +3109,13 @@
       left: 20px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 5px;
       padding: 3px 8px;
       border-radius: 5px;
       background: oklch(0.13 0.012 256 / 0.82);
       color: oklch(0.92 0.006 256);
-      font-size: 10.5px;
+      font-size: 10px;
+      white-space: nowrap;
     }
 
     .sheet .cam-key i {
@@ -3128,6 +3131,13 @@
     .sheet .cam-key i.k-face {
       margin-left: 6px;
       background: oklch(0.74 0.15 305);
+    }
+
+    .sheet .cam-key i.k-eff {
+      height: 0;
+      margin-left: 6px;
+      border-top: 2px dashed oklch(0.78 0.165 152);
+      border-radius: 0;
     }
 
     .sheet svg text {
@@ -6055,8 +6065,8 @@ const SHEET_TEXT = {
     shTiltFisheye: "Point the camera straight down", shTiltFisheyeHint: "Ceiling fisheye: the lens faces the floor.",
     shZoomWide: "Set the zoom to the widest end", shZoomTele: "Set the zoom to the longest end", shZoom: "Set the zoom",
     shLensFixed: "Fixed lens", shFisheyeLens: "Fisheye lens, no zoom to set", shStream: "Main stream {w} × {h}.",
-    shSideTitle: "Side elevation", shCamTitle: "Camera view at the entrance (simulated)",
-    shKeyCount: "counting line {d} m", shKeyFace: "face line {d} m", shFaceLineLabel: "face line",
+    shSideTitle: "Side elevation", shCamTitle: "Camera view (simulated)", shKeyEffective: "effective 80%",
+    shKeyCount: "counting line", shKeyFace: "face line", shFaceLineLabel: "face line",
     shThReading: "Reading", shThValue: "Value", shThMeaning: "Meaning",
     shRowCount: "feet {angle}°, best band {near}–{far} m from the camera, {ppm} px/m",
     shRowFace: "face {angle}°, {ppm} px/m at the face.", shFaceFloor: "Below the {min} px/m face floor; demographics only, never fails the placement.",
@@ -6088,8 +6098,8 @@ const SHEET_TEXT = {
     shTiltFisheye: "หันกล้องลงตรงๆ", shTiltFisheyeHint: "ฟิชอายติดเพดาน เลนส์หันลงพื้น",
     shZoomWide: "ตั้งซูมที่ระยะกว้างสุด", shZoomTele: "ตั้งซูมที่ระยะไกลสุด", shZoom: "ตั้งซูม",
     shLensFixed: "เลนส์ตายตัว", shFisheyeLens: "เลนส์ฟิชอาย ไม่ต้องตั้งซูม", shStream: "สตรีมหลัก {w} × {h}",
-    shSideTitle: "มุมมองด้านข้าง", shCamTitle: "ภาพจากกล้องที่ทางเข้า (จำลอง)",
-    shKeyCount: "เส้นนับ {d} m", shKeyFace: "เส้นจับใบหน้า {d} m", shFaceLineLabel: "เส้นจับใบหน้า",
+    shSideTitle: "มุมมองด้านข้าง", shCamTitle: "ภาพจากกล้อง (จำลอง)", shKeyEffective: "ใช้งานได้ 80%",
+    shKeyCount: "เส้นนับ", shKeyFace: "เส้นจับใบหน้า", shFaceLineLabel: "เส้นจับใบหน้า",
     shThReading: "รายการ", shThValue: "ค่า", shThMeaning: "ความหมาย",
     shRowCount: "มุมเท้า {angle}° ช่วงดีที่สุด {near}–{far} m จากกล้อง {ppm} px/m",
     shRowFace: "มุมใบหน้า {angle}° ที่ใบหน้า {ppm} px/m", shFaceFloor: "ต่ำกว่าเกณฑ์ใบหน้า {min} px/m ใช้เก็บข้อมูลเพศ/อายุเท่านั้น ไม่ทำให้ตำแหน่งไม่ผ่าน",
@@ -6498,7 +6508,8 @@ function renderSheet(p) {
   const cameraView = snap
     ? '<figure class="draw cam"><figcaption>' + escapeHtml(t("shCamTitle")) + '</figcaption><img src="' + snap.url + '" alt="' + escapeHtml(t("shCamTitle")) + '">' +
       '<span class="cam-key"><i class="k-count"></i>' + escapeHtml(t("shKeyCount", { d: fmt(p.distanceM, 2) })) +
-      (r.faceLine.distanceM !== null && !r.faceLine.coincides ? '<i class="k-face"></i>' + escapeHtml(t("shKeyFace", { d: fmt(r.faceLine.distanceM, 2) })) : "") + "</span></figure>"
+      (r.faceLine.distanceM !== null && !r.faceLine.coincides ? '<i class="k-face"></i>' + escapeHtml(t("shKeyFace", { d: fmt(r.faceLine.distanceM, 2) })) : "") +
+      '<i class="k-eff"></i>' + escapeHtml(t("shKeyEffective")) + "</span></figure>"
     : "";
 
   els.sheetPage.lang = lang;
@@ -6713,6 +6724,8 @@ function createWalkSim(THREE, ui) {
   let active = false;
   let playing = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let crossTraffic = true;
+  // The site sheet's snapshot draws lines, bands and boxes but no text, which would shrink to smudges on paper.
+  let quiet = false;
   let lastTime = 0;
   let seed = 7;
   // Seeded so a reset replays a believable crowd rather than a new random one each time.
@@ -6975,7 +6988,7 @@ function createWalkSim(THREE, ui) {
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = "rgba(120, 220, 160, 0.9)";
-      ctx.fillText(input.text.effective, cx - radius * 0.7, cy + radius * 0.75);
+      if (!quiet) ctx.fillText(input.text.effective, cx - radius * 0.7, cy + radius * 0.75);
       return;
     }
     const edge = w * ((1 - EFFECTIVE_SHARE) / 2);
@@ -6990,7 +7003,7 @@ function createWalkSim(THREE, ui) {
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = "rgba(120, 220, 160, 0.9)";
-    ctx.fillText(input.text.effective, edge + 5, h - 6);
+    if (!quiet) ctx.fillText(input.text.effective, edge + 5, h - 6);
   }
 
   function personBox(g, tall, w, h) {
@@ -7025,6 +7038,7 @@ function createWalkSim(THREE, ui) {
       let y = Math.min(h - 4, left.y - 4);
       // Lines a few centimetres apart land on the same row; stack the later label above the earlier one.
       lineLabels.forEach((prev) => { if (Math.abs(prev.y + 13 - y) < 14) y = prev.y - 1; });
+      if (quiet) return true;
       ctx.fillStyle = color;
       ctx.fillText(text, 8, y);
       lineLabels.push({ x: 8, y: y - 13, w: ctx.measureText(text).width, h: 14 });
@@ -7070,6 +7084,7 @@ function createWalkSim(THREE, ui) {
         ctx.fillText(input.text.face, centreX + head / 2 + 3, box.y + head);
       }
     }
+    if (quiet) return;
     // Density labels go last, placed around each other, the line labels and the readout box.
     ctx.font = "600 11px JetBrains Mono, monospace";
     const candidates = densityLabels.map((c) => ({ ...c, width: ctx.measureText(c.text).width + 8, height: 15 }));
@@ -7193,10 +7208,10 @@ function createWalkSim(THREE, ui) {
   syncPlayButton();
 
   // One person standing on the counting line in the middle of the entrance, facing the camera, for the site sheet.
-  // Renders at a fixed size and crops to the entrance; the live crowd and view are put back before returning.
+  // The whole frame, framed exactly as the console shows it; the live crowd and view are put back before returning.
   function snapshot() {
     if (!input) return null;
-    const width = 1200;
+    const width = 960;
     const height = Math.round(width / input.aspect);
     const crowd = agents;
     const wasPlaying = playing;
@@ -7220,20 +7235,20 @@ function createWalkSim(THREE, ui) {
     crowd.forEach((agent) => { agent.body.group.visible = false; });
     agents = [person];
     playing = false;
+    quiet = true;
     try {
       setSize(width, height);
       step(0);
       render();
-      const crop = entranceCrop(width, height);
       const out = document.createElement("canvas");
-      out.width = Math.round(crop.w * 2);
-      out.height = Math.round(crop.h * 2);
+      out.width = width;
+      out.height = height;
       const ctx = out.getContext("2d");
-      [[renderer.domElement, renderer.getPixelRatio()], [ui.overlay, ui.overlay.width / width]].forEach(([source, ratio]) => {
-        ctx.drawImage(source, crop.x * ratio, crop.y * ratio, crop.w * ratio, crop.h * ratio, 0, 0, out.width, out.height);
-      });
-      return { url: out.toDataURL("image/jpeg", 0.88), aspect: crop.w / crop.h };
+      ctx.drawImage(renderer.domElement, 0, 0, width, height);
+      ctx.drawImage(ui.overlay, 0, 0, width, height);
+      return { url: out.toDataURL("image/jpeg", 0.9), aspect: width / height };
     } finally {
+      quiet = false;
       scene.remove(person.body.group);
       crowd.forEach((agent) => { agent.body.group.visible = true; });
       agents = crowd;
@@ -7241,35 +7256,6 @@ function createWalkSim(THREE, ui) {
       resize();
       render();
     }
-  }
-
-  // The part of the frame around the entrance: both lines, a person's full height, a margin; the whole frame if it does not fit.
-  function entranceCrop(width, height) {
-    const whole = { x: 0, y: 0, w: width, h: height };
-    if (isFisheye()) return whole;
-    const lay = layout(input);
-    const halfWidth = lay.doorZ !== null ? lay.doorHalf : lay.corridorHalf;
-    const near = input.distanceM - 0.1;
-    const far = Math.max(input.distanceM, input.faceLineDistanceM || 0) + 0.1;
-    const corners = [];
-    [-halfWidth - 0.15, halfWidth + 0.15].forEach((x) => [-0.05, 1.95].forEach((y) => [near, far].forEach((z) => corners.push(toScreen(x, y, z, width, height)))));
-    if (corners.some((c) => c.behind)) return whole;
-    const xs = corners.map((c) => c.x);
-    const ys = corners.map((c) => c.y);
-    let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
-    // Keep the sheet's picture shape, about 1.85 wide to 1 tall, by widening whichever side is short.
-    const aspect = 1.85;
-    if ((x1 - x0) / (y1 - y0) < aspect) {
-      const grow = ((y1 - y0) * aspect - (x1 - x0)) / 2;
-      x0 -= grow;
-      x1 += grow;
-    } else {
-      const grow = ((x1 - x0) / aspect - (y1 - y0)) / 2;
-      y0 -= grow;
-      y1 += grow;
-    }
-    if (x0 < 0 || y0 < 0 || x1 > width || y1 > height) return whole;
-    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
   }
 
   return {
