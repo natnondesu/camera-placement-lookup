@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Camera Placement Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a survey drawing on drafting film. The geometry is the hero; numbers sit beside it like dimension callouts. */
+:root {
+  --paper: #eef1ef;
+  --sheet: #f9faf9;
+  --ink: #17201c;
+  --ink-soft: #4b5751;
+  --rule: #cfd6d2;
+  --counting: #2448c8;
+  --face: #7a3fc4;
+  --best: #1d7a45;
+  --acceptable: #a86a0c;
+  --out: #b8322a;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #101513;
+    --sheet: #171d1a;
+    --ink: #e6ece9;
+    --ink-soft: #9aa7a0;
+    --rule: #2c3631;
+    --counting: #7d9bff;
+    --face: #c39bff;
+    --best: #4cc884;
+    --acceptable: #e6a93f;
+    --out: #ff7a6e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #101513;
+  --sheet: #171d1a;
+  --ink: #e6ece9;
+  --ink-soft: #9aa7a0;
+  --rule: #2c3631;
+  --counting: #7d9bff;
+  --face: #c39bff;
+  --best: #4cc884;
+  --acceptable: #e6a93f;
+  --out: #ff7a6e;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--paper);
+  background-image: linear-gradient(var(--rule) 1px, transparent 1px), linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: -1px -1px;
+  color: var(--ink);
+  font: 15px/1.45 var(--font-body);
+  padding-bottom: 88px;
+}
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+.mono, .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--counting); outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) {
+  .anim { transition: background-color .18s ease, color .18s ease, border-color .18s ease, transform .18s ease; }
+}
+
+.app { max-width: 1320px; margin: 0 auto; padding: 20px 20px 0; display: grid; gap: 16px; }
+.masthead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; }
+.masthead h1 { font-size: 22px; font-weight: 700; }
+.masthead .sub { color: var(--ink-soft); font-size: 13px; }
+.masthead .ver { margin-left: auto; color: var(--ink-soft); font: 12px var(--font-mono); }
+
+.sheet { background: var(--sheet); border: 1px solid var(--rule); border-radius: 4px; }
+.sheet-pad { padding: 16px; }
+.label { font: 600 11px/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); }
+
+/* Controls */
+.field { display: grid; gap: 6px; }
+.field + .field { margin-top: 14px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+.seg button { border: 0; background: transparent; padding: 7px 12px; cursor: pointer; min-height: 36px; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--sheet); }
+.seg button:hover:not([aria-pressed="true"]) { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.stepper { display: inline-flex; align-items: stretch; border: 1px solid var(--rule); border-radius: 4px; background: var(--sheet); }
+.stepper button { width: 36px; border: 0; background: transparent; cursor: pointer; font: 600 16px var(--font-mono); }
+.stepper button:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.stepper input { width: 84px; border: 0; border-inline: 1px solid var(--rule); text-align: center; padding: 7px 4px; background: transparent; font: 500 16px var(--font-mono); font-variant-numeric: tabular-nums; }
+.stepper .unit { align-self: center; padding: 0 8px 0 2px; color: var(--ink-soft); font: 13px var(--font-mono); }
+select { border: 1px solid var(--rule); border-radius: 4px; padding: 8px 10px; background: var(--sheet); min-height: 38px; max-width: 100%; }
+input[type="number"] { -moz-appearance: textfield; }
+input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.plain-input { border: 1px solid var(--rule); border-radius: 4px; padding: 7px 10px; width: 110px; background: var(--sheet); font: 500 15px var(--font-mono); }
+.link-btn { border: 1px solid var(--counting); color: var(--counting); background: transparent; border-radius: 4px; padding: 6px 10px; cursor: pointer; font-size: 13px; font-weight: 600; }
+.link-btn:hover { background: color-mix(in srgb, var(--counting) 10%, transparent); }
+.link-btn[disabled] { opacity: .45; cursor: default; }
+.hint { color: var(--ink-soft); font-size: 12.5px; }
+
+/* Status encoding: colour plus a shape glyph, never colour alone */
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px 2px 7px; border-radius: 999px; font: 600 12px/1.6 var(--font-body); border: 1px solid currentColor; white-space: nowrap; }
+.chip::before { content: ""; width: 8px; height: 8px; background: currentColor; }
+.chip.best { color: var(--best); }
+.chip.best::before { border-radius: 50%; }
+.chip.acceptable { color: var(--acceptable); }
+.chip.acceptable::before { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.chip.out_of_range { color: var(--out); }
+.chip.out_of_range::before { clip-path: polygon(20% 0, 50% 30%, 80% 0, 100% 20%, 70% 50%, 100% 80%, 80% 100%, 50% 70%, 20% 100%, 0 80%, 30% 50%, 0 20%); }
+.chip.muted { color: var(--ink-soft); }
+.chip.muted::before { border-radius: 50%; background: transparent; border: 1.5px solid currentColor; }
+
+.verdict { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; padding: 14px 18px; border-left: 6px solid var(--best); }
+.verdict .why { flex: 1 1 220px; }
+.verdict.acceptable { border-left-color: var(--acceptable); }
+.verdict.out_of_range { border-left-color: var(--out); }
+.verdict .big { font: 700 30px/1 var(--font-display); }
+.verdict.best .big { color: var(--best); }
+.verdict.acceptable .big { color: var(--acceptable); }
+.verdict.out_of_range .big { color: var(--out); }
+.verdict .why { color: var(--ink-soft); }
+.warn { display: inline-flex; gap: 6px; align-items: center; color: var(--acceptable); font-size: 12.5px; font-weight: 600; }
+
+.callouts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.callout { padding: 14px 16px; border-top: 4px solid var(--counting); display: grid; gap: 6px; align-content: start; }
+.callout.face { border-top-color: var(--face); }
+.callout .dist { font: 600 28px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.callout .dist small { font-size: 14px; color: var(--ink-soft); font-weight: 500; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 13px; }
+.kv dt { color: var(--ink-soft); }
+.kv dd { margin: 0; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.optics { display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 12px 16px; font-size: 13px; }
+.optics span b { font: 500 14px var(--font-mono); margin-left: 6px; }
+
+svg text { font-family: var(--font-mono); }
+.diagram { width: 100%; height: auto; display: block; touch-action: none; }
+.drag-handle { cursor: ew-resize; }
+
+/* Variant A: console */
+.console { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: start; }
+.console .stage { position: relative; }
+.console .eye { position: absolute; right: 14px; top: 14px; width: 232px; box-shadow: 0 10px 30px -12px rgb(0 0 0 / .45); }
+.console .eye .label { padding: 6px 8px 0; }
+.console .main { display: grid; gap: 12px; }
+
+/* Variant B: ladder */
+.ladder { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.ladder .toolbar { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: end; padding: 14px 16px; border-bottom: 1px solid var(--rule); }
+.table-wrap { overflow-x: auto; max-height: 68vh; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { position: sticky; top: 0; background: var(--sheet); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); font: 600 11px var(--font-display); text-transform: uppercase; letter-spacing: .07em; color: var(--ink-soft); z-index: 1; }
+td { padding: 4px 10px; border-bottom: 1px solid color-mix(in srgb, var(--rule) 60%, transparent); font-family: var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: color-mix(in srgb, var(--counting) 6%, transparent); }
+tbody tr.sel { background: color-mix(in srgb, var(--counting) 14%, transparent); }
+tbody tr.sel td:first-child { box-shadow: inset 4px 0 0 var(--counting); }
+.ladder aside { position: sticky; top: 16px; display: grid; gap: 12px; }
+
+/* Variant C: field sheet */
+.field-sheet { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.steps { counter-reset: step; display: grid; }
+.step { display: grid; grid-template-columns: 34px 1fr; gap: 4px 12px; padding: 14px 16px; border-bottom: 1px solid var(--rule); }
+.step::before { counter-increment: step; content: counter(step); grid-row: span 2; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--ink); display: grid; place-items: center; font: 600 13px var(--font-mono); }
+.step h3 { font-size: 16px; font-weight: 600; }
+.mark { padding: 18px; display: grid; gap: 14px; }
+.mark-line { display: grid; grid-template-columns: 10px 1fr auto; gap: 12px; align-items: center; }
+.mark-line i { width: 10px; align-self: stretch; border-radius: 2px; background: var(--counting); }
+.mark-line.face i { background: var(--face); }
+.mark-line .dist { font: 600 34px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; font-size: 14px; }
+.checklist li { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; }
+
+/* Prototype switcher, deliberately not part of the design under review */
+.switcher { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 999px; background: #111; color: #fff; box-shadow: 0 8px 30px rgb(0 0 0 / .35); font: 600 13px system-ui, sans-serif; }
+.switcher button { width: 34px; height: 34px; border-radius: 50%; border: 0; background: #2a2a2a; color: #fff; cursor: pointer; font-size: 16px; }
+.switcher button:hover { background: #444; }
+.switcher .name { padding: 0 12px; min-width: 210px; text-align: center; }
+.switcher .tag { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #ffcf4a; margin-right: 6px; }
+
+@media (max-width: 980px) {
+  .console, .ladder, .field-sheet { grid-template-columns: 1fr; }
+  .console .eye { position: static; width: 100%; margin-top: 12px; box-shadow: none; }
+  .ladder aside { position: static; }
+}
+@media (max-width: 520px) {
+  .app { padding: 12px 16px 0; }
+  .callouts { grid-template-columns: 1fr; }
+  .verdict { grid-template-columns: 1fr; }
+  .switcher .name { min-width: 150px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="masthead">
+    <h1>Camera Placement Console</h1>
+    <span class="sub">Counting line by feet angle, face line by face angle. Prototype for review.</span>
+    <span class="ver" id="rulesVersion"></span>
+  </header>
+  <main id="view"></main>
+</div>
+<nav class="switcher" aria-label="Prototype layout switcher">
+  <button type="button" id="prevVariant" aria-label="Previous layout">&#8249;</button>
+  <span class="name"><span class="tag">Prototype</span><span id="variantName"></span></span>
+  <button type="button" id="nextVariant" aria-label="Next layout">&#8250;</button>
+</nav>
+
+<script>
+// ---- Engine and rules: inlined verbatim from src/placement-rule.js and rules/*.json by build-prototype.mjs ----
+/*__ENGINE__*/
+const RULES = /*__RULES__*/null;
+const CAMERAS = /*__CAMERAS__*/null;
+
+// ---- Prototype state ----
+const profiles = RULES.profiles;
+const byId = (list, id) => list.find((item) => item.id === id);
+const state = {
+  profileId: RULES.defaultProfile,
+  heightM: 4.0,
+  distanceM: null,
+  cameraId: CAMERAS.defaultCamera,
+  focalMm: byId(CAMERAS.cameras, CAMERAS.defaultCamera).focalLengthMm.default,
+  resIndex: 0,
+  tiltMode: "recommended",
+  tiltDeg: null,
+  depthM: null,
+};
+
+const STATUS_LABEL = { best: "Best", acceptable: "Acceptable", out_of_range: "Out of range" };
+const f1 = (n) => n.toFixed(1);
+const f2 = (n) => n.toFixed(2);
+const chip = (status, text) => `<span class="chip ${status}">${text ?? STATUS_LABEL[status]}</span>`;
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+function compute() {
+  const profile = byId(profiles, state.profileId);
+  const camera = byId(CAMERAS.cameras, state.cameraId);
+  const resolution = camera.resolutions[state.resIndex] ?? camera.resolutions[0];
+  const optics = { sensorWidthMm: camera.sensorWidthMm, focalLengthMm: state.focalMm, resolution };
+  const following = state.distanceM === null;
+  const distanceM = following ? recommendedDistance(state.heightM, profile) : state.distanceM;
+  const result = evaluatePlacement({
+    profile,
+    heightM: state.heightM,
+    distanceM,
+    camera: optics,
+    tiltDeg: state.tiltMode === "manual" && state.tiltDeg !== null ? state.tiltDeg : undefined,
+    availableDepthM: state.depthM ?? undefined,
+  });
+  return { profile, camera, optics, distanceM, following, result };
+}
+
+function verdictCopy(ctx) {
+  const { result } = ctx;
+  if (!result.countingLine.framed) return { head: "Placement fails", why: "The person at the counting line is cut off in the frame." };
+  if (result.verdict === "best") return { head: "Placement works", why: `Feet angle ${f1(result.feet.angleDeg)}° is inside the Best band.` };
+  if (result.verdict === "acceptable") return { head: "Works, not ideal", why: `Feet angle ${f1(result.feet.angleDeg)}° is only Acceptable.` };
+  return { head: "Placement fails", why: `Feet angle ${f1(result.feet.angleDeg)}° is outside the ${ctx.profile.name} bands.` };
+}
+
+function faceLineCopy(ctx) {
+  const { result, profile } = ctx;
+  const fl = result.faceLine;
+  const vFov = result.optics.verticalFovDeg;
+  if (fl.reason === "camera_below_face_point") return { state: "Not visible", text: `The camera is not above the ${f2(profile.facePointM)} m face point.` };
+  if (fl.reason === "beyond_available_depth") {
+    return { state: "Not visible", text: `The face line needs ${f2(fl.distanceM)} m of floor; the site has ${f2(state.depthM)} m. Mount lower to bring it closer.` };
+  }
+  if (fl.reason === "outside_frame") {
+    const lo = result.feet.angleDeg - vFov / 2;
+    const hi = Math.min(fl.angleDeg + vFov / 2, result.countingLine.headAngleDeg + vFov / 2);
+    const canFix = lo <= hi;
+    return {
+      state: "Not visible",
+      text: canFix
+        ? `The face line is outside the frame. A tilt between ${f1(Math.max(lo, 0))}° and ${f1(hi)}° frames both lines.`
+        : `No single tilt frames both lines. Use a wider lens (shorter focal length) to see the face line.`,
+    };
+  }
+  if (fl.coincides) return { state: "Visible", text: "The face is already Best at the counting line, so both lines coincide." };
+  const gap = fl.distanceM - ctx.distanceM;
+  return { state: "Visible", text: `${f2(Math.abs(gap))} m ${gap > 0 ? "beyond" : "in front of"} the counting line, face angle ${f1(fl.angleDeg)}°.` };
+}
+
+// ---- Side elevation drawing ----
+let sideFrame = null;
+
+function person(x, groundY, s, heightM, color, opacity) {
+  const headR = 0.11 * s;
+  const bodyTop = groundY - (heightM - 0.24) * s;
+  const w = 0.36 * s;
+  return `<g fill="${color}" fill-opacity="${opacity}">
+    <circle cx="${x}" cy="${groundY - (heightM - 0.11) * s}" r="${headR}"/>
+    <rect x="${x - w / 2}" y="${bodyTop}" width="${w}" height="${groundY - bodyTop}" rx="${w / 2.6}"/>
+  </g>`;
+}
+
+function sideView(ctx, W = 920, H = 470, compact = false) {
+  const { result, profile } = ctx;
+  const h = state.heightM;
+  const d = ctx.distanceM;
+  const fl = result.faceLine;
+  const needed = Math.max(d, fl.distanceM ?? 0, state.depthM ?? 0, 3) * 1.16;
+  const padL = compact ? 44 : 64, padR = 24, padT = compact ? 20 : 30, padB = 64;
+  const s = Math.min((W - padL - padR) / needed, (H - padT - padB) / (Math.max(h, profile.humanHeightM) * 1.12));
+  // When height limits the scale, extend the floor to use the full width.
+  const extent = (W - padL - padR) / s;
+  const x0 = padL, gy = H - padB;
+  const X = (m) => x0 + m * s, Y = (m) => gy - m * s;
+  sideFrame = { x0, s, W };
+  const camX = X(0), camY = Y(h);
+  const tilt = result.tilt.value, v = result.optics.verticalFovDeg;
+  const ray = (deg) => {
+    const r = deg * Math.PI / 180;
+    if (deg > 0.5) {
+      const reach = Math.min(h / Math.tan(r), extent);
+      return [X(reach), Y(h - reach * Math.tan(r))];
+    }
+    return [X(extent), Y(h - extent * Math.tan(r))];
+  };
+  const [tx, ty] = ray(tilt - v / 2), [bx, by] = ray(tilt + v / 2);
+  const step = extent > 16 ? 4 : extent > 8 ? 2 : 1;
+  let ticks = "";
+  const lastTick = Math.floor(extent / step) * step;
+  for (let m = 0; m <= extent; m += step) {
+    ticks += `<line x1="${X(m)}" x2="${X(m)}" y1="${gy}" y2="${gy + 6}" stroke="var(--ink-soft)"/><text x="${X(m)}" y="${gy + 20}" text-anchor="middle" font-size="11" fill="var(--ink-soft)">${m === lastTick ? `${m} m` : m}</text>`;
+  }
+  // Stack the two line labels when they would collide.
+  const faceLabelY = fl.distanceM !== null && Math.abs(X(fl.distanceM) - X(d)) < 170 ? gy + 54 : gy + 36;
+  const depth = state.depthM !== null
+    ? `<g><line x1="${X(state.depthM)}" x2="${X(state.depthM)}" y1="${gy}" y2="${padT}" stroke="var(--ink)" stroke-width="2"/>
+        <text x="${X(state.depthM) - 6}" y="${padT + 12}" text-anchor="end" font-size="11" fill="var(--ink)">available depth ${f2(state.depthM)} m</text></g>`
+    : "";
+  const countColor = "var(--counting)", faceColor = "var(--face)";
+  const feetX = X(d);
+  const faceLine = fl.distanceM !== null && !fl.coincides
+    ? `<g>
+        <line x1="${X(fl.distanceM)}" x2="${X(fl.distanceM)}" y1="${gy - 4}" y2="${gy + 4}" stroke="${faceColor}" stroke-width="6"/>
+        ${person(X(fl.distanceM), gy, s, profile.humanHeightM, faceColor, fl.visible ? 0.55 : 0.2)}
+        <line x1="${camX}" y1="${camY}" x2="${X(fl.distanceM)}" y2="${Y(profile.facePointM)}" stroke="${faceColor}" stroke-width="1.5" stroke-dasharray="${fl.visible ? "6 4" : "2 4"}"/>
+        <text x="${X(fl.distanceM)}" y="${faceLabelY}" text-anchor="middle" font-size="12" font-weight="600" fill="${faceColor}">face line ${f2(fl.distanceM)} m${fl.visible ? "" : " · not visible"}</text>
+      </g>`
+    : "";
+  const faceRay = fl.coincides
+    ? `<line x1="${camX}" y1="${camY}" x2="${feetX}" y2="${Y(profile.facePointM)}" stroke="${faceColor}" stroke-width="1.5" stroke-dasharray="6 4"/>`
+    : "";
+  return `<svg class="diagram" viewBox="0 0 ${W} ${H}" role="img" aria-label="Side view: camera at ${f2(h)} m, counting line at ${f2(d)} m${fl.distanceM ? `, face line at ${f2(fl.distanceM)} m` : ""}">
+    <polygon points="${camX},${camY} ${tx},${ty} ${bx},${by}" fill="var(--counting)" fill-opacity="0.07" stroke="var(--counting)" stroke-opacity="0.35"/>
+    <line x1="${X(0)}" x2="${X(extent)}" y1="${gy}" y2="${gy}" stroke="var(--ink)" stroke-width="1.5"/>
+    ${ticks}
+    <line x1="${camX}" x2="${camX}" y1="${gy}" y2="${camY}" stroke="var(--ink)" stroke-width="3"/>
+    <g transform="translate(${camX} ${camY}) rotate(${tilt})"><rect x="-2" y="-7" width="30" height="14" rx="3" fill="var(--ink)"/><rect x="26" y="-5" width="6" height="10" fill="var(--ink-soft)"/></g>
+    <line x1="${padL - 28}" x2="${padL - 28}" y1="${gy}" y2="${camY}" stroke="var(--ink-soft)" marker-start="url(#tick)" marker-end="url(#tick)"/>
+    <text x="${padL - 34}" y="${(gy + camY) / 2}" text-anchor="middle" font-size="12" fill="var(--ink)" transform="rotate(-90 ${padL - 34} ${(gy + camY) / 2})">${f2(h)} m</text>
+    ${depth}
+    ${faceLine}
+    <g class="drag-handle" data-drag="counting">
+      <rect x="${feetX - 18}" y="${Y(profile.humanHeightM) - 8}" width="36" height="${profile.humanHeightM * s + 16}" fill="transparent"/>
+      <line x1="${feetX}" x2="${feetX}" y1="${gy - 4}" y2="${gy + 4}" stroke="${countColor}" stroke-width="6"/>
+      ${person(feetX, gy, s, profile.humanHeightM, result.countingLine.framed ? "var(--ink)" : "var(--out)", 0.78)}
+    </g>
+    <line x1="${camX}" y1="${camY}" x2="${feetX}" y2="${gy}" stroke="${countColor}" stroke-width="1.8" stroke-dasharray="6 4"/>
+    ${faceRay}
+    <text x="${feetX}" y="${gy + 36}" text-anchor="middle" font-size="12" font-weight="600" fill="${countColor}">counting line ${f2(d)} m</text>
+    <text x="${camX + 40}" y="${camY - 10}" font-size="12" fill="var(--ink)">feet ${f1(result.feet.angleDeg)}° · tilt ${f1(tilt)}°</text>
+    <defs><marker id="tick" viewBox="0 0 10 2" refX="5" refY="1" markerWidth="10" markerHeight="2" orient="auto"><rect width="10" height="2" fill="var(--ink-soft)"/></marker></defs>
+  </svg>`;
+}
+
+// ---- Camera's-eye view ----
+function eyeView(ctx, W = 232) {
+  const { result, profile, optics } = ctx;
+  const aspect = optics.resolution.h / optics.resolution.w;
+  const H = Math.round(W * aspect);
+  const tilt = result.tilt.value, v = result.optics.verticalFovDeg, hf = result.optics.horizontalFovDeg;
+  const rad = Math.PI / 180;
+  const y = (deg) => H * (0.5 + Math.tan((deg - tilt) * rad) / (2 * Math.tan((v / 2) * rad)));
+  const h = state.heightM;
+  const pxPerM = (dist) => W / (2 * Math.hypot(h, dist) * Math.tan((hf / 2) * rad));
+  const figure = (dist, color, op) => {
+    const feetY = y(feetAngle(h, dist));
+    const headY = y(Math.atan2(h - profile.humanHeightM, dist) / rad);
+    const w = 0.45 * pxPerM(dist);
+    return `<line x1="0" x2="${W}" y1="${feetY}" y2="${feetY}" stroke="${color}" stroke-width="2"/>
+      <rect x="${W / 2 - w / 2}" y="${headY}" width="${w}" height="${Math.max(2, feetY - headY)}" rx="${w / 3}" fill="${color}" fill-opacity="${op}"/>`;
+  };
+  const fl = result.faceLine;
+  const faceFig = fl.distanceM !== null && !fl.coincides ? figure(fl.distanceM, "var(--face)", 0.45) : "";
+  const offTop = fl.reason === "outside_frame" ? `<text x="${W / 2}" y="14" text-anchor="middle" font-size="11" fill="var(--face)">face line above frame ↑</text>` : "";
+  const horizonY = y(0);
+  const farthest = Math.ceil(Math.max(ctx.distanceM, fl.distanceM ?? 0) * 2.5);
+  let floorLines = "";
+  for (let m = 1; m <= farthest; m += 1) {
+    const ly = y(feetAngle(h, m));
+    if (ly < 0 || ly > H) continue;
+    floorLines += `<line x1="0" x2="${W}" y1="${ly}" y2="${ly}" stroke="var(--ink-soft)" stroke-opacity="0.22"/><text x="4" y="${ly - 2}" font-size="9" fill="var(--ink-soft)">${m} m</text>`;
+  }
+  return `<svg class="diagram" viewBox="0 0 ${W} ${H}" role="img" aria-label="What the camera sees at ${f1(tilt)} degrees tilt">
+    <defs><clipPath id="eyeclip"><rect width="${W}" height="${H}"/></clipPath></defs>
+    <rect width="${W}" height="${H}" fill="var(--paper)"/>
+    <g clip-path="url(#eyeclip)">
+      <rect x="0" y="${Math.max(0, horizonY)}" width="${W}" height="${H}" fill="var(--ink)" fill-opacity="0.07"/>
+      ${floorLines}${faceFig}${figure(ctx.distanceM, "var(--counting)", 0.7)}
+    </g>
+    <rect width="${W}" height="${H}" fill="none" stroke="var(--rule)"/>
+    ${offTop}
+  </svg>`;
+}
+
+// ---- Shared control markup ----
+function profileSeg() {
+  return `<div class="seg" role="group" aria-label="Scene profile">${profiles.map((p) =>
+    `<button type="button" class="anim" data-action="profile" data-id="${p.id}" aria-pressed="${p.id === state.profileId}" title="${p.description}">${p.name}</button>`).join("")}</div>`;
+}
+function stepper(id, key, step, unit, label) {
+  return `<span class="stepper"><button type="button" data-step="${key}" data-delta="${-step}" aria-label="Decrease ${label}">−</button><input id="${id}" type="number" inputmode="decimal" step="${step}" data-bind="${key}" aria-label="${label}"><button type="button" data-step="${key}" data-delta="${step}" aria-label="Increase ${label}">+</button><span class="unit">${unit}</span></span>`;
+}
+function cameraFields() {
+  const camera = byId(CAMERAS.cameras, state.cameraId);
+  const varifocal = camera.focalLengthMm.min < camera.focalLengthMm.max;
+  return `<div class="field"><label class="label" for="cameraSel">Camera model</label>
+      <select id="cameraSel" data-bind="cameraId">${CAMERAS.cameras.map((c) => `<option value="${c.id}">${c.name}</option>`).join("")}</select>
+      <span class="hint">${camera.description}</span></div>
+    <div class="field"><span class="label">Lens and resolution</span><div class="row">
+      ${varifocal ? stepper("focalIn", "focalMm", 0.1, "mm", "Focal length") : `<span class="mono">${f1(camera.focalLengthMm.default)} mm fixed</span>`}
+      <select id="resSel" data-bind="resIndex" aria-label="Resolution">${camera.resolutions.map((r, i) => `<option value="${i}">${r.label} · ${r.w}×${r.h}</option>`).join("")}</select>
+    </div></div>`;
+}
+function tiltField() {
+  return `<div class="field"><span class="label">Tilt</span><div class="row">
+      <div class="seg" role="group" aria-label="Tilt mode">
+        <button type="button" data-action="tilt" data-mode="recommended" aria-pressed="${state.tiltMode === "recommended"}">Recommended</button>
+        <button type="button" data-action="tilt" data-mode="manual" aria-pressed="${state.tiltMode === "manual"}">Manual</button>
+      </div>
+      ${state.tiltMode === "manual" ? stepper("tiltIn", "tiltDeg", 0.5, "°", "Tilt angle") : `<span class="mono" data-out="tiltRec"></span>`}
+    </div><span class="hint">Recommended aims at the middle of a person standing at the counting line.</span></div>`;
+}
+function depthField() {
+  return `<div class="field"><label class="label" for="depthIn">Available depth (optional)</label>
+    <div class="row"><input id="depthIn" class="plain-input" type="number" step="0.1" min="0" placeholder="unknown" data-bind="depthM"><span class="hint">metres of floor in view, from below the camera</span></div></div>`;
+}
+function distanceField() {
+  return `<div class="field"><span class="label">Counting line distance</span>
+    <div class="row">${stepper("distIn", "distanceM", 0.05, "m", "Counting line distance")}
+      <button type="button" class="link-btn" data-action="useRecommended" data-out="recBtn">Use recommended</button></div>
+    <span class="hint" data-out="distHint"></span></div>`;
+}
+
+// ---- Variants ----
+const VARIANTS = [
+  { key: "console", name: "A · Console", mount: mountConsole, update: updateConsole },
+  { key: "ladder", name: "B · Height ladder", mount: mountLadder, update: updateLadder },
+  { key: "field", name: "C · Field sheet", mount: mountField, update: updateField },
+];
+
+function verdictBlock(ctx) {
+  const v = verdictCopy(ctx);
+  const warn = ctx.result.warnings.includes("height_outside_range")
+    ? `<span class="warn">▲ ${f2(state.heightM)} m is outside the ${ctx.profile.name} height range (${f1(ctx.profile.heightRangeM.min)}–${f1(ctx.profile.heightRangeM.max)} m)</span>`
+    : "";
+  return `<section class="sheet verdict ${ctx.result.verdict}" aria-live="polite">
+    <span class="big">${v.head}</span><span class="why">${v.why} ${warn}</span>
+    <span class="row">${chip(ctx.result.feet.status, `Feet ${STATUS_LABEL[ctx.result.feet.status]}`)}${chip(ctx.result.faceLine.visible ? "best" : "muted", ctx.result.faceLine.visible ? "Face line visible" : "Face line not visible")}</span>
+  </section>`;
+}
+
+function calloutsBlock(ctx) {
+  const { result } = ctx;
+  const fc = faceLineCopy(ctx);
+  return `<div class="callouts">
+    <section class="sheet callout">
+      <span class="label">Counting line · decides the verdict</span>
+      <span class="dist">${f2(ctx.distanceM)}<small> m</small></span>
+      <dl class="kv"><dt>Feet angle</dt><dd>${f1(result.feet.angleDeg)}° ${chip(result.feet.status)}</dd>
+        <dt>Face here</dt><dd>${f1(result.face.angleDeg)}° ${chip(result.face.status)}</dd>
+        <dt>Framed</dt><dd>${result.countingLine.framed ? "whole person in frame" : "person cut off"}</dd>
+        <dt>Coverage</dt><dd>${f1(result.optics.coverageWidthM)} m wide · ${Math.round(result.optics.pixelsPerMetre)} px/m</dd></dl>
+    </section>
+    <section class="sheet callout face">
+      <span class="label">Face line · demographics only</span>
+      <span class="dist">${result.faceLine.distanceM === null ? "—" : f2(result.faceLine.distanceM)}<small> m</small></span>
+      <div class="row">${chip(result.faceLine.visible ? "best" : "muted", fc.state)}</div>
+      <span class="hint">${fc.text}</span>
+    </section>
+  </div>`;
+}
+
+function opticsStrip(ctx) {
+  const o = ctx.result.optics;
+  return `<div class="sheet optics"><span class="label">Optics</span>
+    <span>Vertical FOV<b>${f1(o.verticalFovDeg)}°</b></span><span>Horizontal FOV<b>${f1(o.horizontalFovDeg)}°</b></span>
+    <span>Tilt<b>${f1(ctx.result.tilt.value)}°${state.tiltMode === "manual" ? " manual" : ""}</b></span>
+    <span>Bands<b>feet ${ctx.profile.feetAngleDeg.best.min}–${ctx.profile.feetAngleDeg.best.max}° best, target ${ctx.profile.feetAngleDeg.target}°</b></span></div>`;
+}
+
+function mountConsole() {
+  return `<div class="console">
+    <aside class="sheet sheet-pad">
+      <div class="field"><span class="label">Scene profile</span>${profileSeg()}<span class="hint" data-out="profileDesc"></span></div>
+      <div class="field"><span class="label">Mount height</span>${stepper("heightIn", "heightM", 0.1, "m", "Mount height")}</div>
+      ${distanceField()}
+      ${cameraFields()}
+      ${tiltField()}
+      ${depthField()}
+    </aside>
+    <div class="main">
+      <div data-out="verdict"></div>
+      <section class="sheet stage"><div data-out="side"></div>
+        <div class="sheet eye"><div class="label">Camera's eye</div><div data-out="eye"></div></div></section>
+      <div data-out="callouts"></div>
+      <div data-out="optics"></div>
+    </div>
+  </div>`;
+}
+function updateConsole(ctx) {
+  out("profileDesc", ctx.profile.description);
+  out("verdict", verdictBlock(ctx));
+  out("side", sideView(ctx));
+  out("eye", eyeView(ctx));
+  out("callouts", calloutsBlock(ctx));
+  out("optics", opticsStrip(ctx));
+}
+
+function mountLadder() {
+  return `<div class="ladder">
+    <section class="sheet">
+      <div class="toolbar">
+        <div class="field"><span class="label">Scene profile</span>${profileSeg()}</div>
+        <div class="field"><span class="label">Lookup table</span><span class="hint" data-out="tableMeta"></span></div>
+        <div class="field" style="margin-left:auto"><button type="button" class="link-btn" data-action="copyCsv">Copy CSV</button><span class="hint" data-out="copyMsg"></span></div>
+      </div>
+      <div class="table-wrap" data-out="table"></div>
+    </section>
+    <aside>
+      <div data-out="verdict"></div>
+      <section class="sheet sheet-pad">
+        <div class="field"><span class="label">Selected height</span>${stepper("heightIn", "heightM", 0.1, "m", "Mount height")}</div>
+        ${cameraFields()}
+        ${tiltField()}
+        ${depthField()}
+      </section>
+      <section class="sheet"><div data-out="side"></div></section>
+      <div data-out="faceNote"></div>
+    </aside>
+  </div>`;
+}
+let ladderProfile = null;
+let ladderScrolledTo = null;
+function updateLadder(ctx) {
+  const rows = lookupTable(ctx.profile);
+  const maxD = Math.max(...rows.map((r) => Math.max(r.recommendedDistanceM, r.faceLineDistanceM ?? 0)));
+  const BW = 220, xs = (m) => 6 + (m / maxD) * (BW - 12);
+  if (ladderProfile !== ctx.profile.id) {
+    ladderProfile = ctx.profile.id;
+    out("tableMeta", `${rows.length} heights, ${f1(ctx.profile.heightRangeM.min)}–${f1(ctx.profile.heightRangeM.max)} m. Valid for any camera.`);
+    out("table", `<table><thead><tr><th>Height</th><th>Counting line</th><th>Feet</th><th>Face there</th><th>Face line</th><th>Both lines on the floor (0–${Math.ceil(maxD)} m)</th></tr></thead><tbody>${rows.map((r) => {
+      const fx = r.faceLineDistanceM === null ? null : xs(r.faceLineDistanceM);
+      return `<tr data-height="${f1(r.heightM)}"><td>${f1(r.heightM)} m</td><td>${f2(r.recommendedDistanceM)} m</td><td>${f1(r.feetAngleDeg)}°</td><td>${f1(r.faceAngleDeg)}° ${chip(r.faceStatus)}</td><td>${r.faceLineDistanceM === null ? "—" : f2(r.faceLineDistanceM) + " m"}</td>
+        <td><svg width="${BW}" height="16" viewBox="0 0 ${BW} 16" aria-hidden="true"><line x1="6" x2="${BW - 6}" y1="8" y2="8" stroke="var(--rule)"/>${fx === null ? "" : `<line x1="${xs(r.recommendedDistanceM)}" x2="${fx}" y1="8" y2="8" stroke="var(--face)" stroke-width="2" stroke-opacity=".5"/><circle cx="${fx}" cy="8" r="4" fill="var(--face)"/>`}<circle cx="${xs(r.recommendedDistanceM)}" cy="8" r="4.5" fill="var(--counting)"/></svg></td></tr>`;
+    }).join("")}</tbody></table>`);
+  }
+  const key = f1(state.heightM);
+  document.querySelectorAll("tbody tr").forEach((tr) => tr.classList.toggle("sel", tr.dataset.height === key));
+  if (ladderScrolledTo !== key) {
+    ladderScrolledTo = key;
+    const row = document.querySelector("tbody tr.sel");
+    if (row) row.scrollIntoView({ block: "nearest" });
+  }
+  out("verdict", verdictBlock(ctx));
+  out("side", sideView(ctx, 680, 360, true));
+  const fc = faceLineCopy(ctx);
+  out("faceNote", `<section class="sheet sheet-pad"><span class="label">Face line at this camera</span><p style="margin:6px 0 0">${chip(ctx.result.faceLine.visible ? "best" : "muted", fc.state)} ${fc.text}</p></section>`);
+}
+
+function mountField() {
+  return `<div class="field-sheet">
+    <section class="sheet steps">
+      <div class="step"><h3>Pick the scene</h3><div class="row">${profileSeg()}<span class="hint" data-out="profileDesc"></span></div></div>
+      <div class="step"><h3>Measure the mount height</h3><div>${stepper("heightIn", "heightM", 0.1, "m", "Mount height")}</div></div>
+      <div class="step"><h3>Choose the camera</h3><div>${cameraFields()}</div></div>
+      <div class="step"><h3>Measure the floor in view</h3><div>${depthField()}</div></div>
+      <div class="step"><h3>Set the tilt</h3><div>${tiltField()}</div></div>
+    </section>
+    <div style="display:grid;gap:16px">
+      <div data-out="verdict"></div>
+      <section class="sheet mark" data-out="mark"></section>
+      <section class="sheet sheet-pad"><span class="label">What the camera will see</span><div data-out="eye" style="margin-top:8px;max-width:420px"></div></section>
+    </div>
+  </div>`;
+}
+function updateField(ctx) {
+  const { result } = ctx;
+  const fc = faceLineCopy(ctx);
+  out("profileDesc", ctx.profile.description);
+  out("verdict", verdictBlock(ctx));
+  out("eye", eyeView(ctx, 420));
+  out("mark", `<span class="label">Mark on the floor, measured from directly below the camera</span>
+    <div class="mark-line"><i></i><div><b>Counting line</b><div class="hint">Feet angle ${f1(result.feet.angleDeg)}°</div></div><span class="dist">${f2(ctx.distanceM)} m</span></div>
+    <div class="mark-line face"><i></i><div><b>Face line</b><div class="hint">${fc.text}</div></div><span class="dist">${result.faceLine.distanceM === null ? "—" : f2(result.faceLine.distanceM) + " m"}</span></div>
+    <span class="label">Before you leave the site</span>
+    <ul class="checklist">
+      <li>${chip(result.feet.status, STATUS_LABEL[result.feet.status])}<span>Feet angle at the counting line is ${f1(result.feet.angleDeg)}° (Best ${ctx.profile.feetAngleDeg.best.min}–${ctx.profile.feetAngleDeg.best.max}°).</span></li>
+      <li>${chip(result.countingLine.framed ? "best" : "out_of_range", result.countingLine.framed ? "Framed" : "Cut off")}<span>A ${f2(ctx.profile.humanHeightM)} m person at the counting line fits in the frame.</span></li>
+      <li>${chip(result.faceLine.visible ? "best" : "muted", fc.state)}<span>Face line for demographics. Never fails the placement.</span></li>
+      <li>${chip("best", `Aim ${f1(result.tilt.value)}°`)}<span>Tilt the camera ${f1(result.tilt.value)}° below horizontal${state.tiltMode === "manual" ? " (your manual setting)" : ""}.</span></li>
+    </ul>`);
+}
+
+// ---- Wiring ----
+const view = document.getElementById("view");
+let current = 0;
+const out = (name, html) => document.querySelectorAll(`[data-out="${name}"]`).forEach((el) => { el.innerHTML = html; });
+
+function syncControls(ctx) {
+  const values = {
+    heightM: f1(state.heightM),
+    distanceM: f2(ctx.distanceM),
+    cameraId: state.cameraId,
+    focalMm: f1(state.focalMm),
+    resIndex: String(state.resIndex),
+    tiltDeg: state.tiltDeg === null ? f1(ctx.result.tilt.recommended) : f1(state.tiltDeg),
+    depthM: state.depthM === null ? "" : String(state.depthM),
+  };
+  document.querySelectorAll("[data-bind]").forEach((el) => {
+    if (el === document.activeElement) return;
+    el.value = values[el.dataset.bind];
+  });
+  document.querySelectorAll('[data-action="profile"]').forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === state.profileId)));
+  out("tiltRec", `${f1(ctx.result.tilt.recommended)}°`);
+  out("distHint", ctx.following ? "Following the recommended distance for this height." : `Recommended is ${f2(recommendedDistance(state.heightM, ctx.profile))} m.`);
+  document.querySelectorAll('[data-out="recBtn"]').forEach((b) => { b.disabled = ctx.following; });
+}
+
+function render() {
+  const ctx = compute();
+  VARIANTS[current].update(ctx);
+  syncControls(ctx);
+}
+function mount() {
+  view.innerHTML = VARIANTS[current].mount();
+  ladderProfile = null;
+  ladderScrolledTo = null;
+  document.getElementById("variantName").textContent = VARIANTS[current].name;
+  render();
+}
+function remount() { mount(); }
+
+function setValue(key, raw) {
+  const camera = byId(CAMERAS.cameras, state.cameraId);
+  if (key === "cameraId") {
+    const next = byId(CAMERAS.cameras, raw);
+    state.cameraId = raw;
+    state.focalMm = next.focalLengthMm.default;
+    state.resIndex = 0;
+    remount();
+    return;
+  }
+  if (key === "resIndex") { state.resIndex = Number(raw); render(); return; }
+  if (key === "depthM") {
+    const v = parseFloat(raw);
+    state.depthM = raw === "" || Number.isNaN(v) || v <= 0 ? null : v;
+    render();
+    return;
+  }
+  const v = parseFloat(raw);
+  if (Number.isNaN(v)) return;
+  if (key === "heightM") state.heightM = clamp(Math.round(v * 10) / 10, 1.6, 25);
+  if (key === "distanceM") state.distanceM = clamp(Math.round(v * 100) / 100, 0.3, 80);
+  if (key === "focalMm") state.focalMm = clamp(Math.round(v * 10) / 10, camera.focalLengthMm.min, camera.focalLengthMm.max);
+  if (key === "tiltDeg") state.tiltDeg = clamp(v, 0, 90);
+  render();
+}
+
+document.addEventListener("input", (e) => {
+  const key = e.target.dataset && e.target.dataset.bind;
+  if (key && e.target.tagName === "INPUT") setValue(key, e.target.value);
+});
+document.addEventListener("change", (e) => {
+  const key = e.target.dataset && e.target.dataset.bind;
+  if (key && e.target.tagName === "SELECT") setValue(key, e.target.value);
+  if (key && e.target.tagName === "INPUT") render();
+});
+document.addEventListener("click", (e) => {
+  const stepBtn = e.target.closest("[data-step]");
+  if (stepBtn) {
+    const key = stepBtn.dataset.step;
+    const ctx = compute();
+    const now = { heightM: state.heightM, distanceM: ctx.distanceM, focalMm: state.focalMm, tiltDeg: ctx.result.tilt.value }[key];
+    setValue(key, String(now + Number(stepBtn.dataset.delta)));
+    return;
+  }
+  const btn = e.target.closest("[data-action]");
+  if (!btn) {
+    const tr = e.target.closest("tbody tr[data-height]");
+    if (tr) { state.heightM = Number(tr.dataset.height); state.distanceM = null; render(); }
+    return;
+  }
+  const action = btn.dataset.action;
+  if (action === "profile") { state.profileId = btn.dataset.id; state.distanceM = null; render(); }
+  if (action === "useRecommended") { state.distanceM = null; render(); }
+  if (action === "tilt") {
+    if (btn.dataset.mode === "manual" && state.tiltMode !== "manual") state.tiltDeg = Math.round(compute().result.tilt.recommended * 10) / 10;
+    state.tiltMode = btn.dataset.mode;
+    remount();
+  }
+  if (action === "copyCsv") {
+    const csv = toCsv(lookupTable(compute().profile));
+    navigator.clipboard.writeText(csv)
+      .then(() => out("copyMsg", "Copied."))
+      .catch(() => out("copyMsg", "Copy was blocked by the browser. Select and copy the table instead."));
+  }
+});
+
+// Drag the counting line along the floor in the side view.
+let dragging = false;
+document.addEventListener("pointerdown", (e) => {
+  if (!e.target.closest('[data-drag="counting"]')) return;
+  dragging = true;
+  e.preventDefault();
+});
+document.addEventListener("pointermove", (e) => {
+  if (!dragging || !sideFrame) return;
+  const svg = document.querySelector('[data-out="side"] svg');
+  if (!svg) return;
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const local = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const metres = (local.x - sideFrame.x0) / sideFrame.s;
+  setValue("distanceM", String(metres));
+});
+document.addEventListener("pointerup", () => { dragging = false; });
+
+function go(delta) {
+  current = (current + delta + VARIANTS.length) % VARIANTS.length;
+  history.replaceState(null, "", `#${VARIANTS[current].key}`);
+  mount();
+}
+document.getElementById("prevVariant").addEventListener("click", () => go(-1));
+document.getElementById("nextVariant").addEventListener("click", () => go(1));
+document.addEventListener("keydown", (e) => {
+  const t = e.target;
+  if (t.closest && t.closest("input, textarea, select, [contenteditable]")) return;
+  if (e.key === "ArrowLeft") go(-1);
+  if (e.key === "ArrowRight") go(1);
+});
+function fromHash() {
+  const i = VARIANTS.findIndex((v) => `#${v.key}` === location.hash);
+  current = i < 0 ? 0 : i;
+  mount();
+}
+window.addEventListener("hashchange", fromHash);
+
+profiles.forEach(validateProfile);
+document.getElementById("rulesVersion").textContent = `rules ${RULES.version}`;
+fromHash();
+</script>
+</body>
+</html>
