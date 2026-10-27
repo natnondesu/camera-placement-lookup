@@ -36,7 +36,7 @@ face line distance    = first distance from the counting line where the face ang
 recommended tilt      = atan((H - human height / 2) / D)    aims at the middle of the person
 ```
 
-`H` is the camera height and `D` the horizontal distance from the point below the camera. Heights outside the profile's range are still judged, with a warning. The framing check uses the camera's vertical field of view around the tilt: from the datasheet for a camera with **lens options**, otherwise worked out from sensor width, focal length and resolution aspect.
+`H` is the camera height and `D` the horizontal distance from the point below the camera. Heights outside the profile's range are still judged, with a warning. The framing check uses the camera's vertical field of view around the tilt: the **datasheet field of view** when the camera model has one (exact at both ends of the zoom, estimated in between), otherwise worked out from sensor width, focal length and resolution aspect. A vertical view quoted for one stream shape is cropped or extended for another, keeping the horizontal view.
 
 A **ceiling fisheye** looks straight down (tilt fixed at 90 deg) through an equidistant lens: the image radius grows in step with the angle from straight down. The same rule places its counting line; coverage at the line is the floor seen within 80 deg of straight down, effective coverage the floor inside 80% of the image radius, and pixel density follows the lens model.
 

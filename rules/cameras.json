@@ -8,6 +8,11 @@
       "description": "1/2.7\" 5 MP dome, 2.7-13.5 mm motorized lens.",
       "sensorWidthMm": 4.8,
       "focalLengthMm": { "min": 2.7, "max": 13.5 },
+      "datasheetFov": {
+        "aspect": { "w": 4, "h": 3 },
+        "wide": { "focalLengthMm": 2.7, "hFovDeg": 100, "vFovDeg": 72 },
+        "tele": { "focalLengthMm": 13.5, "hFovDeg": 26, "vFovDeg": 20 }
+      },
       "resolutions": [
         { "label": "5 MP", "w": 2592, "h": 1944 },
         { "label": "4 MP", "w": 2688, "h": 1520 },
@@ -18,21 +23,35 @@
     {
       "id": "hikvision_dome_2mp",
       "name": "HIKVISION Dome 2MP",
-      "description": "1/2.8\" 2 MP fixed-lens dome, 2.8 mm or 4 mm lens.",
-      "lenses": [
-        { "focalLengthMm": 2.8, "hFovDeg": 107, "vFovDeg": 57 },
-        { "focalLengthMm": 4, "hFovDeg": 87, "vFovDeg": 46 }
-      ],
-      "resolutions": [{ "label": "2 MP", "w": 1920, "h": 1080 }]
+      "model": "DS-2DE2A204IW-DE3(C)",
+      "description": "DS-2DE2A204IW-DE3(C) mini PTZ: 1/2.8\" 2 MP, 2.8-12 mm motorized zoom (4x optical).",
+      "focalLengthMm": { "min": 2.8, "max": 12 },
+      "datasheetFov": {
+        "aspect": { "w": 16, "h": 9 },
+        "wide": { "focalLengthMm": 2.8, "hFovDeg": 100.5, "vFovDeg": 52.84 },
+        "tele": { "focalLengthMm": 12, "hFovDeg": 32.66, "vFovDeg": 18.356 }
+      },
+      "resolutions": [
+        { "label": "2 MP", "w": 1920, "h": 1080 },
+        { "label": "720p", "w": 1280, "h": 720 }
+      ]
     },
     {
       "id": "hikvision_dome_4mp",
       "name": "HIKVISION Dome 4MP",
-      "description": "1/3\" 4 MP fixed-lens dome, 2.8 mm lens.",
-      "lenses": [
-        { "focalLengthMm": 2.8, "hFovDeg": 98, "vFovDeg": 54 }
-      ],
-      "resolutions": [{ "label": "4 MP", "w": 2560, "h": 1440 }]
+      "model": "DS-2CD2746G2-IZS",
+      "description": "DS-2CD2746G2-IZS AcuSense dome: 1/3\" 4 MP, 2.8-12 mm motorized varifocal.",
+      "focalLengthMm": { "min": 2.8, "max": 12 },
+      "datasheetFov": {
+        "aspect": { "w": 2688, "h": 1520 },
+        "wide": { "focalLengthMm": 2.8, "hFovDeg": 108, "vFovDeg": 56 },
+        "tele": { "focalLengthMm": 12, "hFovDeg": 30, "vFovDeg": 17 }
+      },
+      "resolutions": [
+        { "label": "4 MP", "w": 2688, "h": 1520 },
+        { "label": "1080p", "w": 1920, "h": 1080 },
+        { "label": "720p", "w": 1280, "h": 720 }
+      ]
     },
     {
       "id": "generic_fisheye_12mp",

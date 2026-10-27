@@ -1976,32 +1976,6 @@
       margin-left: auto;
     }
 
-    .lens-field {
-      display: grid;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .lens-field[hidden] {
-      display: none;
-    }
-
-    .lens-seg {
-      width: 100%;
-    }
-
-    .lens-seg button {
-      flex: 1;
-      font-family: "JetBrains Mono", ui-monospace, monospace;
-    }
-
-    .lens-seg button small {
-      margin-left: 4px;
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 600;
-    }
-
     .warn-line {
       display: flex;
       gap: 8px;
@@ -2696,10 +2670,6 @@
               <select id="presetSelect" aria-label="Camera preset" data-i18n-attr="aria-label:cameraPreset"></select>
             </div>
             <p class="preset-caption" id="presetCaption"></p>
-            <div class="lens-field" id="lensField" hidden>
-              <span class="solve-label" data-i18n="lens">Lens</span>
-              <div class="solve-seg lens-seg" role="group" aria-label="Lens" data-i18n-attr="aria-label:lens" id="lensSeg"></div>
-            </div>
           </div>
         </section>
         <section class="panel">
@@ -3012,9 +2982,12 @@
  *   minPixelsPerMetre: { counting: number, face: number }
  * }} SceneProfile
  * @typedef {{ sensorWidthMm?: number, focalLengthMm?: number, resolution: { w: number, h: number },
- *            lens?: "rectilinear" | "fisheye", fovDeg?: number, hFovDeg?: number, vFovDeg?: number }} CameraOptics
+ *            lens?: "rectilinear" | "fisheye", fovDeg?: number, datasheetFov?: DatasheetFov }} CameraOptics
  *   A fisheye is ceiling-mounted looking straight down, with an equidistant lens of fovDeg.
- *   hFovDeg and vFovDeg are the manufacturer's measured view; when given they replace sensor and focal length.
+ *   datasheetFov is the manufacturer's measured view; when given it replaces sensor width.
+ * @typedef {{ focalLengthMm: number, hFovDeg: number, vFovDeg: number }} DatasheetEnd
+ * @typedef {{ aspect: { w: number, h: number }, wide: DatasheetEnd, tele: DatasheetEnd }} DatasheetFov
+ *   A lens's datasheet view at both ends of its zoom (the same end twice for a fixed lens), quoted for one stream aspect.
  * @typedef {"best" | "acceptable" | "out_of_range"} Status
  * @typedef {"outside_frame" | "camera_below_face_point"} NotVisibleReason
  */
@@ -3105,11 +3078,27 @@ const EFFECTIVE_COVERAGE = 0.8;
 // Floor seen more than this far off a fisheye's axis is squeezed against the image circle's edge.
 const FISHEYE_MAX_OFF_AXIS_DEG = 80;
 
+// Each end of the datasheet implies an effective sensor size, 2 f tan(fov / 2). Moving that size in step with the
+// focal length reproduces both ends exactly; in between it is an estimate the datasheet does not give.
+function datasheetView(camera) {
+  const { wide, tele, aspect } = camera.datasheetFov;
+  const focal = camera.focalLengthMm ?? wide.focalLengthMm;
+  const span = tele.focalLengthMm - wide.focalLengthMm;
+  const t = span > 0 ? Math.min(1, Math.max(0, (focal - wide.focalLengthMm) / span)) : 0;
+  const size = (end, deg) => 2 * end.focalLengthMm * Math.tan(toRad(deg / 2));
+  const between = (a, b) => a + (b - a) * t;
+  const width = between(size(wide, wide.hFovDeg), size(tele, tele.hFovDeg));
+  const height = between(size(wide, wide.vFovDeg), size(tele, tele.vFovDeg));
+  // The vertical view is quoted for one stream shape; another shape keeps the width and crops or extends the height.
+  const streamHeight = (height * (aspect.w / aspect.h)) / (camera.resolution.w / camera.resolution.h);
+  return { h: 2 * Math.atan(width / (2 * focal)) * DEG, v: 2 * Math.atan(streamHeight / (2 * focal)) * DEG };
+}
+
 /** @param {CameraOptics} camera @returns {number} */
 function verticalFov(camera) {
   if (isFisheye(camera)) return camera.fovDeg;
-  // Wide fixed lenses are distorted, so the datasheet's measured view beats the pinhole estimate.
-  if (camera.vFovDeg) return camera.vFovDeg;
+  // Wide lenses are distorted, so the datasheet's measured view beats the pinhole estimate.
+  if (camera.datasheetFov) return datasheetView(camera).v;
   const sensorHeightMm = camera.sensorWidthMm * (camera.resolution.h / camera.resolution.w);
   return 2 * Math.atan(sensorHeightMm / (2 * camera.focalLengthMm)) * DEG;
 }
@@ -3117,7 +3106,7 @@ function verticalFov(camera) {
 /** @param {CameraOptics} camera @returns {number} */
 function horizontalFov(camera) {
   if (isFisheye(camera)) return camera.fovDeg;
-  if (camera.hFovDeg) return camera.hFovDeg;
+  if (camera.datasheetFov) return datasheetView(camera).h;
   return 2 * Math.atan(camera.sensorWidthMm / (2 * camera.focalLengthMm)) * DEG;
 }
 
@@ -3316,7 +3305,7 @@ function toCsv(rows) {
   "defaultFocalLengthMm": 2.8
 };
     const RULES = {"version":"2026-10-27","defaultProfile":"open_door","profiles":[{"id":"open_door","name":"Open door","description":"People can also walk across the front of the counted doorway, e.g. a store entrance.","heightRangeM":{"min":2,"max":10,"step":0.1},"facePointM":1.5,"humanHeightM":1.7,"feetAngleDeg":{"target":41,"best":{"min":38,"max":43},"acceptable":{"min":38,"max":48}},"faceAngleDeg":{"best":{"min":10,"max":25},"acceptableMax":30},"minPixelsPerMetre":{"counting":80,"face":200}},{"id":"corridor","name":"Corridor","description":"People can only move in one direction through the view, e.g. a mall entrance or an escalator.","heightRangeM":{"min":2,"max":10,"step":0.1},"facePointM":1.5,"humanHeightM":1.7,"feetAngleDeg":{"target":38,"best":{"min":35,"max":43},"acceptable":{"min":33,"max":48}},"faceAngleDeg":{"best":{"min":10,"max":25},"acceptableMax":30},"minPixelsPerMetre":{"counting":80,"face":200}}]};
-    const CAMERA_CATALOG = {"version":"2026-10-27","defaultCamera":"dahua_hdbw2531r_zs_s2","cameras":[{"id":"dahua_hdbw2531r_zs_s2","name":"Dahua DH-IPC-HDBW2531R-ZS-S2","description":"1/2.7\" 5 MP dome, 2.7-13.5 mm motorized lens.","sensorWidthMm":4.8,"focalLengthMm":{"min":2.7,"max":13.5},"resolutions":[{"label":"5 MP","w":2592,"h":1944},{"label":"4 MP","w":2688,"h":1520},{"label":"3 MP","w":2304,"h":1296},{"label":"1080p","w":1920,"h":1080}]},{"id":"hikvision_dome_2mp","name":"HIKVISION Dome 2MP","description":"1/2.8\" 2 MP fixed-lens dome, 2.8 mm or 4 mm lens.","lenses":[{"focalLengthMm":2.8,"hFovDeg":107,"vFovDeg":57},{"focalLengthMm":4,"hFovDeg":87,"vFovDeg":46}],"resolutions":[{"label":"2 MP","w":1920,"h":1080}]},{"id":"hikvision_dome_4mp","name":"HIKVISION Dome 4MP","description":"1/3\" 4 MP fixed-lens dome, 2.8 mm lens.","lenses":[{"focalLengthMm":2.8,"hFovDeg":98,"vFovDeg":54}],"resolutions":[{"label":"4 MP","w":2560,"h":1440}]},{"id":"generic_fisheye_12mp","name":"Fisheye 12 MP, 180° (generic)","description":"Ceiling mount looking straight down. 180° equidistant lens, 2992 × 2992 image circle.","lens":"fisheye","fovDeg":180,"sensorWidthMm":5.6,"focalLengthMm":{"min":1.2,"max":1.2},"resolutions":[{"label":"12 MP","w":2992,"h":2992}]}]};
+    const CAMERA_CATALOG = {"version":"2026-10-27","defaultCamera":"dahua_hdbw2531r_zs_s2","cameras":[{"id":"dahua_hdbw2531r_zs_s2","name":"Dahua DH-IPC-HDBW2531R-ZS-S2","description":"1/2.7\" 5 MP dome, 2.7-13.5 mm motorized lens.","sensorWidthMm":4.8,"focalLengthMm":{"min":2.7,"max":13.5},"datasheetFov":{"aspect":{"w":4,"h":3},"wide":{"focalLengthMm":2.7,"hFovDeg":100,"vFovDeg":72},"tele":{"focalLengthMm":13.5,"hFovDeg":26,"vFovDeg":20}},"resolutions":[{"label":"5 MP","w":2592,"h":1944},{"label":"4 MP","w":2688,"h":1520},{"label":"3 MP","w":2304,"h":1296},{"label":"1080p","w":1920,"h":1080}]},{"id":"hikvision_dome_2mp","name":"HIKVISION Dome 2MP","model":"DS-2DE2A204IW-DE3(C)","description":"DS-2DE2A204IW-DE3(C) mini PTZ: 1/2.8\" 2 MP, 2.8-12 mm motorized zoom (4x optical).","focalLengthMm":{"min":2.8,"max":12},"datasheetFov":{"aspect":{"w":16,"h":9},"wide":{"focalLengthMm":2.8,"hFovDeg":100.5,"vFovDeg":52.84},"tele":{"focalLengthMm":12,"hFovDeg":32.66,"vFovDeg":18.356}},"resolutions":[{"label":"2 MP","w":1920,"h":1080},{"label":"720p","w":1280,"h":720}]},{"id":"hikvision_dome_4mp","name":"HIKVISION Dome 4MP","model":"DS-2CD2746G2-IZS","description":"DS-2CD2746G2-IZS AcuSense dome: 1/3\" 4 MP, 2.8-12 mm motorized varifocal.","focalLengthMm":{"min":2.8,"max":12},"datasheetFov":{"aspect":{"w":2688,"h":1520},"wide":{"focalLengthMm":2.8,"hFovDeg":108,"vFovDeg":56},"tele":{"focalLengthMm":12,"hFovDeg":30,"vFovDeg":17}},"resolutions":[{"label":"4 MP","w":2688,"h":1520},{"label":"1080p","w":1920,"h":1080},{"label":"720p","w":1280,"h":720}]},{"id":"generic_fisheye_12mp","name":"Fisheye 12 MP, 180° (generic)","description":"Ceiling mount looking straight down. 180° equidistant lens, 2992 × 2992 image circle.","lens":"fisheye","fovDeg":180,"sensorWidthMm":5.6,"focalLengthMm":{"min":1.2,"max":1.2},"resolutions":[{"label":"12 MP","w":2992,"h":2992}]}]};
 
     const SENSOR_SIZES = [{"id":"1/4","label":"1/4\" format - 3.6 mm width","widthMm":3.6},{"id":"1/2.7","label":"1/2.7\" format - 4.8 mm width","widthMm":4.8},{"id":"1/2.3","label":"1/2.3\" format - 5.37 mm width","widthMm":5.37},{"id":"1/2","label":"1/2\" format - 6.4 mm width","widthMm":6.4},{"id":"1/1.2","label":"1/1.2\" format - 8.8 mm width","widthMm":8.8}];
 
@@ -3341,10 +3330,7 @@ function toCsv(rows) {
       if (!camera) return CUSTOM_PRESET;
       const sensor = SENSOR_SIZES.find((item) => Math.abs(item.widthMm - camera.sensorWidthMm) < 0.01);
       const first = camera.resolutions[0];
-      const lenses = camera.lenses || null;
-      const focal = lenses
-        ? { min: Math.min(...lenses.map((l) => l.focalLengthMm)), max: Math.max(...lenses.map((l) => l.focalLengthMm)) }
-        : camera.focalLengthMm;
+      const focal = camera.focalLengthMm;
       return {
         caption: camera.description,
         sensorId: sensor ? sensor.id : "1/2.7",
@@ -3355,7 +3341,7 @@ function toCsv(rows) {
         focalDefaultMm: focal.min,
         lens: camera.lens || "rectilinear",
         fovDeg: camera.fovDeg || null,
-        lenses: lenses,
+        datasheetFov: camera.datasheetFov || null,
         resolutions: camera.resolutions.map((r) => ({ label: r.label + " - " + r.w + " x " + r.h, w: r.w, h: r.h })),
         defaultResolution: first.w + "x" + first.h
       };
@@ -3368,7 +3354,6 @@ function toCsv(rows) {
         densityWarn: "Only {ppm} px/m at the counting line, below the {min} px/m floor: people may be missed. Mount lower, or use a higher-resolution camera or a longer lens.",
         tooSmall: "Too small",
         faceTooSmall: "In frame, but only {ppm} px/m at the face (floor {min} px/m): too few pixels for demographics. Never fails the placement.",
-        lens: "Lens",
         subtitle: "Geometry console", countingLineAt: "Counting line at", entranceShort: "Entrance", entryCovered: "in view",
         entryTight: "edges at frame rim", entryTooWide: "too wide", allControls: "All controls", lower: "Lower", raise: "Raise", viewTabs: "View", visualizer: "Visualizer", ruleTable: "Rule table", language: "Language",
         placementControls: "Placement controls", scene: "Scene", rulesVersion: "rules {version}",
@@ -3447,7 +3432,6 @@ function toCsv(rows) {
         densityWarn: "ที่เส้นนับมีเพียง {ppm} px/m ต่ำกว่าเกณฑ์ {min} px/m อาจนับคนได้ไม่ครบ ติดตั้งให้ต่ำลง หรือใช้กล้องความละเอียดสูงขึ้นหรือเลนส์ยาวขึ้น",
         tooSmall: "เล็กเกินไป",
         faceTooSmall: "อยู่ในภาพ แต่ที่ใบหน้ามีเพียง {ppm} px/m (เกณฑ์ {min} px/m) พิกเซลน้อยเกินไปสำหรับข้อมูลเพศ/อายุ ไม่ทำให้ตำแหน่งไม่ผ่าน",
-        lens: "เลนส์",
         subtitle: "เครื่องมือคำนวณตำแหน่งกล้อง", countingLineAt: "เส้นนับที่", entranceShort: "ทางเข้า", entryCovered: "อยู่ในภาพ",
         entryTight: "ขอบอยู่ริมภาพ", entryTooWide: "กว้างเกินภาพ", allControls: "ตั้งค่าทั้งหมด", lower: "ลด", raise: "เพิ่ม", viewTabs: "มุมมอง", visualizer: "แผนภาพ", ruleTable: "ตารางกฎ", language: "ภาษา",
         placementControls: "ตั้งค่าตำแหน่ง", scene: "ลักษณะพื้นที่", rulesVersion: "กฎ {version}",
@@ -3522,8 +3506,8 @@ function toCsv(rows) {
         sceneDesc_corridor: "คนเดินผ่านภาพได้ทางเดียว ไม่มีคนเดินตัดผ่าน เช่น ทางเข้าห้าง หรือบันไดเลื่อน",
         camDesc_custom: "กำหนดเอง ปรับขนาดเซนเซอร์ ความยาวโฟกัส และความละเอียดได้",
         camDesc_dahua_hdbw2531r_zs_s2: "โดม 5 MP เซนเซอร์ 1/2.7 นิ้ว เลนส์ซูมมอเตอร์ 2.7-13.5 mm",
-        camDesc_hikvision_dome_2mp: "โดม 2 MP เซนเซอร์ 1/2.8 นิ้ว เลนส์ตายตัว 2.8 mm หรือ 4 mm",
-        camDesc_hikvision_dome_4mp: "โดม 4 MP เซนเซอร์ 1/3 นิ้ว เลนส์ตายตัว 2.8 mm",
+        camDesc_hikvision_dome_2mp: "DS-2DE2A204IW-DE3(C) กล้อง PTZ ขนาดเล็ก เซนเซอร์ 1/2.8 นิ้ว 2 MP ซูมออปติคอล 4 เท่า 2.8-12 mm",
+        camDesc_hikvision_dome_4mp: "DS-2CD2746G2-IZS โดม AcuSense เซนเซอร์ 1/3 นิ้ว 4 MP เลนส์ปรับระยะมอเตอร์ 2.8-12 mm",
         camDesc_generic_fisheye_12mp: "ติดเพดาน มองตรงลง เลนส์ฟิชอาย 180° ภาพวงกลม 2992 × 2992"
       }
     };
@@ -3609,7 +3593,6 @@ function toCsv(rows) {
       entranceInput: byId("entranceInput"), entranceLine: byId("entranceLine"),
       tiltRange: byId("tiltRange"), tiltHint: byId("tiltHint"), tiltInput: byId("tiltInput"), tiltAuto: byId("tiltAuto"),
       sensorField: byId("sensorField"), sensorSelect: byId("sensorSelect"), focalField: byId("focalField"),
-      lensField: byId("lensField"), lensSeg: byId("lensSeg"),
       focalRange: byId("focalRange"), focalInput: byId("focalInput"), focalMinTick: byId("focalMinTick"), focalMaxTick: byId("focalMaxTick"),
       resolutionSelect: byId("resolutionSelect"),
       verdict: byId("verdict"), verdictHeadline: byId("verdictHeadline"), verdictSub: byId("verdictSub"), heightWarn: byId("heightWarn"),
@@ -3691,7 +3674,6 @@ function toCsv(rows) {
       solveMode: "distance",
       entranceM: 5,
       presetId: CAMERA_CATALOG.defaultCamera,
-      lensIndex: 0,
       topView: "sim",
       tiltUserAdjusted: false,
       tableProfileId: null,
@@ -3755,23 +3737,11 @@ function toCsv(rows) {
       return distanceM * Math.tan(toRad(profile.feetAngleDeg.target));
     }
 
-    function currentLens() {
-      const lenses = presetFor(state.presetId).lenses;
-      return lenses ? lenses[Math.min(state.lensIndex, lenses.length - 1)] : null;
-    }
-
-    function currentFocalMm() {
-      const lens = currentLens();
-      return lens ? lens.focalLengthMm : Number(els.focalInput.value);
-    }
-
-    // Fixed-lens cameras pick a lens; their sensor and focal length come with it, so those controls step aside.
-    function syncLensControls(preset) {
-      const lenses = preset.lenses;
-      els.lensField.hidden = !lenses;
-      els.sensorField.hidden = els.focalField.hidden = Boolean(lenses) || preset.lens === "fisheye";
-      if (!lenses) return;
-      els.lensSeg.innerHTML = lenses.map((lens, i) => '<button type="button" data-lens="' + i + '" aria-pressed="' + (i === state.lensIndex) + '">' + fmt(lens.focalLengthMm, 1) + ' mm <small>' + Math.round(lens.hFovDeg) + '° × ' + Math.round(lens.vFovDeg) + '°</small></button>').join("");
+    // The sensor format only drives the view for cameras without a datasheet view; a fisheye has no zoom either.
+    function syncOpticsControls(preset) {
+      const fisheye = preset.lens === "fisheye";
+      els.sensorField.hidden = fisheye || Boolean(preset.datasheetFov);
+      els.focalField.hidden = fisheye;
     }
 
     // ---------- Placement from the engine ----------
@@ -3782,12 +3752,9 @@ function toCsv(rows) {
       const sensor = selectedSensor();
       const resolution = selectedResolution();
       const preset = presetFor(state.presetId);
-      const lens = currentLens();
       const camera = preset.lens === "fisheye"
         ? { lens: "fisheye", fovDeg: preset.fovDeg, resolution: resolution }
-        : lens
-          ? { hFovDeg: lens.hFovDeg, vFovDeg: lens.vFovDeg, focalLengthMm: lens.focalLengthMm, resolution: resolution }
-          : { sensorWidthMm: sensor.widthMm, focalLengthMm: Number(els.focalInput.value), resolution: resolution };
+        : { sensorWidthMm: sensor.widthMm, focalLengthMm: Number(els.focalInput.value), resolution: resolution, datasheetFov: preset.datasheetFov };
       const result = evaluatePlacement({
         profile: profile,
         heightM: heightM,
@@ -3850,9 +3817,8 @@ function toCsv(rows) {
 
     function applyPreset(key) {
       state.presetId = key;
-      state.lensIndex = 0;
       const preset = presetFor(key);
-      syncLensControls(preset);
+      syncOpticsControls(preset);
       els.presetCaption.textContent = cameraCaption(key, preset);
       els.sensorField.classList.toggle("locked", preset.sensorLocked);
       els.sensorSelect.disabled = preset.sensorLocked;
@@ -4676,7 +4642,7 @@ function toCsv(rows) {
       const face = faceLineCopy(p);
       const camera = els.presetSelect.options[els.presetSelect.selectedIndex].text;
       return [
-        t("readingsHead", { scene: sceneName(p.profile), height: fmt(p.heightM, 1), camera: camera, focal: fmt(currentFocalMm(), 1) }),
+        t("readingsHead", { scene: sceneName(p.profile), height: fmt(p.heightM, 1), camera: camera, focal: fmt(Number(els.focalInput.value), 1) }),
         t("readingsVerdict", { status: STATUS_LABEL[r.verdict], angle: fmt(r.feet.angleDeg, 1) }),
         t("readingsCounting", { distance: fmt(p.distanceM, 2) }),
         t("readingsFace", { distance: r.faceLine.distanceM === null ? t("none") : fmt(r.faceLine.distanceM, 2) + " m", state: face.label }),
@@ -4970,13 +4936,6 @@ function toCsv(rows) {
       update();
     }));
     els.presetSelect.addEventListener("change", (event) => applyPreset(event.target.value));
-    els.lensSeg.addEventListener("click", (event) => {
-      const button = event.target.closest("[data-lens]");
-      if (!button) return;
-      state.lensIndex = Number(button.dataset.lens);
-      els.lensSeg.querySelectorAll("[data-lens]").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
-      update();
-    });
     els.heightRange.addEventListener("input", (event) => setHeight(event.target.value));
     // While typing, a half-written number ("", "1.", "0") must not be clamped and rewritten under the cursor.
     // Valid values apply live; the field is tidied (clamped and formatted) only when the edit is committed.
@@ -5108,7 +5067,7 @@ function toCsv(rows) {
     populatePresets();
     els.presetSelect.value = state.presetId;
     const startPreset = presetFor(state.presetId);
-    syncLensControls(startPreset);
+    syncOpticsControls(startPreset);
     els.presetCaption.textContent = cameraCaption(state.presetId, startPreset);
     els.sensorSelect.value = startPreset.sensorId;
     els.sensorSelect.disabled = startPreset.sensorLocked;

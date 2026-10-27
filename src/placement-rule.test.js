@@ -319,8 +319,12 @@ test("a best band wider than the acceptable band is rejected", () => {
   assert.throws(() => validateProfile(broken), /best band/);
 });
 
-// HIKVISION Dome 2MP with the 2.8 mm lens, field of view from the datasheet
-const datasheetCamera = { hFovDeg: 107, vFovDeg: 57, resolution: { w: 1920, h: 1080 } };
+// A fixed 2.8 mm lens: the datasheet's view is the same at both ends
+const fixedEnd = { focalLengthMm: 2.8, hFovDeg: 107, vFovDeg: 57 };
+const datasheetCamera = {
+  focalLengthMm: 2.8, sensorWidthMm: 4.8, resolution: { w: 1920, h: 1080 },
+  datasheetFov: { aspect: { w: 16, h: 9 }, wide: fixedEnd, tele: fixedEnd },
+};
 
 test("a camera with a datasheet field of view uses it instead of sensor and focal length", () => {
   assert.equal(horizontalFov(datasheetCamera), 107);
@@ -336,6 +340,41 @@ test("a placement with a datasheet camera reports the datasheet field of view", 
   assert.equal(result.optics.horizontalFovDeg, 107);
   assert.equal(result.optics.verticalFovDeg, 57);
   assert.equal(result.countingLine.framed, true);
+});
+
+// Dahua DH-IPC-HDBW2531R-ZS-S2 datasheet: 100 x 72 deg at 2.7 mm, 26 x 20 deg at 13.5 mm, quoted for the 4:3 stream
+const dahuaView = {
+  aspect: { w: 4, h: 3 },
+  wide: { focalLengthMm: 2.7, hFovDeg: 100, vFovDeg: 72 },
+  tele: { focalLengthMm: 13.5, hFovDeg: 26, vFovDeg: 20 },
+};
+const zoomAt = (focalLengthMm, resolution = { w: 2592, h: 1944 }) => ({ focalLengthMm, resolution, datasheetFov: dahuaView });
+const effectiveSize = (focalMm, deg) => 2 * focalMm * Math.tan((deg * Math.PI) / 360);
+const viewFrom = (sizeMm, focalMm) => (2 * Math.atan(sizeMm / (2 * focalMm)) * 180) / Math.PI;
+
+test("a zoom lens matches its datasheet view at the wide end", () => {
+  close(horizontalFov(zoomAt(2.7)), 100, 1e-9);
+  close(verticalFov(zoomAt(2.7)), 72, 1e-9);
+});
+
+test("a zoom lens matches its datasheet view at the tele end", () => {
+  close(horizontalFov(zoomAt(13.5)), 26, 1e-9);
+  close(verticalFov(zoomAt(13.5)), 20, 1e-9);
+});
+
+test("between the ends the effective sensor width moves in step with the focal length", () => {
+  const midWidth = (effectiveSize(2.7, 100) + effectiveSize(13.5, 26)) / 2;
+  close(horizontalFov(zoomAt(8.1)), viewFrom(midWidth, 8.1), 1e-9);
+});
+
+test("a 16:9 stream keeps the horizontal view and crops the vertical", () => {
+  const camera = zoomAt(2.7, { w: 2688, h: 1520 });
+  close(horizontalFov(camera), 100, 1e-9);
+  close(verticalFov(camera), viewFrom(effectiveSize(2.7, 72) * (4 / 3) / (2688 / 1520), 2.7), 1e-9);
+});
+
+test("pixel density on a calibrated zoom uses the datasheet view", () => {
+  close(pixelDensity(zoomAt(2.7), 5, 0), 2592 / (2 * 5 * Math.tan((50 * Math.PI) / 180)), 1e-9);
 });
 
 // 90 deg horizontal view over 1920 px: 960 / slant distance pixels per metre

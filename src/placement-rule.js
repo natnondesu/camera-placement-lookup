@@ -9,9 +9,12 @@
  *   minPixelsPerMetre: { counting: number, face: number }
  * }} SceneProfile
  * @typedef {{ sensorWidthMm?: number, focalLengthMm?: number, resolution: { w: number, h: number },
- *            lens?: "rectilinear" | "fisheye", fovDeg?: number, hFovDeg?: number, vFovDeg?: number }} CameraOptics
+ *            lens?: "rectilinear" | "fisheye", fovDeg?: number, datasheetFov?: DatasheetFov }} CameraOptics
  *   A fisheye is ceiling-mounted looking straight down, with an equidistant lens of fovDeg.
- *   hFovDeg and vFovDeg are the manufacturer's measured view; when given they replace sensor and focal length.
+ *   datasheetFov is the manufacturer's measured view; when given it replaces sensor width.
+ * @typedef {{ focalLengthMm: number, hFovDeg: number, vFovDeg: number }} DatasheetEnd
+ * @typedef {{ aspect: { w: number, h: number }, wide: DatasheetEnd, tele: DatasheetEnd }} DatasheetFov
+ *   A lens's datasheet view at both ends of its zoom (the same end twice for a fixed lens), quoted for one stream aspect.
  * @typedef {"best" | "acceptable" | "out_of_range"} Status
  * @typedef {"outside_frame" | "camera_below_face_point"} NotVisibleReason
  */
@@ -102,11 +105,27 @@ const EFFECTIVE_COVERAGE = 0.8;
 // Floor seen more than this far off a fisheye's axis is squeezed against the image circle's edge.
 const FISHEYE_MAX_OFF_AXIS_DEG = 80;
 
+// Each end of the datasheet implies an effective sensor size, 2 f tan(fov / 2). Moving that size in step with the
+// focal length reproduces both ends exactly; in between it is an estimate the datasheet does not give.
+function datasheetView(camera) {
+  const { wide, tele, aspect } = camera.datasheetFov;
+  const focal = camera.focalLengthMm ?? wide.focalLengthMm;
+  const span = tele.focalLengthMm - wide.focalLengthMm;
+  const t = span > 0 ? Math.min(1, Math.max(0, (focal - wide.focalLengthMm) / span)) : 0;
+  const size = (end, deg) => 2 * end.focalLengthMm * Math.tan(toRad(deg / 2));
+  const between = (a, b) => a + (b - a) * t;
+  const width = between(size(wide, wide.hFovDeg), size(tele, tele.hFovDeg));
+  const height = between(size(wide, wide.vFovDeg), size(tele, tele.vFovDeg));
+  // The vertical view is quoted for one stream shape; another shape keeps the width and crops or extends the height.
+  const streamHeight = (height * (aspect.w / aspect.h)) / (camera.resolution.w / camera.resolution.h);
+  return { h: 2 * Math.atan(width / (2 * focal)) * DEG, v: 2 * Math.atan(streamHeight / (2 * focal)) * DEG };
+}
+
 /** @param {CameraOptics} camera @returns {number} */
 export function verticalFov(camera) {
   if (isFisheye(camera)) return camera.fovDeg;
-  // Wide fixed lenses are distorted, so the datasheet's measured view beats the pinhole estimate.
-  if (camera.vFovDeg) return camera.vFovDeg;
+  // Wide lenses are distorted, so the datasheet's measured view beats the pinhole estimate.
+  if (camera.datasheetFov) return datasheetView(camera).v;
   const sensorHeightMm = camera.sensorWidthMm * (camera.resolution.h / camera.resolution.w);
   return 2 * Math.atan(sensorHeightMm / (2 * camera.focalLengthMm)) * DEG;
 }
@@ -114,7 +133,7 @@ export function verticalFov(camera) {
 /** @param {CameraOptics} camera @returns {number} */
 export function horizontalFov(camera) {
   if (isFisheye(camera)) return camera.fovDeg;
-  if (camera.hFovDeg) return camera.hFovDeg;
+  if (camera.datasheetFov) return datasheetView(camera).h;
   return 2 * Math.atan(camera.sensorWidthMm / (2 * camera.focalLengthMm)) * DEG;
 }
 
