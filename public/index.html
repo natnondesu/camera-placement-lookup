@@ -2581,6 +2581,906 @@
         padding: 0 12px;
       }
     }
+    /* ---------- Share ---------- */
+    .share-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 40px;
+      margin-left: auto;
+      padding: 0 14px;
+      border: 1px solid var(--accent);
+      border-radius: 11px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 160ms var(--ease), color 160ms var(--ease);
+    }
+
+    .share-button:hover {
+      background: var(--accent);
+      color: var(--accent-ink);
+    }
+
+    .share-button svg {
+      width: 17px;
+      height: 17px;
+    }
+
+    .share-button + .lang-seg {
+      margin-left: 0;
+    }
+
+    .shared-banner {
+      width: min(1640px, calc(100% - 44px));
+      margin: 14px auto 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 10px 10px 14px;
+      border: 1px solid oklch(0.715 0.150 256 / 0.4);
+      border-radius: var(--radius-md);
+      background: var(--accent-dim);
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .shared-banner[hidden] {
+      display: none;
+    }
+
+    .shared-banner > div {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .shared-banner #sharedWhere {
+      color: var(--ink-soft);
+    }
+
+    .shared-banner p {
+      margin: 4px 0 0;
+      color: var(--ink-soft);
+    }
+
+    .shared-banner[data-state="warn"] {
+      border-color: oklch(0.820 0.140 82 / 0.5);
+      background: var(--ok-bg);
+    }
+
+    .shared-banner[data-state="warn"] p {
+      color: var(--ok);
+    }
+
+    .shared-dismiss,
+    .share-close {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      flex: none;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .shared-dismiss:hover,
+    .share-close:hover {
+      background: var(--surface-3);
+      color: var(--ink);
+    }
+
+    .shared-dismiss svg,
+    .share-close svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .share-dialog {
+      width: min(440px, calc(100% - 32px));
+      padding: 20px 20px 18px;
+      border: 1px solid var(--border-strong);
+      border-radius: 18px;
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: 0 30px 70px oklch(0 0 0 / 0.55);
+    }
+
+    .share-dialog::backdrop {
+      background: oklch(0.08 0.01 256 / 0.6);
+    }
+
+    .share-close-form {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      margin: 0;
+    }
+
+    .share-dialog h2 {
+      margin: 0 40px 4px 0;
+      font-size: 18px;
+    }
+
+    .share-help {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .share-field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 12px;
+      color: var(--ink-soft);
+      font-size: 12.5px;
+      font-weight: 650;
+    }
+
+    .share-field input,
+    .share-link {
+      width: 100%;
+      min-height: 44px;
+      padding: 0 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: 11px;
+      background: var(--surface-2);
+      color: var(--ink);
+      font: inherit;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .share-field input:focus,
+    .share-link:focus {
+      outline: 0;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    .share-link {
+      margin: 2px 0 14px;
+      background: var(--bg);
+      color: var(--accent);
+      font: 600 12px "JetBrains Mono", ui-monospace, monospace;
+      text-overflow: ellipsis;
+    }
+
+    .share-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .share-actions button,
+    .sheet-print,
+    .sheet-back {
+      min-height: 46px;
+      border: 1px solid var(--border-strong);
+      border-radius: 11px;
+      background: var(--surface-3);
+      color: var(--ink);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .share-actions .share-open,
+    .sheet-print {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: oklch(0.18 0.02 256);
+    }
+
+    .share-status {
+      min-height: 18px;
+      margin: 10px 0 0;
+      color: var(--best);
+      font-size: 12.5px;
+    }
+
+    /* ---------- Site sheet view ---------- */
+    .sheet-view {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      overflow: auto;
+      background: oklch(0.135 0.011 256);
+      padding: 0 16px 48px;
+    }
+
+    .sheet-view[hidden] {
+      display: none;
+    }
+
+    body.sheet-open {
+      overflow: hidden;
+    }
+
+    .sheet-toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 794px;
+      margin: 0 auto;
+      padding: 12px 0;
+      background: oklch(0.135 0.011 256);
+    }
+
+    .sheet-toolbar .lang-seg {
+      margin-left: auto;
+    }
+
+    .sheet-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 14px 0 8px;
+      background: transparent;
+    }
+
+    .sheet-back svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .sheet-print {
+      padding: 0 16px;
+    }
+
+    .sheet {
+      --paper: oklch(0.992 0.003 95);
+      --rule: oklch(0.870 0.008 256);
+      --p-ink: oklch(0.215 0.015 256);
+      --p-ink-soft: oklch(0.380 0.015 256);
+      --p-muted: oklch(0.500 0.014 256);
+      --p-best: oklch(0.520 0.150 152);
+      --p-best-bg: oklch(0.945 0.045 152);
+      --p-ok: oklch(0.520 0.115 70);
+      --p-ok-bg: oklch(0.955 0.050 85);
+      --p-bad: oklch(0.530 0.190 25);
+      --p-bad-bg: oklch(0.950 0.035 25);
+      --p-face: oklch(0.520 0.170 305);
+      --p-blue: oklch(0.520 0.150 256);
+      width: 794px;
+      max-width: 100%;
+      min-height: 1123px;
+      margin: 0 auto;
+      padding: 34px 46px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      background: var(--paper);
+      color: var(--p-ink);
+      font-size: 12.5px;
+      line-height: 1.4;
+      box-shadow: 0 30px 70px oklch(0 0 0 / 0.55);
+      color-scheme: light;
+    }
+
+    .sheet ::selection {
+      background: oklch(0.715 0.150 256 / 0.25);
+    }
+
+    .sheet-head {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--p-ink);
+    }
+
+    .sheet-title {
+      margin: 0;
+      font-size: 23px;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+    }
+
+    .site-fields {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 2px 12px;
+      margin: 8px 0 0;
+      font-size: 13px;
+    }
+
+    .site-fields dt {
+      color: var(--p-muted);
+    }
+
+    .site-fields dd {
+      margin: 0;
+      font-weight: 650;
+    }
+
+    .site-fields .fov {
+      color: var(--p-muted);
+      font-weight: 500;
+    }
+
+    .site-fields input {
+      width: 100%;
+      padding: 0 0 1px;
+      border: 0;
+      border-bottom: 1px dashed var(--rule);
+      background: transparent;
+      color: inherit;
+      font: inherit;
+    }
+
+    .site-fields input:focus {
+      outline: 0;
+      border-bottom-color: var(--p-blue);
+    }
+
+    .site-fields input::placeholder {
+      color: var(--p-muted);
+      font-weight: 500;
+    }
+
+    .meta-right {
+      display: grid;
+      gap: 3px;
+      align-content: start;
+      text-align: right;
+      color: var(--p-muted);
+      font-size: 12px;
+    }
+
+    .meta-right b {
+      color: var(--p-ink);
+      font: 600 12px "JetBrains Mono", ui-monospace, monospace;
+    }
+
+    .sheet .sh-verdict {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .sheet .sh-verdict p {
+      margin: 0;
+      color: var(--p-ink-soft);
+      font-size: 14px;
+    }
+
+    .sheet .sh-verdict p b {
+      color: var(--p-ink);
+    }
+
+    .sheet .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 12px 5px 10px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .sheet .pill::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .sheet .pill.best,
+    .sheet .sh-tag.best {
+      color: var(--p-best);
+      background: var(--p-best-bg);
+    }
+
+    .sheet .pill.ok,
+    .sheet .sh-tag.ok {
+      color: var(--p-ok);
+      background: var(--p-ok-bg);
+    }
+
+    .sheet .pill.bad,
+    .sheet .sh-tag.bad {
+      color: var(--p-bad);
+      background: var(--p-bad-bg);
+    }
+
+    .sheet .sh-tag.muted {
+      color: var(--p-muted);
+      background: oklch(0.95 0.005 256);
+    }
+
+    .sheet .steps {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      overflow: hidden;
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+    }
+
+    .sheet .steps li {
+      display: grid;
+      grid-template-columns: 34px 1fr auto;
+      gap: 14px;
+      align-items: center;
+      padding: 5px 16px 5px 12px;
+      border-top: 1px solid var(--rule);
+      line-height: 1.3;
+    }
+
+    .sheet .steps li:first-child {
+      border-top: 0;
+    }
+
+    .sheet .steps .n {
+      display: grid;
+      width: 26px;
+      height: 26px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--p-ink);
+      color: var(--paper);
+      font: 700 13px "JetBrains Mono", ui-monospace, monospace;
+    }
+
+    .sheet .steps .do {
+      font-size: 14px;
+    }
+
+    .sheet .steps .do small {
+      display: block;
+      margin-top: 1px;
+      color: var(--p-muted);
+      font-size: 12px;
+    }
+
+    .sheet .steps .v {
+      white-space: nowrap;
+      font: 700 20px "JetBrains Mono", ui-monospace, monospace;
+      letter-spacing: -0.02em;
+    }
+
+    .sheet .steps .v span {
+      margin-left: 2px;
+      color: var(--p-muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .sheet .drawings {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .sheet .drawings.single {
+      grid-template-columns: 1fr;
+    }
+
+    .sheet figure.draw {
+      position: relative;
+      margin: 0;
+      padding: 10px 12px 8px;
+      border: 1px solid var(--rule);
+      border-radius: 10px;
+    }
+
+    .sheet figure.draw figcaption {
+      margin-bottom: 4px;
+      color: var(--p-muted);
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .sheet figure.draw svg {
+      display: block;
+      width: 100%;
+      height: 176px;
+    }
+
+    .sheet figure.cam {
+      padding-bottom: 10px;
+    }
+
+    .sheet figure.cam img {
+      display: block;
+      width: 100%;
+      height: 176px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+
+    .sheet .cam-key {
+      position: absolute;
+      top: 38px;
+      left: 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      background: oklch(0.13 0.012 256 / 0.82);
+      color: oklch(0.92 0.006 256);
+      font-size: 10.5px;
+    }
+
+    .sheet .cam-key i {
+      width: 12px;
+      height: 3px;
+      border-radius: 2px;
+    }
+
+    .sheet .cam-key i.k-count {
+      background: oklch(0.78 0.165 152);
+    }
+
+    .sheet .cam-key i.k-face {
+      margin-left: 6px;
+      background: oklch(0.74 0.15 305);
+    }
+
+    .sheet svg text {
+      font-family: "Inter", "Noto Sans Thai", sans-serif;
+      font-size: 11px;
+    }
+
+    .sheet .se-num {
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-weight: 600;
+    }
+
+    .se-floor { stroke: var(--p-ink); stroke-width: 1.5; }
+    .se-band { stroke: var(--p-best); stroke-width: 5; stroke-linecap: round; }
+    .se-mast { stroke: var(--p-muted); stroke-dasharray: 3 3; }
+    .se-camera { fill: var(--p-blue); }
+    .se-ray { stroke-width: 1.6; stroke-dasharray: 6 4; fill: none; }
+    .se-aim { stroke: var(--p-blue); stroke-width: 1.2; }
+    .se-aim-dot { fill: var(--p-blue); }
+    .se-ref { stroke: var(--p-muted); }
+    .se-arc { stroke: var(--p-blue); stroke-width: 1.4; fill: none; }
+    .se-dim { stroke: var(--p-ink-soft); }
+    .se-face-dim { stroke: var(--p-face); }
+    .se-tick { stroke: var(--p-muted); stroke-dasharray: 2 2; }
+    .se-arrow { fill: var(--p-ink-soft); }
+    .se-arrow-face { fill: var(--p-face); }
+    .se-person { fill: none; stroke-width: 1.8; stroke-linecap: round; }
+    .se-ray.se-best, .se-person.se-best { stroke: var(--p-best); }
+    .se-ray.se-ok, .se-person.se-ok { stroke: var(--p-ok); }
+    .se-ray.se-bad, .se-person.se-bad { stroke: var(--p-bad); }
+    .se-ray.se-face, .se-person.se-face { stroke: var(--p-face); }
+    .se-person.se-face { opacity: 0.8; }
+    text.se-best { fill: var(--p-best); }
+    text.se-ok { fill: var(--p-ok); }
+    text.se-bad { fill: var(--p-bad); }
+    text.se-blue { fill: var(--p-blue); }
+    text.se-ink { fill: var(--p-ink); font-size: 12px; }
+    text.se-face-text, .se-label { fill: var(--p-face); }
+
+    .sheet .sh-readings {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    /* The console's lookup table styles every table; the sheet's readings start from a clean slate. */
+    .sheet .sh-readings {
+      min-width: 0;
+    }
+
+    .sheet .sh-readings th,
+    .sheet .sh-readings td {
+      position: static;
+      padding: 0;
+      background: none;
+      color: var(--p-ink);
+      font-family: inherit;
+      text-align: left;
+      white-space: normal;
+    }
+
+    .sheet .sh-readings tbody tr:hover td {
+      background: none;
+    }
+
+    .sheet .sh-readings th {
+      padding: 0 0 6px;
+      border-bottom: 1px solid var(--p-ink);
+      color: var(--p-muted);
+      text-align: left;
+      font-size: 11.5px;
+      font-weight: 650;
+    }
+
+    .sheet .sh-readings th.num {
+      text-align: right;
+    }
+
+    .sheet .sh-readings th.note {
+      padding-left: 14px;
+    }
+
+    .sheet .sh-readings td {
+      padding: 5px 0;
+      border-bottom: 1px solid var(--rule);
+      vertical-align: top;
+    }
+
+    .sheet .sh-readings td.num {
+      padding-left: 10px;
+      white-space: nowrap;
+      text-align: right;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-weight: 600;
+    }
+
+    .sheet .sh-readings td.what {
+      padding-right: 10px;
+      white-space: nowrap;
+      font-weight: 650;
+    }
+
+    .sheet .sh-readings td.face-name {
+      color: var(--p-face);
+    }
+
+    .sheet .sh-readings td.note {
+      padding-left: 14px;
+      color: var(--p-ink-soft);
+    }
+
+    .sheet .sh-tag {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 5px;
+      font-size: 11.5px;
+      font-weight: 750;
+    }
+
+    .sheet .warn {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: var(--p-ok-bg);
+      color: oklch(0.400 0.090 65);
+      font-size: 12.5px;
+    }
+
+    .sheet .warn svg {
+      width: 16px;
+      height: 16px;
+      margin-top: 1px;
+    }
+
+    .sheet .warn p {
+      margin: 0;
+    }
+
+    .sheet .warn p + p {
+      margin-top: 4px;
+    }
+
+    .sheet .check {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px 26px;
+    }
+
+    .sheet .check h3,
+    .sheet .foot h3 {
+      margin: 0 0 8px;
+      color: var(--p-muted);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+
+    .sheet .blanks {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 16px;
+    }
+
+    .sheet .blank {
+      display: grid;
+      grid-template-columns: 1fr 58px;
+      gap: 10px;
+      align-items: end;
+      font-size: 12.5px;
+    }
+
+    .sheet .blank span:last-child {
+      height: 18px;
+      border-bottom: 1px solid var(--p-ink-soft);
+      color: var(--p-muted);
+      text-align: right;
+      font: 500 11px "JetBrains Mono", ui-monospace, monospace;
+    }
+
+    .sheet .sh-ticks {
+      display: grid;
+      gap: 5px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      font-size: 12.5px;
+    }
+
+    .sheet .sh-ticks li {
+      display: grid;
+      grid-template-columns: 16px 1fr;
+      gap: 9px;
+      align-items: start;
+    }
+
+    .sheet .sh-ticks li::before {
+      content: "";
+      width: 14px;
+      height: 14px;
+      margin-top: 1px;
+      border: 1.5px solid var(--p-ink-soft);
+      border-radius: 3px;
+    }
+
+    .sheet .foot {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 18px;
+      align-items: center;
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid var(--rule);
+    }
+
+    .sheet .qr {
+      width: 92px;
+      height: 92px;
+      color: var(--p-ink);
+    }
+
+    .sheet .qr svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+
+    /* The QR code carries the whole link; the printed text only needs to be recognisable. */
+    .sheet .link {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      text-decoration: none;
+      word-break: break-all;
+      color: var(--p-blue);
+      font: 600 11.5px "JetBrains Mono", ui-monospace, monospace;
+    }
+
+    .sheet .foot p {
+      margin: 4px 0 0;
+      color: var(--p-muted);
+      font-size: 12px;
+    }
+
+    .sheet .sign {
+      display: grid;
+      gap: 12px;
+      min-width: 190px;
+    }
+
+    .sheet .sign div {
+      display: flex;
+      align-items: end;
+      height: 22px;
+      padding-bottom: 2px;
+      border-bottom: 1px solid var(--p-ink-soft);
+      color: var(--p-muted);
+      font-size: 11px;
+    }
+
+    @media screen and (max-width: 760px) {
+      .share-button {
+        width: 44px;
+        min-height: 44px;
+        padding: 0;
+        justify-content: center;
+      }
+
+      .share-button span {
+        display: none;
+      }
+
+      .icon-tab {
+        margin-left: 0;
+      }
+
+      .share-dialog {
+        width: 100%;
+        max-width: none;
+        margin: auto 0 0;
+        border-radius: 22px 22px 0 0;
+        padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+      }
+
+      .sheet-view {
+        padding: 0 0 32px;
+      }
+
+      .sheet-toolbar {
+        padding: 10px 12px;
+      }
+
+      .sheet-back span {
+        display: none;
+      }
+
+      /* On a phone the sheet reads as a page; Print still produces the A4 layout. */
+      .sheet {
+        min-height: 0;
+        padding: 22px 16px;
+      }
+
+      .sheet-head,
+      .sheet .drawings,
+      .sheet .check,
+      .sheet .foot {
+        grid-template-columns: 1fr;
+      }
+
+      .sheet .meta-right {
+        text-align: left;
+      }
+    }
+
+    @media print {
+      @page {
+        size: A4;
+        margin: 0;
+      }
+
+      body.sheet-open > *:not(.sheet-view) {
+        display: none !important;
+      }
+
+      body.sheet-open {
+        overflow: visible;
+        background: white;
+      }
+
+      .sheet-view {
+        position: static;
+        overflow: visible;
+        padding: 0;
+        background: white;
+      }
+
+      .sheet-toolbar {
+        display: none;
+      }
+
+      /* Content height, not a forced 297 mm: a page-tall minimum rounds past the page and adds a blank second one. */
+      .sheet {
+        width: 210mm;
+        max-width: none;
+        min-height: 0;
+        box-shadow: none;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -3293,6 +4193,69 @@ function toCsv(rows) {
   const header = CSV_COLUMNS.map(([name]) => name).join(",");
   const lines = rows.map((row) => CSV_COLUMNS.map(([, read]) => read(row)).join(","));
   return [header, ...lines].join("\n") + "\n";
+}
+
+/**
+ * A placement written into a link, so the link itself is the record: no server keeps anything.
+ * @typedef {{
+ *   rulesVersion: string | null, scene: string | null, camera: string | null,
+ *   focalMm: number | null, resolution: { w: number, h: number } | null, sensor: string | null,
+ *   solve: string | null, heightM: number | null, distanceM: number | null,
+ *   tiltDeg: number | null, entranceM: number | null, verdict: string | null,
+ *   site: string | null, location: string | null
+ * }} SharedPlacement
+ *   tiltDeg is set only when the tilt was set by hand; verdict is the verdict when the link was made.
+ */
+
+const NUMBERS = [
+  ["z", "focalMm", 2],
+  ["h", "heightM", 2],
+  ["d", "distanceM", 2],
+  ["t", "tiltDeg", 1],
+  ["e", "entranceM", 2],
+];
+const TEXTS = [
+  ["v", "rulesVersion"],
+  ["s", "scene"],
+  ["c", "camera"],
+  ["sn", "sensor"],
+  ["m", "solve"],
+  ["vd", "verdict"],
+  ["site", "site"],
+  ["loc", "location"],
+];
+
+const trimmed = (value, digits) => String(Number(value.toFixed(digits)));
+
+/** @param {SharedPlacement} placement @returns {string} the hash, without the leading # */
+function encodePlacement(placement) {
+  const params = new URLSearchParams();
+  const put = (key, value) => {
+    if (value !== null && value !== undefined && value !== "") params.set(key, value);
+  };
+  TEXTS.slice(0, 5).forEach(([key, field]) => put(key, placement[field]));
+  if (placement.resolution) put("r", placement.resolution.w + "x" + placement.resolution.h);
+  NUMBERS.forEach(([key, field, digits]) => {
+    if (Number.isFinite(placement[field])) put(key, trimmed(placement[field], digits));
+  });
+  TEXTS.slice(5).forEach(([key, field]) => put(key, placement[field]));
+  return params.toString();
+}
+
+/** @param {string} hash with or without the leading # @returns {SharedPlacement | null} null when it holds no placement */
+function decodePlacement(hash) {
+  const params = new URLSearchParams(String(hash || "").replace(/^#/, ""));
+  if (!params.has("s") && !params.has("c") && !params.has("h")) return null;
+  const placement = {};
+  TEXTS.forEach(([key, field]) => { placement[field] = params.get(key) || null; });
+  NUMBERS.forEach(([key, field]) => {
+    const text = params.get(key);
+    const value = Number(text);
+    placement[field] = text !== null && text !== "" && Number.isFinite(value) ? value : null;
+  });
+  const size = /^(\d+)x(\d+)$/.exec(params.get("r") || "");
+  placement.resolution = size ? { w: Number(size[1]), h: Number(size[2]) } : null;
+  return placement;
 }
 
     const RULE = {
@@ -4759,6 +5722,7 @@ function toCsv(rows) {
       const announcement = t("announce", { status: verdictLabel, feet: STATUS_LABEL[r.feet.status], face: face.label, distance: fmt(distanceM, 2) });
       window.clearTimeout(state.announceTimer);
       state.announceTimer = window.setTimeout(() => { els.placementAnnouncement.textContent = announcement; }, 240);
+      syncShareState(p);
     }
 
     // ---------- Phone and tablet ----------
@@ -5067,6 +6031,541 @@ function toCsv(rows) {
     }
     document.querySelectorAll("[data-lang]").forEach((button) => button.addEventListener("click", () => setLanguage(button.dataset.lang)));
 
+// Share links and the printable site sheet. Inlined into the console's script by generate.mjs, after the
+// console's own functions (t, fmt, els, state, currentPlacement, presetFor and friends) and before start-up.
+
+const SHEET_TEXT = {
+  en: {
+    shShare: "Share", shTitle: "Share this placement", shHelp: "The link opens this exact setup. The site sheet is a printable page.",
+    shSite: "Site", shLocation: "Location", shSiteHint: "e.g. Central World", shLocationHint: "e.g. Entrance A, camera 1",
+    shCopy: "Copy link", shCopied: "Link copied.", shCopyFailed: "Copy was blocked; select the link and copy it.", shOpenSheet: "Site sheet", shClose: "Close",
+    shBack: "Back to console", shPrint: "Print or save PDF", shViewTitle: "Site sheet",
+    shShared: "Shared placement", shDismiss: "Dismiss",
+    shVerdictChanged: "Made with rules {version} when the verdict was {then}; with today's rules it is {now}.",
+    shNewRules: "Made with rules {version}; today's rules ({today}) give the same verdict.",
+    shCameraGone: "The camera in this link ({camera}) is no longer in the catalogue; showing {current} instead.",
+    shSheetTitle: "Camera placement", shPrepared: "Prepared", shRules: "Rules", shScene: "Scene", shCamera: "Camera",
+    shFov: "{h}° × {v}° at {f} mm", shDatasheet: "(datasheet)",
+    shVerdict_best: "<b>Placement is best.</b> Feet angle {angle}° at the counting line, inside the best band {min}–{max}°.",
+    shVerdict_acceptable: "<b>Placement is acceptable.</b> Feet angle {angle}° at the counting line, outside the best band {min}–{max}° but within {amin}–{amax}°.",
+    shVerdict_out_of_range: "<b>Placement is out of range.</b> {reason}",
+    shMount: "Mount the camera above the floor", shMountHint: "Measure to the centre of the lens.",
+    shLine: "Mark the counting line out from the point below the camera", shLineHint: "Straight out, across the full entrance.",
+    shTilt: "Tilt the camera down", shTiltHint: "It aims at {aim} m on a person standing on the line.",
+    shTiltFisheye: "Point the camera straight down", shTiltFisheyeHint: "Ceiling fisheye: the lens faces the floor.",
+    shZoomWide: "Set the zoom to the widest end", shZoomTele: "Set the zoom to the longest end", shZoom: "Set the zoom",
+    shLensFixed: "Fixed lens", shFisheyeLens: "Fisheye lens, no zoom to set", shStream: "Main stream {w} × {h}.",
+    shSideTitle: "Side elevation", shCamTitle: "Camera view at the entrance (simulated)",
+    shKeyCount: "counting line {d} m", shKeyFace: "face line {d} m", shFaceLineLabel: "face line",
+    shThReading: "Reading", shThValue: "Value", shThMeaning: "Meaning",
+    shRowCount: "feet {angle}°, best band {near}–{far} m from the camera, {ppm} px/m",
+    shRowFace: "face {angle}°, {ppm} px/m at the face.", shFaceFloor: "Below the {min} px/m face floor; demographics only, never fails the placement.",
+    shRowEntrance: "inside the effective {eff} m of the {cover} m the camera covers",
+    shFaceWarn: "Faces are {ppm} px/m at the face line, under the {min} px/m floor: demographics may be unreliable. Zoom in a little or mount lower if demographics matter here.",
+    shAsInstalled: "As installed (measured)", shHeight: "Height", shCountingLine: "Counting line", shZoomBlank: "Zoom", shTiltBlank: "Tilt",
+    shOnSite: "On site", shCheck1: "Counting line marked across the full entrance", shCheck2: "Nothing blocks the view: signs, beams, doors",
+    shCheck3: "No strong backlight from glass doors or windows", shCheck4: "Power and network tested; stream visible",
+    shOpenTitle: "Open this placement", shOpenNote: "Scan or open the link to see the same placement in the console, with the live simulation.",
+    shInstalledBy: "Installed by", shDate: "Date"
+  },
+  th: {
+    shShare: "แชร์", shTitle: "แชร์ตำแหน่งนี้", shHelp: "ลิงก์นี้เปิดการตั้งค่าเดียวกันทุกอย่าง และพิมพ์เป็นใบงานติดตั้งได้",
+    shSite: "สถานที่", shLocation: "ตำแหน่ง", shSiteHint: "เช่น เซ็นทรัลเวิลด์", shLocationHint: "เช่น ทางเข้า A กล้อง 1",
+    shCopy: "คัดลอกลิงก์", shCopied: "คัดลอกลิงก์แล้ว", shCopyFailed: "เบราว์เซอร์ไม่อนุญาตให้คัดลอก เลือกลิงก์แล้วคัดลอกเอง", shOpenSheet: "ใบงานติดตั้ง", shClose: "ปิด",
+    shBack: "กลับไปหน้าคำนวณ", shPrint: "พิมพ์หรือบันทึก PDF", shViewTitle: "ใบงานติดตั้ง",
+    shShared: "ตำแหน่งที่แชร์มา", shDismiss: "ปิด",
+    shVerdictChanged: "สร้างด้วยกฎ {version} ตอนนั้นผลคือ {then} ตามกฎปัจจุบันผลคือ {now}",
+    shNewRules: "สร้างด้วยกฎ {version} กฎปัจจุบัน ({today}) ให้ผลเหมือนเดิม",
+    shCameraGone: "ไม่พบกล้องในลิงก์ ({camera}) ในรายการแล้ว แสดง {current} แทน",
+    shSheetTitle: "ตำแหน่งติดตั้งกล้อง", shPrepared: "จัดทำ", shRules: "กฎ", shScene: "ลักษณะพื้นที่", shCamera: "กล้อง",
+    shFov: "มุมรับภาพ {h}° × {v}° ที่ {f} mm", shDatasheet: "(ตามสเปก)",
+    shVerdict_best: "<b>ตำแหน่งนี้ดีที่สุด</b> มุมเท้าที่เส้นนับ {angle}° อยู่ในช่วงดีที่สุด {min}–{max}°",
+    shVerdict_acceptable: "<b>ตำแหน่งนี้พอใช้</b> มุมเท้าที่เส้นนับ {angle}° อยู่นอกช่วงดีที่สุด {min}–{max}° แต่อยู่ในช่วง {amin}–{amax}°",
+    shVerdict_out_of_range: "<b>ตำแหน่งนี้เกินเกณฑ์</b> {reason}",
+    shMount: "ติดตั้งกล้องสูงจากพื้น", shMountHint: "วัดถึงกึ่งกลางเลนส์",
+    shLine: "ทำเครื่องหมายเส้นนับ ห่างจากจุดใต้กล้อง", shLineHint: "ตรงออกไป และยาวตลอดความกว้างทางเข้า",
+    shTilt: "ก้มกล้องลง", shTiltHint: "เล็งที่ความสูง {aim} m ของคนที่ยืนบนเส้นนับ",
+    shTiltFisheye: "หันกล้องลงตรงๆ", shTiltFisheyeHint: "ฟิชอายติดเพดาน เลนส์หันลงพื้น",
+    shZoomWide: "ตั้งซูมที่ระยะกว้างสุด", shZoomTele: "ตั้งซูมที่ระยะไกลสุด", shZoom: "ตั้งซูม",
+    shLensFixed: "เลนส์ตายตัว", shFisheyeLens: "เลนส์ฟิชอาย ไม่ต้องตั้งซูม", shStream: "สตรีมหลัก {w} × {h}",
+    shSideTitle: "มุมมองด้านข้าง", shCamTitle: "ภาพจากกล้องที่ทางเข้า (จำลอง)",
+    shKeyCount: "เส้นนับ {d} m", shKeyFace: "เส้นจับใบหน้า {d} m", shFaceLineLabel: "เส้นจับใบหน้า",
+    shThReading: "รายการ", shThValue: "ค่า", shThMeaning: "ความหมาย",
+    shRowCount: "มุมเท้า {angle}° ช่วงดีที่สุด {near}–{far} m จากกล้อง {ppm} px/m",
+    shRowFace: "มุมใบหน้า {angle}° ที่ใบหน้า {ppm} px/m", shFaceFloor: "ต่ำกว่าเกณฑ์ใบหน้า {min} px/m ใช้เก็บข้อมูลเพศ/อายุเท่านั้น ไม่ทำให้ตำแหน่งไม่ผ่าน",
+    shRowEntrance: "อยู่ในช่วงใช้งานได้ {eff} m จาก {cover} m ที่กล้องมองเห็น",
+    shFaceWarn: "ที่เส้นจับใบหน้ามีเพียง {ppm} px/m ต่ำกว่าเกณฑ์ {min} px/m ข้อมูลเพศ/อายุอาจไม่แม่นยำ ซูมเข้าเล็กน้อยหรือติดตั้งให้ต่ำลงหากต้องการข้อมูลนี้",
+    shAsInstalled: "ค่าที่ติดตั้งจริง (วัดได้)", shHeight: "ความสูง", shCountingLine: "เส้นนับ", shZoomBlank: "ซูม", shTiltBlank: "มุมก้ม",
+    shOnSite: "ตรวจหน้างาน", shCheck1: "ทำเครื่องหมายเส้นนับตลอดความกว้างทางเข้าแล้ว", shCheck2: "ไม่มีสิ่งบังภาพ เช่น ป้าย คาน ประตู",
+    shCheck3: "ไม่มีแสงย้อนแรงจากประตูกระจกหรือหน้าต่าง", shCheck4: "ทดสอบไฟและเครือข่ายแล้ว เห็นภาพจากกล้อง",
+    shOpenTitle: "เปิดตำแหน่งนี้", shOpenNote: "สแกนหรือเปิดลิงก์เพื่อดูตำแหน่งเดียวกันในโปรแกรม พร้อมการจำลอง",
+    shInstalledBy: "ผู้ติดตั้ง", shDate: "วันที่"
+  }
+};
+Object.keys(SHEET_TEXT).forEach((code) => Object.assign(I18N[code], SHEET_TEXT[code]));
+
+const SHEET_ICON = {
+  share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"></path><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"></path></svg>',
+  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>',
+  warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2.5 20h19z"></path><path d="M12 10v4M12 17.5h.01"></path></svg>'
+};
+
+const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function readSaved(key) {
+  try {
+    return window.localStorage.getItem(key) || "";
+  } catch (error) {
+    return "";
+  }
+}
+
+function saveLocal(key, value) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (error) {
+    // Remembering the site is a convenience; the link still carries it.
+  }
+}
+
+state.site = readSaved("cpl-site");
+state.location = readSaved("cpl-location");
+state.sheetSnapshot = null;
+
+// ---------- Markup ----------
+(function buildShareMarkup() {
+  const share = document.createElement("button");
+  share.type = "button";
+  share.className = "share-button";
+  share.id = "shareButton";
+  share.setAttribute("data-i18n-attr", "aria-label:shShare");
+  share.innerHTML = SHEET_ICON.share + '<span data-i18n="shShare">Share</span>';
+  document.querySelector(".topbar .lang-seg").before(share);
+
+  const banner = document.createElement("div");
+  banner.className = "shared-banner";
+  banner.id = "sharedBanner";
+  banner.hidden = true;
+  banner.setAttribute("role", "status");
+  banner.innerHTML = '<div><b data-i18n="shShared">Shared placement</b> <span id="sharedWhere"></span><p id="sharedNote" hidden></p></div>' +
+    '<button type="button" class="shared-dismiss" id="sharedDismiss" data-i18n-attr="aria-label:shDismiss">' + SHEET_ICON.close + "</button>";
+  document.querySelector(".workspace").before(banner);
+
+  const dialog = document.createElement("dialog");
+  dialog.className = "share-dialog";
+  dialog.id = "shareDialog";
+  dialog.setAttribute("aria-labelledby", "shareDialogTitle");
+  dialog.innerHTML =
+    '<form method="dialog" class="share-close-form"><button class="share-close" data-i18n-attr="aria-label:shClose">' + SHEET_ICON.close + "</button></form>" +
+    '<h2 id="shareDialogTitle" data-i18n="shTitle">Share this placement</h2>' +
+    '<p class="share-help" data-i18n="shHelp"></p>' +
+    '<label class="share-field"><span data-i18n="shSite">Site</span><input id="shareSite" autocomplete="off" data-i18n-attr="placeholder:shSiteHint"></label>' +
+    '<label class="share-field"><span data-i18n="shLocation">Location</span><input id="shareLocation" autocomplete="off" data-i18n-attr="placeholder:shLocationHint"></label>' +
+    '<input class="share-link" id="shareLink" readonly aria-label="Link">' +
+    '<div class="share-actions"><button type="button" class="share-copy" id="shareCopy" data-i18n="shCopy">Copy link</button>' +
+    '<button type="button" class="share-open" id="shareOpenSheet" data-i18n="shOpenSheet">Site sheet</button></div>' +
+    '<p class="share-status" id="shareStatus" aria-live="polite"></p>';
+  document.body.appendChild(dialog);
+
+  const view = document.createElement("section");
+  view.className = "sheet-view";
+  view.id = "sheetView";
+  view.hidden = true;
+  view.setAttribute("data-i18n-attr", "aria-label:shViewTitle");
+  view.innerHTML =
+    '<div class="sheet-toolbar">' +
+      '<button type="button" class="sheet-back" id="sheetBack">' + SHEET_ICON.back + '<span data-i18n="shBack">Back to console</span></button>' +
+      '<div class="solve-seg lang-seg" role="group" aria-label="Language" data-i18n-attr="aria-label:language">' +
+        '<button type="button" data-lang="en" aria-pressed="true">EN</button><button type="button" data-lang="th" aria-pressed="false">ไทย</button>' +
+      "</div>" +
+      '<button type="button" class="sheet-print" id="sheetPrint" data-i18n="shPrint">Print or save PDF</button>' +
+    "</div>" +
+    '<article class="sheet" id="sheetPage" aria-live="off"></article>';
+  document.body.appendChild(view);
+})();
+
+Object.assign(els, {
+  shareButton: byId("shareButton"), sharedBanner: byId("sharedBanner"), sharedWhere: byId("sharedWhere"), sharedNote: byId("sharedNote"),
+  shareDialog: byId("shareDialog"), shareSite: byId("shareSite"), shareLocation: byId("shareLocation"), shareLink: byId("shareLink"),
+  shareStatus: byId("shareStatus"), sheetView: byId("sheetView"), sheetPage: byId("sheetPage")
+});
+
+// ---------- The link ----------
+function sharedPlacementFrom(p) {
+  const preset = presetFor(state.presetId);
+  return {
+    rulesVersion: RULES.version,
+    scene: p.profile.id,
+    camera: state.presetId,
+    focalMm: preset.lens === "fisheye" ? null : Number(els.focalInput.value),
+    resolution: p.resolution ? { w: p.resolution.w, h: p.resolution.h } : null,
+    sensor: state.presetId === "custom" ? els.sensorSelect.value : null,
+    solve: state.solveMode,
+    heightM: p.heightM,
+    distanceM: p.distanceM,
+    tiltDeg: state.tiltUserAdjusted && preset.lens !== "fisheye" ? Number(els.tiltInput.value) : null,
+    entranceM: state.entranceM,
+    verdict: p.result.verdict,
+    site: state.site,
+    location: state.location
+  };
+}
+
+function shareUrl(p) {
+  return location.href.split("#")[0] + "#" + encodePlacement(sharedPlacementFrom(p));
+}
+
+let hashTimer = null;
+// Called at the end of every update: the address bar always holds the current placement, and an open sheet follows it.
+function syncShareState(p) {
+  window.clearTimeout(hashTimer);
+  hashTimer = window.setTimeout(() => {
+    const hash = encodePlacement(sharedPlacementFrom(p));
+    if (location.hash.slice(1) !== hash) history.replaceState(null, "", "#" + hash);
+  }, 250);
+  if (els.shareDialog.open) els.shareLink.value = shareUrl(p);
+  if (!els.sheetView.hidden) renderSheet(p);
+}
+
+// A link opened on another device restores everything it carries, then says where it came from.
+function restoreSharedPlacement() {
+  const shared = decodePlacement(location.hash);
+  if (!shared) return;
+  const notes = [];
+  if (shared.scene && RULES.profiles.some((profile) => profile.id === shared.scene)) {
+    state.profileId = shared.scene;
+    populateScenes();
+  }
+  if (shared.camera) {
+    const known = shared.camera === "custom" || CAMERA_CATALOG.cameras.some((camera) => camera.id === shared.camera);
+    if (known) {
+      els.presetSelect.value = shared.camera;
+      applyPreset(shared.camera);
+    } else {
+      notes.push(t("shCameraGone", { camera: shared.camera, current: els.presetSelect.selectedOptions[0].textContent }));
+    }
+  }
+  if (shared.sensor && state.presetId === "custom") els.sensorSelect.value = shared.sensor;
+  if (shared.focalMm !== null) setFieldValue(els.focalInput, els.focalRange, shared.focalMm, 1);
+  if (shared.resolution) {
+    const key = shared.resolution.w + "x" + shared.resolution.h;
+    if ([...els.resolutionSelect.options].some((option) => option.value === key)) els.resolutionSelect.value = key;
+  }
+  if (shared.heightM !== null) setFieldValue(els.heightInput, els.heightRange, shared.heightM, 1);
+  if (shared.distanceM !== null) setFieldValue(els.distanceInput, els.distanceRange, shared.distanceM, 2);
+  if (shared.tiltDeg !== null) {
+    state.tiltUserAdjusted = true;
+    setFieldValue(els.tiltInput, els.tiltRange, shared.tiltDeg, 1);
+  }
+  state.entranceM = shared.entranceM;
+  els.entranceInput.value = shared.entranceM === null ? "" : String(shared.entranceM);
+  if (shared.site !== null) state.site = shared.site;
+  if (shared.location !== null) state.location = shared.location;
+  setSolveMode(["distance", "height", "manual"].includes(shared.solve) ? shared.solve : "distance");
+
+  const now = currentPlacement().result.verdict;
+  let warn = notes.length > 0;
+  if (shared.verdict && STATUS_LABEL[shared.verdict] && shared.verdict !== now) {
+    notes.push(t("shVerdictChanged", { version: shared.rulesVersion || "?", then: STATUS_LABEL[shared.verdict], now: STATUS_LABEL[now] }));
+    warn = true;
+  } else if (shared.rulesVersion && shared.rulesVersion !== RULES.version) {
+    notes.push(t("shNewRules", { version: shared.rulesVersion, today: RULES.version }));
+  }
+  els.sharedWhere.textContent = [shared.site, shared.location].filter(Boolean).join(" · ");
+  els.sharedNote.textContent = notes.join(" ");
+  els.sharedNote.hidden = notes.length === 0;
+  els.sharedBanner.dataset.state = warn ? "warn" : "info";
+  els.sharedBanner.hidden = false;
+}
+
+// ---------- Share dialog ----------
+function openShareDialog() {
+  els.shareSite.value = state.site;
+  els.shareLocation.value = state.location;
+  els.shareLink.value = shareUrl(currentPlacement());
+  els.shareStatus.textContent = "";
+  if (typeof els.shareDialog.showModal === "function") els.shareDialog.showModal();
+  else els.shareDialog.setAttribute("open", "");
+}
+
+function setSiteField(key, value) {
+  state[key] = value.trim();
+  saveLocal(key === "site" ? "cpl-site" : "cpl-location", state[key]);
+  update();
+}
+
+els.shareButton.addEventListener("click", openShareDialog);
+els.shareSite.addEventListener("input", (event) => setSiteField("site", event.target.value));
+els.shareLocation.addEventListener("input", (event) => setSiteField("location", event.target.value));
+els.shareLink.addEventListener("focus", () => els.shareLink.select());
+byId("shareCopy").addEventListener("click", () => {
+  const link = shareUrl(currentPlacement());
+  const done = (message) => { els.shareStatus.textContent = message; };
+  if (!navigator.clipboard) { els.shareLink.select(); done(t("shCopyFailed")); return; }
+  navigator.clipboard.writeText(link).then(() => done(t("shCopied"))).catch(() => { els.shareLink.select(); done(t("shCopyFailed")); });
+});
+byId("shareOpenSheet").addEventListener("click", () => {
+  els.shareDialog.close();
+  openSiteSheet();
+});
+byId("sharedDismiss").addEventListener("click", () => { els.sharedBanner.hidden = true; });
+
+// ---------- Site sheet ----------
+function openSiteSheet() {
+  // The simulation is paused and posed for one frame; without WebGL the sheet goes without the camera view.
+  state.sheetSnapshot = window.walkSim && typeof window.walkSim.snapshot === "function" ? window.walkSim.snapshot() : null;
+  els.sheetView.hidden = false;
+  document.body.classList.add("sheet-open");
+  renderSheet(currentPlacement());
+  els.sheetView.scrollTop = 0;
+  byId("sheetBack").focus();
+}
+
+function closeSiteSheet() {
+  els.sheetView.hidden = true;
+  document.body.classList.remove("sheet-open");
+  els.shareButton.focus();
+}
+
+byId("sheetBack").addEventListener("click", closeSiteSheet);
+// The console wires its own language buttons before this code runs, so the sheet's toolbar wires its pair here.
+els.sheetView.querySelectorAll("[data-lang]").forEach((button) => button.addEventListener("click", () => setLanguage(button.dataset.lang)));
+byId("sheetPrint").addEventListener("click", () => {
+  try {
+    window.print();
+  } catch (error) {
+    // Some embedded viewers block printing; the browser menu still prints the page.
+  }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !els.sheetView.hidden && !els.shareDialog.open) closeSiteSheet();
+});
+
+const deg = (value) => fmt(value, 1);
+const statusClass = (status) => (status === "best" ? "best" : status === "acceptable" ? "ok" : "bad");
+
+function sheetSteps(p) {
+  const r = p.result;
+  const preset = presetFor(state.presetId);
+  const fisheye = preset.lens === "fisheye";
+  const focal = Number(els.focalInput.value);
+  const stream = t("shStream", { w: p.resolution.w, h: p.resolution.h });
+  const aimM = p.heightM - Math.tan(toRad(r.tilt.value)) * p.distanceM;
+  let zoomText = t("shZoom");
+  if (preset.focalMinMm === preset.focalMaxMm) zoomText = t("shLensFixed");
+  else if (Math.abs(focal - preset.focalMinMm) < 0.05) zoomText = t("shZoomWide");
+  else if (Math.abs(focal - preset.focalMaxMm) < 0.05) zoomText = t("shZoomTele");
+  const steps = [
+    [t("shMount"), t("shMountHint"), fmt(p.heightM, 1), "m"],
+    [t("shLine"), t("shLineHint"), fmt(p.distanceM, 2), "m"],
+    fisheye
+      ? [t("shTiltFisheye"), t("shTiltFisheyeHint"), "90", "°"]
+      : [t("shTilt"), t("shTiltHint", { aim: fmt(aimM, 2) }), deg(r.tilt.value), "°"],
+    fisheye ? [t("shFisheyeLens"), stream, fmt(preset.fovDeg, 0), "°"] : [zoomText, stream, fmt(focal, 1), "mm"]
+  ];
+  return '<ol class="steps">' + steps.map((step, i) =>
+    '<li><span class="n">' + (i + 1) + '</span><span class="do">' + escapeHtml(step[0]) + "<small>" + escapeHtml(step[1]) + '</small></span><span class="v">' + step[2] + "<span>" + step[3] + "</span></span></li>"
+  ).join("") + "</ol>";
+}
+
+// Side elevation drawn to scale from the placement, as an installer's dimensioned sketch.
+function sideElevationSvg(p) {
+  const r = p.result;
+  const profile = p.profile;
+  const H = p.heightM;
+  const D = p.distanceM;
+  const fisheye = r.optics.lens === "fisheye";
+  const faceD = r.faceLine.distanceM !== null && !r.faceLine.coincides ? r.faceLine.distanceM : null;
+  const win = feetDistanceWindow(profile, H);
+  const maxX = Math.max(D, faceD || 0, win.bestMax) * 1.1;
+  const left = 44;
+  const floor = 170;
+  const s = Math.min((330 - left) / maxX, (floor - 22) / H);
+  const X = (m) => (left + m * s).toFixed(1);
+  const Y = (m) => (floor - m * s).toFixed(1);
+  const camX = left;
+  const camY = Y(H);
+  const feet = statusClass(r.feet.status);
+  const person = (x, cls) => {
+    const tall = profile.humanHeightM * s;
+    const head = Math.max(3.5, tall * 0.08);
+    const xf = Number(x);
+    const top = floor - tall;
+    return '<g class="se-person se-' + cls + '"><circle cx="' + x + '" cy="' + (top + head).toFixed(1) + '" r="' + head.toFixed(1) + '"></circle>' +
+      '<path d="M' + x + " " + (top + head * 2).toFixed(1) + " V" + (floor - tall * 0.45).toFixed(1) +
+      " M" + x + " " + (floor - tall * 0.45).toFixed(1) + " L" + (xf - tall * 0.11).toFixed(1) + " " + floor +
+      " M" + x + " " + (floor - tall * 0.45).toFixed(1) + " L" + (xf + tall * 0.11).toFixed(1) + " " + floor + '"></path></g>';
+  };
+  const parts = [];
+  parts.push('<line class="se-floor" x1="' + left + '" y1="' + floor + '" x2="336" y2="' + floor + '"></line>');
+  parts.push('<line class="se-band" x1="' + X(win.bestMin) + '" y1="' + floor + '" x2="' + X(win.bestMax) + '" y2="' + floor + '"></line>');
+  parts.push('<line class="se-mast" x1="' + camX + '" y1="' + camY + '" x2="' + camX + '" y2="' + floor + '"></line>');
+  parts.push('<rect class="se-camera" x="' + (camX - 9) + '" y="' + (Number(camY) - 6) + '" width="18" height="12" rx="3"></rect>');
+  parts.push('<line class="se-ray se-' + feet + '" x1="' + (camX + 6) + '" y1="' + camY + '" x2="' + X(D) + '" y2="' + floor + '"></line>');
+  if (faceD !== null) {
+    parts.push('<line class="se-ray se-face" x1="' + (camX + 6) + '" y1="' + camY + '" x2="' + X(faceD) + '" y2="' + Y(profile.facePointM) + '"></line>');
+    parts.push(person(X(faceD), "face"));
+    parts.push('<text class="se-label se-face-text" x="' + (Number(X(faceD)) + 8) + '" y="' + (floor - profile.humanHeightM * s - 2).toFixed(1) + '">' + escapeHtml(t("shFaceLineLabel")) + "</text>");
+  }
+  if (!fisheye) {
+    const aimM = H - Math.tan(toRad(r.tilt.value)) * D;
+    parts.push('<line class="se-aim" x1="' + (camX + 6) + '" y1="' + camY + '" x2="' + X(D) + '" y2="' + Y(aimM) + '"></line>');
+    parts.push('<circle class="se-aim-dot" cx="' + X(D) + '" cy="' + Y(aimM) + '" r="2.8"></circle>');
+    parts.push('<line class="se-ref" x1="' + (camX + 6) + '" y1="' + camY + '" x2="' + (camX + 66) + '" y2="' + camY + '"></line>');
+    const a = toRad(r.tilt.value);
+    const arcX = (camX + 6 + 34 * Math.cos(a)).toFixed(1);
+    const arcY = (Number(camY) + 34 * Math.sin(a)).toFixed(1);
+    parts.push('<path class="se-arc" d="M ' + (camX + 40) + " " + camY + " A 34 34 0 0 1 " + arcX + " " + arcY + '"></path>');
+    parts.push('<text class="se-num se-blue" x="' + (camX + 46) + '" y="' + (Number(camY) + 18) + '">' + deg(r.tilt.value) + "°</text>");
+  }
+  parts.push(person(X(D), feet));
+  parts.push('<text class="se-num se-' + feet + '" x="' + (Number(X(D)) - 14) + '" y="' + (floor - 6) + '" text-anchor="end">' + deg(r.feet.angleDeg) + "°</text>");
+  parts.push('<line class="se-dim" x1="22" y1="' + camY + '" x2="22" y2="' + floor + '" marker-start="url(#seArrow)" marker-end="url(#seArrow)"></line>');
+  const midY = ((Number(camY) + floor) / 2).toFixed(1);
+  parts.push('<text class="se-num se-ink" x="15" y="' + midY + '" text-anchor="middle" transform="rotate(-90 15 ' + midY + ')">' + fmt(H, 1) + " m</text>");
+  parts.push('<line class="se-dim" x1="' + left + '" y1="' + (floor + 16) + '" x2="' + X(D) + '" y2="' + (floor + 16) + '" marker-start="url(#seArrow)" marker-end="url(#seArrow)"></line>');
+  parts.push('<text class="se-num se-ink" x="' + ((left + Number(X(D))) / 2).toFixed(1) + '" y="' + (floor + 12) + '" text-anchor="middle">' + fmt(D, 2) + " m</text>");
+  parts.push('<line class="se-tick" x1="' + X(D) + '" y1="' + floor + '" x2="' + X(D) + '" y2="' + (floor + 22) + '"></line>');
+  if (faceD !== null) {
+    parts.push('<line class="se-dim se-face-dim" x1="' + left + '" y1="' + (floor + 30) + '" x2="' + X(faceD) + '" y2="' + (floor + 30) + '" marker-end="url(#seArrowFace)"></line>');
+    parts.push('<text class="se-num se-face-text" x="' + (Number(X(faceD)) + 6) + '" y="' + (floor + 33) + '">' + fmt(faceD, 2) + " m</text>");
+    parts.push('<line class="se-tick" x1="' + X(faceD) + '" y1="' + floor + '" x2="' + X(faceD) + '" y2="' + (floor + 34) + '"></line>');
+  }
+  return '<svg viewBox="8 8 340 206" role="img" aria-label="' + escapeHtml(t("shSideTitle")) + '">' +
+    '<defs><marker id="seArrow" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 z" class="se-arrow"></path></marker>' +
+    '<marker id="seArrowFace" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 z" class="se-arrow-face"></path></marker></defs>' +
+    parts.join("") + "</svg>";
+}
+
+function sheetReadings(p) {
+  const r = p.result;
+  const profile = p.profile;
+  const win = feetDistanceWindow(profile, p.heightM);
+  const face = faceLineCopy(p);
+  const fl = r.faceLine;
+  const faceTag = !fl.visible ? "muted" : fl.tooSmall ? "ok" : "best";
+  const rows = [
+    [t("countingLine"), fmt(p.distanceM, 2, " m"), statusClass(r.feet.status), STATUS_LABEL[r.feet.status],
+      t("shRowCount", { angle: deg(r.feet.angleDeg), near: fmt(win.bestMin, 2), far: fmt(win.bestMax, 2), ppm: fmt(r.optics.pixelsPerMetre, 0) }), ""],
+    [t("faceLine"), fl.distanceM === null ? t("none") : fmt(fl.distanceM, 2, " m"), faceTag, face.label,
+      fl.angleDeg === null ? face.note
+        : t("shRowFace", { angle: deg(fl.angleDeg), ppm: fmt(fl.pixelsPerMetre, 0) }) + " " + (fl.visible && fl.tooSmall ? t("shFaceFloor", { min: profile.minPixelsPerMetre.face }) : face.note), "face-name"]
+  ];
+  if (r.entrance !== null) {
+    const entryClass = { covered: "best", tight: "ok", too_wide: "bad" }[r.entrance.status];
+    const note = r.entrance.status === "covered"
+      ? t("shRowEntrance", { eff: fmt(r.optics.effectiveWidthM, 1), cover: fmt(r.optics.coverageWidthM, 1) })
+      : entranceCopy(r.entrance, r.optics.coverageWidthM);
+    rows.push([t("entranceShort"), fmt(r.entrance.widthM, 1, " m"), entryClass, t(ENTRY_STATE[r.entrance.status]), note, ""]);
+  }
+  return '<table class="sh-readings"><thead><tr><th>' + escapeHtml(t("shThReading")) + '</th><th class="num">' + escapeHtml(t("shThValue")) + '</th><th class="note">' + escapeHtml(t("shThMeaning")) + "</th></tr></thead><tbody>" +
+    rows.map((row) => '<tr><td class="what ' + row[5] + '">' + escapeHtml(row[0]) + '</td><td class="num">' + escapeHtml(row[1]) + '</td><td class="note"><span class="sh-tag ' + row[2] + '">' + escapeHtml(row[3]) + "</span> " + escapeHtml(row[4]) + "</td></tr>").join("") +
+    "</tbody></table>";
+}
+
+function sheetWarnings(p) {
+  const r = p.result;
+  const profile = p.profile;
+  const lines = [];
+  if (!r.countingLine.framed) lines.push(t("cutOff"));
+  if (r.warnings.includes("height_outside_range")) {
+    lines.push(t("heightWarn", { height: fmt(p.heightM, 1), scene: sceneName(profile), min: fmt(profile.heightRangeM.min, 1), max: fmt(profile.heightRangeM.max, 1) }));
+  }
+  if (r.warnings.includes("low_pixel_density")) lines.push(t("densityWarn", { ppm: fmt(r.optics.pixelsPerMetre, 0), min: profile.minPixelsPerMetre.counting }));
+  if (r.faceLine.visible && r.faceLine.tooSmall) lines.push(t("shFaceWarn", { ppm: fmt(r.faceLine.pixelsPerMetre, 0), min: profile.minPixelsPerMetre.face }));
+  if (r.entrance !== null && r.entrance.status !== "covered") lines.push(entranceCopy(r.entrance, r.optics.coverageWidthM));
+  if (lines.length === 0) return "";
+  return '<div class="warn" role="note">' + SHEET_ICON.warn + "<div>" + lines.map((line) => "<p>" + escapeHtml(line) + "</p>").join("") + "</div></div>";
+}
+
+function renderSheet(p) {
+  const r = p.result;
+  const profile = p.profile;
+  const preset = presetFor(state.presetId);
+  const cameraName = els.presetSelect.selectedOptions[0] ? els.presetSelect.selectedOptions[0].textContent : "";
+  const fovText = r.optics.lens === "fisheye"
+    ? fmt(r.optics.horizontalFovDeg, 0) + "°"
+    : t("shFov", { h: fmt(r.optics.horizontalFovDeg, 0), v: fmt(r.optics.verticalFovDeg, 0), f: fmt(Number(els.focalInput.value), 1) }) + (preset.datasheetFov ? " " + t("shDatasheet") : "");
+  const fa = profile.feetAngleDeg;
+  const verdictLine = t("shVerdict_" + r.verdict, {
+    angle: deg(r.feet.angleDeg), min: fa.best.min, max: fa.best.max, amin: fa.acceptable.min, amax: fa.acceptable.max,
+    reason: escapeHtml(verdictCopy(p))
+  });
+  const prepared = new Date().toLocaleDateString(lang === "th" ? "th-TH" : "en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const link = shareUrl(p);
+  const snap = state.sheetSnapshot;
+  const cameraView = snap
+    ? '<figure class="draw cam"><figcaption>' + escapeHtml(t("shCamTitle")) + '</figcaption><img src="' + snap.url + '" alt="' + escapeHtml(t("shCamTitle")) + '">' +
+      '<span class="cam-key"><i class="k-count"></i>' + escapeHtml(t("shKeyCount", { d: fmt(p.distanceM, 2) })) +
+      (r.faceLine.distanceM !== null && !r.faceLine.coincides ? '<i class="k-face"></i>' + escapeHtml(t("shKeyFace", { d: fmt(r.faceLine.distanceM, 2) })) : "") + "</span></figure>"
+    : "";
+
+  els.sheetPage.lang = lang;
+  els.sheetPage.innerHTML =
+    '<header class="sheet-head"><div><h2 class="sheet-title">' + escapeHtml(t("shSheetTitle")) + "</h2>" +
+      '<dl class="site-fields">' +
+        "<dt>" + escapeHtml(t("shSite")) + '</dt><dd><input data-site-field="site" value="' + escapeHtml(state.site) + '" placeholder="' + escapeHtml(t("shSiteHint")) + '" aria-label="' + escapeHtml(t("shSite")) + '"></dd>' +
+        "<dt>" + escapeHtml(t("shLocation")) + '</dt><dd><input data-site-field="location" value="' + escapeHtml(state.location) + '" placeholder="' + escapeHtml(t("shLocationHint")) + '" aria-label="' + escapeHtml(t("shLocation")) + '"></dd>' +
+        "<dt>" + escapeHtml(t("shScene")) + "</dt><dd>" + escapeHtml(sceneName(profile)) + "</dd>" +
+        "<dt>" + escapeHtml(t("shCamera")) + "</dt><dd>" + escapeHtml(cameraName) + ' <span class="fov">· ' + escapeHtml(fovText) + "</span></dd>" +
+      "</dl></div>" +
+      '<div class="meta-right"><span>' + escapeHtml(t("shPrepared")) + "</span><b>" + escapeHtml(prepared) + "</b><span>" + escapeHtml(t("shRules")) + "</span><b>" + escapeHtml(RULES.version) + "</b></div>" +
+    "</header>" +
+    '<section class="sh-verdict"><span class="pill ' + statusClass(r.verdict) + '">' + escapeHtml(STATUS_LABEL[r.verdict]) + "</span><p>" + verdictLine + "</p></section>" +
+    sheetSteps(p) +
+    '<section class="drawings' + (snap ? "" : " single") + '"><figure class="draw"><figcaption>' + escapeHtml(t("shSideTitle")) + "</figcaption>" + sideElevationSvg(p) + "</figure>" + cameraView + "</section>" +
+    sheetReadings(p) +
+    sheetWarnings(p) +
+    '<section class="check"><div><h3>' + escapeHtml(t("shAsInstalled")) + '</h3><div class="blanks">' +
+      [["shHeight", "m"], ["shCountingLine", "m"], ["shZoomBlank", "mm"], ["shTiltBlank", "°"]].map((b) => '<div class="blank"><span>' + escapeHtml(t(b[0])) + "</span><span>" + b[1] + "</span></div>").join("") +
+      "</div></div><div><h3>" + escapeHtml(t("shOnSite")) + '</h3><ul class="sh-ticks">' +
+      ["shCheck1", "shCheck2", "shCheck3", "shCheck4"].map((key) => "<li>" + escapeHtml(t(key)) + "</li>").join("") +
+    "</ul></div></section>" +
+    '<footer class="foot"><div class="qr" id="sheetQr" aria-hidden="true"></div><div><h3>' + escapeHtml(t("shOpenTitle")) + '</h3><a class="link" href="' + escapeHtml(link) + '">' + escapeHtml(link.replace(/^https?:\/\//, "")) + "</a><p>" + escapeHtml(t("shOpenNote")) + "</p></div>" +
+      '<div class="sign"><div>' + escapeHtml(t("shInstalledBy")) + "</div><div>" + escapeHtml(t("shDate")) + "</div></div></footer>";
+
+  els.sheetPage.querySelectorAll("[data-site-field]").forEach((input) => input.addEventListener("change", () => {
+    setSiteField(input.dataset.siteField, input.value);
+  }));
+  drawQr(byId("sheetQr"), link);
+}
+
+// The QR code comes from a small library loaded on first use; without it the printed link still works.
+let qrLibrary = null;
+function loadQrLibrary() {
+  if (window.qrcode) return Promise.resolve(window.qrcode);
+  if (!qrLibrary) {
+    qrLibrary = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js";
+      script.onload = () => (window.qrcode ? resolve(window.qrcode) : reject(new Error("QR library missing")));
+      script.onerror = () => reject(new Error("QR library could not load"));
+      document.head.appendChild(script);
+    });
+  }
+  return qrLibrary;
+}
+
+function drawQr(target, text) {
+  loadQrLibrary().then((qrcode) => {
+    const qr = qrcode(0, "M");
+    qr.addData(text);
+    qr.make();
+    const n = qr.getModuleCount();
+    let path = "";
+    for (let row = 0; row < n; row += 1) {
+      for (let col = 0; col < n; col += 1) {
+        if (qr.isDark(row, col)) path += "M" + col + " " + row + "h1v1h-1z";
+      }
+    }
+    target.innerHTML = '<svg viewBox="-2 -2 ' + (n + 4) + " " + (n + 4) + '" shape-rendering="crispEdges"><path d="' + path + '"></path></svg>';
+  }).catch((error) => {
+    target.hidden = true;
+    console.warn("Site sheet QR code unavailable:", error.message);
+  });
+}
+
     // ---------- Start ----------
     trackHeights();
     applyStaticText();
@@ -5087,6 +6586,7 @@ function toCsv(rows) {
     setFieldValue(els.heightInput, els.heightRange, RULE.defaultCameraHeightM, 1);
     setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(RULE.defaultCameraHeightM, currentProfile()), 2);
     setSolveMode(state.solveMode);
+    restoreSharedPlacement();
   </script>
   <script type="module">
 // Walk simulation seen through the placement camera. Three.js and the lens maths (pixel density,
@@ -5370,7 +6870,10 @@ function createWalkSim(THREE, ui) {
     if (!input) return;
     const width = ui.canvas.parentElement.clientWidth;
     if (!width) return;
-    const height = Math.round(width / input.aspect);
+    setSize(width, Math.round(width / input.aspect));
+  }
+
+  function setSize(width, height) {
     renderer.setSize(width, height);
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     ui.overlay.width = Math.round(width * dpr);
@@ -5689,7 +7192,88 @@ function createWalkSim(THREE, ui) {
   });
   syncPlayButton();
 
+  // One person standing on the counting line in the middle of the entrance, facing the camera, for the site sheet.
+  // Renders at a fixed size and crops to the entrance; the live crowd and view are put back before returning.
+  function snapshot() {
+    if (!input) return null;
+    const width = 1200;
+    const height = Math.round(width / input.aspect);
+    const crowd = agents;
+    const wasPlaying = playing;
+    const person = { body: makePerson() };
+    const half = 0.6;
+    Object.assign(person, {
+      kind: "in",
+      from: { x: 0, z: input.distanceM + half },
+      to: { x: 0, z: input.distanceM - half },
+      length: 2 * half,
+      travelled: half,
+      speed: 0,
+      phase: 0,
+      lastZ: null,
+      flash: 0,
+      flashDirection: null,
+      faceFlash: 0,
+    });
+    person.body.group.scale.setScalar(input.humanHeightM / MODEL_HEIGHT_M);
+    scene.add(person.body.group);
+    crowd.forEach((agent) => { agent.body.group.visible = false; });
+    agents = [person];
+    playing = false;
+    try {
+      setSize(width, height);
+      step(0);
+      render();
+      const crop = entranceCrop(width, height);
+      const out = document.createElement("canvas");
+      out.width = Math.round(crop.w * 2);
+      out.height = Math.round(crop.h * 2);
+      const ctx = out.getContext("2d");
+      [[renderer.domElement, renderer.getPixelRatio()], [ui.overlay, ui.overlay.width / width]].forEach(([source, ratio]) => {
+        ctx.drawImage(source, crop.x * ratio, crop.y * ratio, crop.w * ratio, crop.h * ratio, 0, 0, out.width, out.height);
+      });
+      return { url: out.toDataURL("image/jpeg", 0.88), aspect: crop.w / crop.h };
+    } finally {
+      scene.remove(person.body.group);
+      crowd.forEach((agent) => { agent.body.group.visible = true; });
+      agents = crowd;
+      playing = wasPlaying;
+      resize();
+      render();
+    }
+  }
+
+  // The part of the frame around the entrance: both lines, a person's full height, a margin; the whole frame if it does not fit.
+  function entranceCrop(width, height) {
+    const whole = { x: 0, y: 0, w: width, h: height };
+    if (isFisheye()) return whole;
+    const lay = layout(input);
+    const halfWidth = lay.doorZ !== null ? lay.doorHalf : lay.corridorHalf;
+    const near = input.distanceM - 0.1;
+    const far = Math.max(input.distanceM, input.faceLineDistanceM || 0) + 0.1;
+    const corners = [];
+    [-halfWidth - 0.15, halfWidth + 0.15].forEach((x) => [-0.05, 1.95].forEach((y) => [near, far].forEach((z) => corners.push(toScreen(x, y, z, width, height)))));
+    if (corners.some((c) => c.behind)) return whole;
+    const xs = corners.map((c) => c.x);
+    const ys = corners.map((c) => c.y);
+    let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    // Keep the sheet's picture shape, about 1.85 wide to 1 tall, by widening whichever side is short.
+    const aspect = 1.85;
+    if ((x1 - x0) / (y1 - y0) < aspect) {
+      const grow = ((y1 - y0) * aspect - (x1 - x0)) / 2;
+      x0 -= grow;
+      x1 += grow;
+    } else {
+      const grow = ((x1 - x0) / aspect - (y1 - y0)) / 2;
+      y0 -= grow;
+      y1 += grow;
+    }
+    if (x0 < 0 || y0 < 0 || x1 > width || y1 > height) return whole;
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }
+
   return {
+    snapshot,
     setPlacement(placement) {
       const first = input === null;
       input = placement;

@@ -279,7 +279,10 @@ export function createWalkSim(THREE, ui) {
     if (!input) return;
     const width = ui.canvas.parentElement.clientWidth;
     if (!width) return;
-    const height = Math.round(width / input.aspect);
+    setSize(width, Math.round(width / input.aspect));
+  }
+
+  function setSize(width, height) {
     renderer.setSize(width, height);
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     ui.overlay.width = Math.round(width * dpr);
@@ -598,7 +601,88 @@ export function createWalkSim(THREE, ui) {
   });
   syncPlayButton();
 
+  // One person standing on the counting line in the middle of the entrance, facing the camera, for the site sheet.
+  // Renders at a fixed size and crops to the entrance; the live crowd and view are put back before returning.
+  function snapshot() {
+    if (!input) return null;
+    const width = 1200;
+    const height = Math.round(width / input.aspect);
+    const crowd = agents;
+    const wasPlaying = playing;
+    const person = { body: makePerson() };
+    const half = 0.6;
+    Object.assign(person, {
+      kind: "in",
+      from: { x: 0, z: input.distanceM + half },
+      to: { x: 0, z: input.distanceM - half },
+      length: 2 * half,
+      travelled: half,
+      speed: 0,
+      phase: 0,
+      lastZ: null,
+      flash: 0,
+      flashDirection: null,
+      faceFlash: 0,
+    });
+    person.body.group.scale.setScalar(input.humanHeightM / MODEL_HEIGHT_M);
+    scene.add(person.body.group);
+    crowd.forEach((agent) => { agent.body.group.visible = false; });
+    agents = [person];
+    playing = false;
+    try {
+      setSize(width, height);
+      step(0);
+      render();
+      const crop = entranceCrop(width, height);
+      const out = document.createElement("canvas");
+      out.width = Math.round(crop.w * 2);
+      out.height = Math.round(crop.h * 2);
+      const ctx = out.getContext("2d");
+      [[renderer.domElement, renderer.getPixelRatio()], [ui.overlay, ui.overlay.width / width]].forEach(([source, ratio]) => {
+        ctx.drawImage(source, crop.x * ratio, crop.y * ratio, crop.w * ratio, crop.h * ratio, 0, 0, out.width, out.height);
+      });
+      return { url: out.toDataURL("image/jpeg", 0.88), aspect: crop.w / crop.h };
+    } finally {
+      scene.remove(person.body.group);
+      crowd.forEach((agent) => { agent.body.group.visible = true; });
+      agents = crowd;
+      playing = wasPlaying;
+      resize();
+      render();
+    }
+  }
+
+  // The part of the frame around the entrance: both lines, a person's full height, a margin; the whole frame if it does not fit.
+  function entranceCrop(width, height) {
+    const whole = { x: 0, y: 0, w: width, h: height };
+    if (isFisheye()) return whole;
+    const lay = layout(input);
+    const halfWidth = lay.doorZ !== null ? lay.doorHalf : lay.corridorHalf;
+    const near = input.distanceM - 0.1;
+    const far = Math.max(input.distanceM, input.faceLineDistanceM || 0) + 0.1;
+    const corners = [];
+    [-halfWidth - 0.15, halfWidth + 0.15].forEach((x) => [-0.05, 1.95].forEach((y) => [near, far].forEach((z) => corners.push(toScreen(x, y, z, width, height)))));
+    if (corners.some((c) => c.behind)) return whole;
+    const xs = corners.map((c) => c.x);
+    const ys = corners.map((c) => c.y);
+    let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    // Keep the sheet's picture shape, about 1.85 wide to 1 tall, by widening whichever side is short.
+    const aspect = 1.85;
+    if ((x1 - x0) / (y1 - y0) < aspect) {
+      const grow = ((y1 - y0) * aspect - (x1 - x0)) / 2;
+      x0 -= grow;
+      x1 += grow;
+    } else {
+      const grow = ((x1 - x0) / aspect - (y1 - y0)) / 2;
+      y0 -= grow;
+      y1 += grow;
+    }
+    if (x0 < 0 || y0 < 0 || x1 > width || y1 > height) return whole;
+    return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  }
+
   return {
+    snapshot,
     setPlacement(placement) {
       const first = input === null;
       input = placement;

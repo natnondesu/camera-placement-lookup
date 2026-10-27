@@ -119,3 +119,11 @@ _Avoid_: Overall status, pass/fail
 **Lookup table**:
 For one scene profile, the recommended distance, angles and face line distance at each camera height in its height range. Valid for any camera model.
 _Avoid_: Rule table, golden table
+
+**Share link**:
+A link that holds a whole placement (scene, camera, zoom, height, line, entrance, site and location), the rules version and the verdict when it was made. Nothing is stored anywhere else; opening the link restores the placement and says if today's rules give a different verdict.
+_Avoid_: Saved placement, permalink
+
+**Site sheet**:
+The printable one-page record of a placement for the installer: install steps, side elevation, simulated camera view, readings, warnings, an as-installed check-off and a QR code of its share link.
+_Avoid_: Report, install sheet

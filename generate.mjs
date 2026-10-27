@@ -52,6 +52,9 @@ cameras.cameras.filter((camera) => camera.lens !== "fisheye").forEach((camera) =
 
 const engineSource = (await fs.readFile(path.join(__dirname, "src/placement-rule.js"), "utf8")).replace(/^export /gm, "");
 const simSource = (await fs.readFile(path.join(__dirname, "src/walk-sim.js"), "utf8")).replace(/^export /gm, "");
+const shareSource = (await fs.readFile(path.join(__dirname, "src/share-link.js"), "utf8")).replace(/^export /gm, "");
+const sheetSource = await fs.readFile(path.join(__dirname, "src/site-sheet.js"), "utf8");
+const sheetCss = await fs.readFile(path.join(__dirname, "src/site-sheet.css"), "utf8");
 
 function buildHtml() {
   const ruleJson = JSON.stringify(RULE, null, 2);
@@ -2641,6 +2644,7 @@ function buildHtml() {
         padding: 0 12px;
       }
     }
+${sheetCss}
   </style>
 </head>
 <body>
@@ -3038,6 +3042,7 @@ function buildHtml() {
   </div>
   <script>
 ${engineSource}
+${shareSource}
     const RULE = ${ruleJson};
     const RULES = ${rulesJson};
     const CAMERA_CATALOG = ${camerasJson};
@@ -4488,6 +4493,7 @@ ${engineSource}
       const announcement = t("announce", { status: verdictLabel, feet: STATUS_LABEL[r.feet.status], face: face.label, distance: fmt(distanceM, 2) });
       window.clearTimeout(state.announceTimer);
       state.announceTimer = window.setTimeout(() => { els.placementAnnouncement.textContent = announcement; }, 240);
+      syncShareState(p);
     }
 
     // ---------- Phone and tablet ----------
@@ -4796,6 +4802,7 @@ ${engineSource}
     }
     document.querySelectorAll("[data-lang]").forEach((button) => button.addEventListener("click", () => setLanguage(button.dataset.lang)));
 
+${sheetSource}
     // ---------- Start ----------
     trackHeights();
     applyStaticText();
@@ -4816,6 +4823,7 @@ ${engineSource}
     setFieldValue(els.heightInput, els.heightRange, RULE.defaultCameraHeightM, 1);
     setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(RULE.defaultCameraHeightM, currentProfile()), 2);
     setSolveMode(state.solveMode);
+    restoreSharedPlacement();
   </script>
   <script type="module">
 ${simSource}

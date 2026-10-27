@@ -51,5 +51,8 @@ The **pixel floor** never changes the verdict: a counting line below it carries 
 | Camera catalogue | `rules/cameras.json` |
 | Web console | `generate.mjs` builds `public/index.html` with the engine and rules inlined (`npm run build`) |
 | Lookup tables | `public/camera-placement-lookup-<profile>.csv`, written by the same build; the Rule table tab can also copy them |
+| Share links and site sheet | `src/share-link.js` (tested), `src/site-sheet.js` and `src/site-sheet.css`, inlined by the build |
+
+A **share link** carries the placement in the address itself, so it keeps working for as long as the app stays at its address. Keep camera ids in `rules/cameras.json` once published (retire a camera rather than delete it) so old links still find their camera. The office keeps the **site sheet** PDF in the job folder; its QR code reopens the live placement.
 
 The Excel workbook is no longer a source: export the table from the console instead of editing a spreadsheet copy.
