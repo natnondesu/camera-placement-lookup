@@ -9,8 +9,9 @@
  *   minPixelsPerMetre: { counting: number, face: number }
  * }} SceneProfile
  * @typedef {{ sensorWidthMm?: number, focalLengthMm?: number, resolution: { w: number, h: number },
- *            lens?: "rectilinear" | "fisheye", fovDeg?: number }} CameraOptics
+ *            lens?: "rectilinear" | "fisheye", fovDeg?: number, hFovDeg?: number, vFovDeg?: number }} CameraOptics
  *   A fisheye is ceiling-mounted looking straight down, with an equidistant lens of fovDeg.
+ *   hFovDeg and vFovDeg are the manufacturer's measured view; when given they replace sensor and focal length.
  * @typedef {"best" | "acceptable" | "out_of_range"} Status
  * @typedef {"outside_frame" | "camera_below_face_point"} NotVisibleReason
  */
@@ -104,6 +105,8 @@ const FISHEYE_MAX_OFF_AXIS_DEG = 80;
 /** @param {CameraOptics} camera @returns {number} */
 export function verticalFov(camera) {
   if (isFisheye(camera)) return camera.fovDeg;
+  // Wide fixed lenses are distorted, so the datasheet's measured view beats the pinhole estimate.
+  if (camera.vFovDeg) return camera.vFovDeg;
   const sensorHeightMm = camera.sensorWidthMm * (camera.resolution.h / camera.resolution.w);
   return 2 * Math.atan(sensorHeightMm / (2 * camera.focalLengthMm)) * DEG;
 }
@@ -111,6 +114,7 @@ export function verticalFov(camera) {
 /** @param {CameraOptics} camera @returns {number} */
 export function horizontalFov(camera) {
   if (isFisheye(camera)) return camera.fovDeg;
+  if (camera.hFovDeg) return camera.hFovDeg;
   return 2 * Math.atan(camera.sensorWidthMm / (2 * camera.focalLengthMm)) * DEG;
 }
 

@@ -16,27 +16,22 @@
       ]
     },
     {
-      "id": "generic_bullet_2mp",
-      "name": "Bullet 2 MP (generic)",
-      "description": "Fixed 2.8 mm lens, 1/2.8\" class sensor.",
-      "sensorWidthMm": 5.37,
-      "focalLengthMm": { "min": 2.8, "max": 2.8 },
-      "resolutions": [{ "label": "1080p", "w": 1920, "h": 1080 }]
+      "id": "hikvision_dome_2mp",
+      "name": "HIKVISION Dome 2MP",
+      "description": "1/2.8\" 2 MP fixed-lens dome, 2.8 mm or 4 mm lens.",
+      "lenses": [
+        { "focalLengthMm": 2.8, "hFovDeg": 107, "vFovDeg": 57 },
+        { "focalLengthMm": 4, "hFovDeg": 87, "vFovDeg": 46 }
+      ],
+      "resolutions": [{ "label": "2 MP", "w": 1920, "h": 1080 }]
     },
     {
-      "id": "generic_dome_4mp",
-      "name": "Dome 4 MP (generic)",
-      "description": "Fixed 2.8 mm lens.",
-      "sensorWidthMm": 4.8,
-      "focalLengthMm": { "min": 2.8, "max": 2.8 },
-      "resolutions": [{ "label": "4 MP", "w": 2560, "h": 1440 }]
-    },
-    {
-      "id": "generic_varifocal_4mp",
-      "name": "Varifocal 4 MP (generic)",
-      "description": "Varifocal lens, 1/2\" class sensor.",
-      "sensorWidthMm": 6.4,
-      "focalLengthMm": { "min": 2.8, "max": 12 },
+      "id": "hikvision_dome_4mp",
+      "name": "HIKVISION Dome 4MP",
+      "description": "1/3\" 4 MP fixed-lens dome, 2.8 mm lens.",
+      "lenses": [
+        { "focalLengthMm": 2.8, "hFovDeg": 98, "vFovDeg": 54 }
+      ],
       "resolutions": [{ "label": "4 MP", "w": 2560, "h": 1440 }]
     },
     {
@@ -48,14 +43,6 @@
       "sensorWidthMm": 5.6,
       "focalLengthMm": { "min": 1.2, "max": 1.2 },
       "resolutions": [{ "label": "12 MP", "w": 2992, "h": 2992 }]
-    },
-    {
-      "id": "generic_box_12mp",
-      "name": "Box 12 MP (generic)",
-      "description": "8 mm lens, 1/1.2\" class sensor.",
-      "sensorWidthMm": 8.8,
-      "focalLengthMm": { "min": 8, "max": 8 },
-      "resolutions": [{ "label": "12 MP", "w": 4000, "h": 3000 }]
     }
   ]
 }

@@ -65,6 +65,10 @@ _Avoid_: Usable area, safe zone
 A specific camera's sensor, lens range and resolutions, used to work out what is in frame. Independent of any scene profile.
 _Avoid_: Preset
 
+**Lens option**:
+One of the fixed lenses a camera model is sold with, given as its focal length and the field of view the manufacturer measured. That measured view is used as is, because wide fixed lenses see more than sensor size and focal length predict.
+_Avoid_: Lens variant, SKU
+
 **Ceiling fisheye**:
 A camera model with a fisheye lens mounted on the ceiling looking straight down, so its tilt is always 90 degrees. Judged by the same placement rule as other cameras: the counting line still sits at the recommended distance from the point below it.
 _Avoid_: 360 camera, panoramic camera

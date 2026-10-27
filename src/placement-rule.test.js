@@ -10,6 +10,7 @@ import {
   faceLineDistance,
   recommendedTilt,
   verticalFov,
+  horizontalFov,
   evaluatePlacement,
   lookupTable,
   validateProfile,
@@ -316,6 +317,25 @@ test("a target outside the best band is rejected", () => {
 test("a best band wider than the acceptable band is rejected", () => {
   const broken = { ...corridor, feetAngleDeg: { ...corridor.feetAngleDeg, best: { min: 30, max: 43 } } };
   assert.throws(() => validateProfile(broken), /best band/);
+});
+
+// HIKVISION Dome 2MP with the 2.8 mm lens, field of view from the datasheet
+const datasheetCamera = { hFovDeg: 107, vFovDeg: 57, resolution: { w: 1920, h: 1080 } };
+
+test("a camera with a datasheet field of view uses it instead of sensor and focal length", () => {
+  assert.equal(horizontalFov(datasheetCamera), 107);
+  assert.equal(verticalFov(datasheetCamera), 57);
+});
+
+test("pixel density with a datasheet field of view spreads the image width across it", () => {
+  close(pixelDensity(datasheetCamera, 5, 0), 1920 / (2 * 5 * Math.tan((53.5 * Math.PI) / 180)), 1e-9);
+});
+
+test("a placement with a datasheet camera reports the datasheet field of view", () => {
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: datasheetCamera });
+  assert.equal(result.optics.horizontalFovDeg, 107);
+  assert.equal(result.optics.verticalFovDeg, 57);
+  assert.equal(result.countingLine.framed, true);
 });
 
 // 90 deg horizontal view over 1920 px: 960 / slant distance pixels per metre
