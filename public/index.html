@@ -423,19 +423,23 @@
 
     .field-top {
       display: flex;
-      align-items: baseline;
+      align-items: center;
       justify-content: space-between;
       gap: 10px;
     }
 
+    /* Text and the solved badge flow as one line that wraps between words, so the badge never floats on its own. */
     .field-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
+      display: block;
       color: var(--ink-soft);
       font-size: 13px;
       font-weight: 600;
-      line-height: 1.25;
+      line-height: 1.35;
+    }
+
+    .field-label .driven-badge {
+      margin-left: 2px;
+      vertical-align: 1px;
     }
 
     .driven-badge {
@@ -452,7 +456,7 @@
 
     .field.driven .driven-badge,
     .field.locked .driven-badge {
-      display: inline-flex;
+      display: inline-block;
     }
 
     .value-edit {
@@ -568,6 +572,20 @@
     .field.locked .value-edit,
     .field.locked select {
       border-style: dashed;
+    }
+
+    /* A solved value is tappable: the wrapper takes the tap and switches to Manual. */
+    .field.driven .value-edit {
+      cursor: pointer;
+    }
+
+    .field.driven .value-edit input {
+      pointer-events: none;
+    }
+
+    .value-edit:has(input[aria-invalid="true"]) {
+      border-color: var(--bad);
+      box-shadow: 0 0 0 3px var(--bad-bg);
     }
 
     .ticks {
@@ -2369,8 +2387,18 @@
         visibility: hidden;
       }
 
-      .rail.open .rail-more {
+      .rail.open .rail-more,
+      .rail.dragging .rail-more {
         visibility: visible;
+      }
+
+      .rail.dragging {
+        transition: none;
+      }
+
+      .sheet-handle,
+      .sheet-summary {
+        touch-action: none;
       }
 
       .sheet-handle {
@@ -2661,8 +2689,8 @@
             <div class="field" id="heightField">
               <div class="field-top">
                 <label class="field-label" for="heightRange"><span data-i18n="mountingHeight">Mounting height</span> <span class="driven-badge" data-i18n="solved">solved</span></label>
-                <span class="value-edit">
-                  <input id="heightInput" type="number" min="1.6" max="20" step="0.1" value="4.0" aria-label="Mounting height in meters" data-i18n-attr="aria-label:mountingHeight">
+                <span class="value-edit" data-i18n-attr="title:editSolved">
+                  <input id="heightInput" type="number" inputmode="decimal" min="1.6" max="20" step="0.1" value="4.0" aria-label="Mounting height in meters" data-i18n-attr="aria-label:mountingHeight">
                   <span class="unit">m</span>
                 </span>
               </div>
@@ -2672,8 +2700,8 @@
             <div class="field" id="distanceField">
               <div class="field-top">
                 <label class="field-label" for="distanceRange"><span data-i18n="countingDistance">Counting line distance</span> <span class="driven-badge" data-i18n="solved">solved</span></label>
-                <span class="value-edit">
-                  <input id="distanceInput" type="number" min="0.3" max="36" step="0.01" value="4.60" aria-label="Counting line distance in meters" data-i18n-attr="aria-label:countingDistance">
+                <span class="value-edit" data-i18n-attr="title:editSolved">
+                  <input id="distanceInput" type="number" inputmode="decimal" min="0.3" max="36" step="0.01" value="4.60" aria-label="Counting line distance in meters" data-i18n-attr="aria-label:countingDistance">
                   <span class="unit">m</span>
                 </span>
               </div>
@@ -2693,7 +2721,7 @@
               <div class="field-top">
                 <label class="field-label" for="entranceInput" data-i18n="entranceWidth">Entrance width</label>
                 <span class="value-edit">
-                  <input id="entranceInput" type="number" min="0" max="60" step="0.1" value="5" placeholder="none" aria-describedby="entranceHint" aria-label="Entrance width in meters" data-i18n-attr="placeholder:none;aria-label:entranceWidth">
+                  <input id="entranceInput" type="number" inputmode="decimal" min="0" max="60" step="0.1" value="5" placeholder="none" aria-describedby="entranceHint" aria-label="Entrance width in meters" data-i18n-attr="placeholder:none;aria-label:entranceWidth">
                   <span class="unit">m</span>
                 </span>
               </div>
@@ -2707,7 +2735,7 @@
                     <label class="field-label" for="tiltRange" data-i18n="tiltAngle">Tilt angle</label>
                     <button type="button" class="tilt-auto" id="tiltAuto" aria-pressed="true" data-i18n="recommended">Recommended</button>
                     <span class="value-edit">
-                      <input id="tiltInput" type="number" min="0" max="90" step="0.5" value="30" aria-label="Tilt angle in degrees" data-i18n-attr="aria-label:tiltAngle">
+                      <input id="tiltInput" type="number" inputmode="decimal" min="0" max="90" step="0.5" value="30" aria-label="Tilt angle in degrees" data-i18n-attr="aria-label:tiltAngle">
                       <span class="unit">deg</span>
                     </span>
                   </div>
@@ -2727,7 +2755,7 @@
                   <div class="field-top">
                     <label class="field-label" for="focalRange" data-i18n="focalLength">Focal length</label>
                     <span class="value-edit">
-                      <input id="focalInput" type="number" min="0.5" max="100" step="0.1" value="2.8" aria-label="Focal length in millimeters">
+                      <input id="focalInput" type="number" inputmode="decimal" min="0.5" max="100" step="0.1" value="2.8" aria-label="Focal length in millimeters">
                       <span class="unit">mm</span>
                     </span>
                   </div>
@@ -3297,7 +3325,7 @@ function toCsv(rows) {
 
     const I18N = {
       en: {
-        mountAt: "Mount the camera at {height} m ({exact} m before rounding).", onRecommended: "On the recommended distance",
+        mountAt: "Mount the camera at {height} m ({exact} m before rounding).", onRecommended: "On the recommended distance", editSolved: "Tap to set it yourself (switches to Manual)",
         densityWarn: "Only {ppm} px/m at the counting line, below the {min} px/m floor: people may be missed. Mount lower, or use a higher-resolution camera or a longer lens.",
         tooSmall: "Too small",
         faceTooSmall: "In frame, but only {ppm} px/m at the face (floor {min} px/m): too few pixels for demographics. Never fails the placement.",
@@ -3375,7 +3403,7 @@ function toCsv(rows) {
         sceneDesc_corridor: "People can only move in one direction through the view, e.g. a mall entrance or an escalator."
       },
       th: {
-        mountAt: "ติดตั้งกล้องที่ความสูง {height} m (ค่าก่อนปัดเศษ {exact} m)", onRecommended: "อยู่ที่ระยะแนะนำแล้ว",
+        mountAt: "ติดตั้งกล้องที่ความสูง {height} m (ค่าก่อนปัดเศษ {exact} m)", onRecommended: "อยู่ที่ระยะแนะนำแล้ว", editSolved: "แตะเพื่อกำหนดเอง (เปลี่ยนเป็นโหมดกำหนดเอง)",
         densityWarn: "ที่เส้นนับมีเพียง {ppm} px/m ต่ำกว่าเกณฑ์ {min} px/m อาจนับคนได้ไม่ครบ ติดตั้งให้ต่ำลง หรือใช้กล้องความละเอียดสูงขึ้นหรือเลนส์ยาวขึ้น",
         tooSmall: "เล็กเกินไป",
         faceTooSmall: "อยู่ในภาพ แต่ที่ใบหน้ามีเพียง {ppm} px/m (เกณฑ์ {min} px/m) พิกเซลน้อยเกินไปสำหรับข้อมูลเพศ/อายุ ไม่ทำให้ตำแหน่งไม่ผ่าน",
@@ -3650,9 +3678,9 @@ function toCsv(rows) {
       range.style.setProperty("--fill", pct(Number(range.value), Number(range.min), Number(range.max)).toFixed(2) + "%");
     }
 
-    function setFieldValue(input, range, value, decimals) {
+    function setFieldValue(input, range, value, decimals, keepText) {
       const clamped = clamp(Number(value), Number(input.min), Number(input.max));
-      input.value = clamped.toFixed(decimals);
+      if (!keepText) input.value = clamped.toFixed(decimals);
       range.value = clamped.toFixed(decimals);
       setRangeFill(range);
       return clamped;
@@ -3795,23 +3823,23 @@ function toCsv(rows) {
       update();
     }
 
-    function setHeight(value) {
+    function setHeight(value, typing) {
       if (state.solveMode === "height") return;
-      const heightM = setFieldValue(els.heightInput, els.heightRange, value, 1);
+      const heightM = setFieldValue(els.heightInput, els.heightRange, value, 1, typing);
       if (state.solveMode === "distance") setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(heightM, currentProfile()), 2);
       update();
     }
 
-    function setDistance(value) {
+    function setDistance(value, typing) {
       if (state.solveMode === "distance") return;
-      const distanceM = setFieldValue(els.distanceInput, els.distanceRange, value, 2);
+      const distanceM = setFieldValue(els.distanceInput, els.distanceRange, value, 2, typing);
       if (state.solveMode === "height") setFieldValue(els.heightInput, els.heightRange, heightForDistance(currentProfile(), distanceM), 1);
       update();
     }
 
-    function setTilt(value) {
+    function setTilt(value, typing) {
       state.tiltUserAdjusted = true;
-      setFieldValue(els.tiltInput, els.tiltRange, value, 1);
+      setFieldValue(els.tiltInput, els.tiltRange, value, 1, typing);
       update();
     }
 
@@ -4813,12 +4841,58 @@ function toCsv(rows) {
     });
     els.viewTabs.addEventListener("keydown", onTabKey);
     els.tableToggle.addEventListener("click", () => setTab(els.tableView.hidden ? "table" : "visualizer"));
-    [els.sheetHandle, els.sheetSummary].forEach((button) => button.addEventListener("click", () => setSheet(!els.rail.classList.contains("open"))));
+    let sheetDragged = false;
+    [els.sheetHandle, els.sheetSummary].forEach((button) => button.addEventListener("click", () => {
+      if (sheetDragged) { sheetDragged = false; return; }
+      setSheet(!els.rail.classList.contains("open"));
+    }));
+
+    // The sheet follows the finger from its handle or summary row, then settles open or closed.
+    function enableSheetDrag(handle) {
+      let start = null;
+      handle.addEventListener("pointerdown", (event) => {
+        if (!window.matchMedia("(max-width: 760px)").matches) return;
+        start = { y: event.clientY, height: els.rail.getBoundingClientRect().height, moved: false };
+        try { handle.setPointerCapture(event.pointerId); } catch (error) { /* synthetic or released pointer; the drag still works */ }
+      });
+      handle.addEventListener("pointermove", (event) => {
+        if (!start) return;
+        const delta = start.y - event.clientY;
+        if (!start.moved && Math.abs(delta) < 6) return;
+        start.moved = true;
+        const closed = els.sheetBar.offsetHeight;
+        const open = window.innerHeight * 0.82;
+        els.rail.classList.add("dragging");
+        els.rail.style.maxHeight = Math.min(open, Math.max(closed, start.height + delta)) + "px";
+      });
+      const finish = (event) => {
+        if (!start) return;
+        if (start.moved) {
+          const delta = start.y - event.clientY;
+          const wasOpen = els.rail.classList.contains("open");
+          sheetDragged = true;
+          els.rail.classList.remove("dragging");
+          els.rail.style.maxHeight = "";
+          // A short flick is enough: 40 px toward the other state switches it.
+          setSheet(wasOpen ? delta > -40 : delta > 40);
+          window.setTimeout(() => { sheetDragged = false; }, 350);
+        }
+        start = null;
+      };
+      handle.addEventListener("pointerup", finish);
+      handle.addEventListener("pointercancel", finish);
+    }
+    enableSheetDrag(els.sheetHandle);
+    enableSheetDrag(els.sheetSummary);
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && els.rail.classList.contains("open")) setSheet(false);
     });
     document.querySelectorAll("[data-quick]").forEach((button) => button.addEventListener("click", () => stepQuick(button.dataset.quick, Number(button.dataset.dir))));
-    els.quickHeight.addEventListener("change", (event) => setHeight(event.target.value));
+    els.quickHeight.addEventListener("change", (event) => {
+      const text = event.target.value.trim();
+      if (text !== "" && Number.isFinite(Number(text))) setHeight(text);
+      event.target.value = els.heightInput.value;
+    });
     els.quickEntrance.addEventListener("change", (event) => setQuickEntrance(event.target.value));
     els.sceneSeg.addEventListener("click", (event) => {
       const button = event.target.closest("[data-scene]");
@@ -4832,19 +4906,48 @@ function toCsv(rows) {
     }));
     els.presetSelect.addEventListener("change", (event) => applyPreset(event.target.value));
     els.heightRange.addEventListener("input", (event) => setHeight(event.target.value));
-    els.heightInput.addEventListener("input", (event) => setHeight(event.target.value));
-    els.heightInput.addEventListener("change", (event) => setHeight(event.target.value));
+    // While typing, a half-written number ("", "1.", "0") must not be clamped and rewritten under the cursor.
+    // Valid values apply live; the field is tidied (clamped and formatted) only when the edit is committed.
+    function whileTyping(input, apply) {
+      input.addEventListener("input", () => {
+        const text = input.value.trim();
+        const value = Number(text);
+        const isNumber = text !== "" && Number.isFinite(value);
+        const inRange = isNumber && value >= Number(input.min) && value <= Number(input.max);
+        // Only a finished number outside the range is flagged; "" or "4." mid-typing is simply not applied yet.
+        input.setAttribute("aria-invalid", String(isNumber && !inRange));
+        if (inRange) apply(text, true);
+      });
+      input.addEventListener("change", () => {
+        input.setAttribute("aria-invalid", "false");
+        const text = input.value.trim();
+        // An emptied or unreadable field goes back to the last value, not to the minimum.
+        apply(text === "" || !Number.isFinite(Number(text)) ? input.dataset.lastValue : text, false);
+        input.dataset.lastValue = input.value;
+      });
+      input.addEventListener("focus", () => { input.dataset.lastValue = input.value; });
+      input.dataset.lastValue = input.value;
+    }
+    whileTyping(els.heightInput, setHeight);
+    // Tapping a solved value means the installer wants to set it: switch to Manual and put the cursor there.
+    [els.heightField, els.distanceField].forEach((field) => {
+      field.querySelector(".value-edit").addEventListener("click", () => {
+        if (!field.classList.contains("driven")) return;
+        setSolveMode("manual");
+        const input = field.querySelector('input[type="number"]');
+        input.focus();
+        input.select();
+      });
+    });
     els.distanceRange.addEventListener("input", (event) => setDistance(event.target.value));
-    els.distanceInput.addEventListener("input", (event) => setDistance(event.target.value));
-    els.distanceInput.addEventListener("change", (event) => setDistance(event.target.value));
+    whileTyping(els.distanceInput, setDistance);
     els.entranceInput.addEventListener("input", (event) => setEntrance(event.target.value));
     els.tiltRange.addEventListener("input", (event) => setTilt(event.target.value));
-    els.tiltInput.addEventListener("input", (event) => setTilt(event.target.value));
-    els.tiltInput.addEventListener("change", (event) => setTilt(event.target.value));
+    whileTyping(els.tiltInput, setTilt);
     els.tiltAuto.addEventListener("click", () => { state.tiltUserAdjusted = false; update(); });
     els.sensorSelect.addEventListener("change", update);
     els.focalRange.addEventListener("input", (event) => { setFieldValue(els.focalInput, els.focalRange, event.target.value, 1); update(); });
-    els.focalInput.addEventListener("input", (event) => { setFieldValue(els.focalInput, els.focalRange, event.target.value, 1); update(); });
+    whileTyping(els.focalInput, (value, typing) => { setFieldValue(els.focalInput, els.focalRange, value, 1, typing); update(); });
     els.resolutionSelect.addEventListener("change", update);
     els.snapButton.addEventListener("click", () => setDistance(recommendedDistance(Number(els.heightInput.value), currentProfile())));
     els.copyReadings.addEventListener("click", () => copyText(readingsText(currentPlacement()), t("copiedReadings")));
