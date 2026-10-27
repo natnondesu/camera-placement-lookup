@@ -1,167 +1,38 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { lookupTable, toCsv, validateProfile } from "./src/placement-rule.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Control ranges only. Placement thresholds live in rules/scene-profiles.json.
 const RULE = {
-  minCameraHeightM: 1.8,
+  minCameraHeightM: 1.6,
   maxCameraHeightM: 20,
   cameraHeightStepM: 0.1,
-  humanHeightM: 1.7,
-  faceHeightM: 1.5,
-  defaultTiltTargetHeightM: 0.7,
-  defaultTiltAngleDeg: 25,
+  defaultCameraHeightM: 4,
+  minDistanceM: 0.3,
+  maxDistanceM: 36,
   minTiltAngleDeg: 0,
   maxTiltAngleDeg: 90,
-  tiltAngleStepDeg: 1,
-  defaultFocalLengthMm: 2.8,
+  tiltAngleStepDeg: 0.5,
   minFocalLengthMm: 0.5,
   maxFocalLengthMm: 100,
   focalLengthStepMm: 0.1,
-  defaultSensorWidthMm: 4.8,
-  idealFeetAngleDeg: 37.5,
-  priorityFeetAngleDeg: 38,
-  bestFeetAngleMinDeg: 36,
-  bestFeetAngleMaxDeg: 39,
-  acceptableFeetAngleMinDeg: 32,
-  acceptableFeetAngleMaxDeg: 45,
-  bestFaceAngleMaxDeg: 25,
-  acceptableFaceAngleMaxDeg: 30,
+  defaultFocalLengthMm: 2.8,
 };
 
-const EPSILON = 1e-9;
-const ANGLE_TOLERANCE_DEG = 0.005;
+const readJson = async (file) => JSON.parse(await fs.readFile(path.join(__dirname, file), "utf8"));
+const rules = await readJson("rules/scene-profiles.json");
+const cameras = await readJson("rules/cameras.json");
+rules.profiles.forEach(validateProfile);
+// The page runs the same engine the tests cover, inlined without its export keywords.
+const engineSource = (await fs.readFile(path.join(__dirname, "src/placement-rule.js"), "utf8")).replace(/^export /gm, "");
 
-function toRad(deg) {
-  return (deg * Math.PI) / 180;
-}
-
-function angleDeg(verticalDeltaM, distanceM) {
-  return Math.atan(Math.abs(verticalDeltaM) / distanceM) * 180 / Math.PI;
-}
-
-function verticalFovDeg(sensorWidthMm, focalLengthMm, resolution = { w: 1920, h: 1080 }) {
-  const sensorHeightMm = sensorWidthMm * (resolution.h / resolution.w);
-  return 2 * Math.atan(sensorHeightMm / (2 * focalLengthMm)) * 180 / Math.PI;
-}
-
-function horizontalFovDeg(sensorWidthMm, focalLengthMm) {
-  return 2 * Math.atan(sensorWidthMm / (2 * focalLengthMm)) * 180 / Math.PI;
-}
-
-function tiltAngleForTargetHeight(cameraHeightM, distanceM, targetHeightM = RULE.defaultTiltTargetHeightM) {
-  return Math.atan(Math.max(0, cameraHeightM - targetHeightM) / Math.max(distanceM, EPSILON)) * 180 / Math.PI;
-}
-
-function distanceForFeetAngle(cameraHeightM, angleDegValue) {
-  return cameraHeightM / Math.tan(toRad(angleDegValue));
-}
-
-function minDistanceForFaceAngle(cameraHeightM, maxFaceAngleDeg) {
-  const faceDeltaM = Math.abs(cameraHeightM - RULE.faceHeightM);
-  if (faceDeltaM === 0) return 0;
-  return faceDeltaM / Math.tan(toRad(maxFaceAngleDeg));
-}
-
-function round(value, decimals = 3) {
-  if (value === null || value === undefined || Number.isNaN(value)) return "";
-  return Number(value.toFixed(decimals));
-}
-
-function fmt(value, decimals = 3) {
-  const rounded = round(value, decimals);
-  return rounded === "" ? "" : rounded.toFixed(decimals);
-}
-
-function cameraHeightValues() {
-  const values = [];
-  const count = Math.round((RULE.maxCameraHeightM - RULE.minCameraHeightM) / RULE.cameraHeightStepM);
-  for (let i = 0; i <= count; i += 1) {
-    values.push(Number((RULE.minCameraHeightM + i * RULE.cameraHeightStepM).toFixed(1)));
-  }
-  return values;
-}
-
-function lookupRow(cameraHeightM) {
-  const bestFeetMinDistanceM = distanceForFeetAngle(cameraHeightM, RULE.bestFeetAngleMaxDeg);
-  const bestFeetMaxDistanceM = distanceForFeetAngle(cameraHeightM, RULE.bestFeetAngleMinDeg);
-  const bestFaceMinDistanceM = minDistanceForFaceAngle(cameraHeightM, RULE.bestFaceAngleMaxDeg);
-  const strictBestDistanceMinM = Math.max(bestFeetMinDistanceM, bestFaceMinDistanceM);
-  const strictBestDistanceMaxM = bestFeetMaxDistanceM;
-  const hasStrictBest = strictBestDistanceMinM < strictBestDistanceMaxM - EPSILON;
-
-  const acceptableFeetMinDistanceM = distanceForFeetAngle(cameraHeightM, RULE.acceptableFeetAngleMaxDeg);
-  const acceptableFeetMaxDistanceM = distanceForFeetAngle(cameraHeightM, RULE.acceptableFeetAngleMinDeg);
-  const acceptableFaceMinDistanceM = minDistanceForFaceAngle(cameraHeightM, RULE.acceptableFaceAngleMaxDeg);
-  const acceptableDistanceMinM = Math.max(acceptableFeetMinDistanceM, acceptableFaceMinDistanceM);
-  const acceptableDistanceMaxM = acceptableFeetMaxDistanceM;
-  const hasAcceptable = acceptableDistanceMinM <= acceptableDistanceMaxM + EPSILON;
-
-  let rawRecommendedDistanceM;
-  let recommendationTier = "best";
-  let priorityMode = "strict_best";
-  let note = "Recommended distance is inside the best feet-angle band and keeps face angle below 25 deg.";
-
-  if (hasStrictBest) {
-    const idealDistanceM = distanceForFeetAngle(cameraHeightM, RULE.idealFeetAngleDeg);
-    rawRecommendedDistanceM = idealDistanceM >= strictBestDistanceMinM && idealDistanceM <= strictBestDistanceMaxM
-      ? idealDistanceM
-      : (strictBestDistanceMinM + strictBestDistanceMaxM) / 2;
-  } else {
-    rawRecommendedDistanceM = distanceForFeetAngle(cameraHeightM, RULE.priorityFeetAngleDeg);
-    priorityMode = "feet_priority_38deg";
-    note = "Face <25 deg conflicts with the 36-39 deg feet band; recommendation prioritizes a fixed 38 deg feet angle.";
-  }
-
-  const recommendedDistanceM = round(rawRecommendedDistanceM, 2);
-  const recommendedFeetAngleDeg = angleDeg(cameraHeightM, recommendedDistanceM);
-  const recommendedFaceAngleDeg = angleDeg(cameraHeightM - RULE.faceHeightM, recommendedDistanceM);
-  const faceStatus = recommendedFaceAngleDeg < RULE.bestFaceAngleMaxDeg
-    ? "ideal_under_25"
-    : recommendedFaceAngleDeg <= RULE.acceptableFaceAngleMaxDeg
-      ? "acceptable_25_to_30"
-      : "out_over_30";
-
-  if (faceStatus === "out_over_30") {
-    note = `${note} Face angle is above the original 30 deg out-of-range limit.`;
-  }
-
-  return {
-    camera_height_m: cameraHeightM,
-    face_height_m: RULE.faceHeightM,
-    human_height_m: RULE.humanHeightM,
-    recommended_distance_m: recommendedDistanceM,
-    recommendation_tier: recommendationTier,
-    priority_mode: priorityMode,
-    recommended_feet_angle_deg: recommendedFeetAngleDeg,
-    recommended_face_angle_deg: recommendedFaceAngleDeg,
-    face_status: faceStatus,
-    best_feet_distance_min_m: bestFeetMinDistanceM,
-    best_feet_distance_max_m: bestFeetMaxDistanceM,
-    face_safe_acceptable_distance_min_m: hasAcceptable ? acceptableDistanceMinM : null,
-    face_safe_acceptable_distance_max_m: hasAcceptable ? acceptableDistanceMaxM : null,
-    note,
-  };
-}
-
-function buildRows() {
-  return cameraHeightValues().map(lookupRow);
-}
-
-function buildHtml(rows) {
-  const rowsJson = JSON.stringify(rows);
+function buildHtml() {
   const ruleJson = JSON.stringify(RULE, null, 2);
-  const initialRow = rows[0] ?? lookupRow(RULE.minCameraHeightM);
-  const initialResolution = { w: 1920, h: 1080 };
-  const initialTiltAngleDeg = round(tiltAngleForTargetHeight(initialRow.camera_height_m, initialRow.recommended_distance_m), 0);
-  const initialVerticalFovDeg = verticalFovDeg(RULE.defaultSensorWidthMm, RULE.defaultFocalLengthMm, initialResolution);
-  const initialHorizontalFovDeg = horizontalFovDeg(RULE.defaultSensorWidthMm, RULE.defaultFocalLengthMm);
-  const initialVisibleVerticalSpanM = Math.max(0.001, 2 * initialRow.recommended_distance_m * Math.tan(toRad(initialVerticalFovDeg / 2)));
-  const initialFullWidthM = Math.max(0.001, 2 * initialRow.recommended_distance_m * Math.tan(toRad(initialHorizontalFovDeg / 2)));
-  const initialEffectiveWidthM = initialFullWidthM * 0.8;
-  const initialHorizontalPpm = initialResolution.w / initialFullWidthM;
-  const initialVerticalPpm = initialResolution.h / initialVisibleVerticalSpanM;
+  const rulesJson = JSON.stringify(rules);
+  const camerasJson = JSON.stringify(cameras);
 
   return `<!doctype html>
 <html lang="en">
@@ -1923,6 +1794,128 @@ function buildHtml(rows) {
         animation-iteration-count: 1 !important;
       }
     }
+
+    :root {
+      --face: oklch(0.740 0.150 305);
+      --face-bg: oklch(0.740 0.150 305 / 0.14);
+    }
+
+    .scene-seg {
+      display: flex;
+      width: 100%;
+    }
+
+    .scene-seg button {
+      flex: 1;
+      min-height: 36px;
+      font-size: 13px;
+    }
+
+    .field-hint {
+      margin: 0;
+      color: var(--faint);
+      font-size: 11.5px;
+      line-height: 1.4;
+    }
+
+    .tilt-auto {
+      appearance: none;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 10.5px;
+      font-weight: 750;
+      padding: 2px 8px;
+      margin-left: auto;
+      margin-right: 8px;
+      transition: background 160ms var(--ease), color 160ms var(--ease), border-color 160ms var(--ease);
+    }
+
+    .tilt-auto[aria-pressed="true"] {
+      color: var(--accent);
+      border-color: oklch(0.715 0.150 256 / 0.45);
+      background: var(--accent-dim);
+    }
+
+    .tilt-auto:hover {
+      color: var(--ink);
+      border-color: var(--border-strong);
+    }
+
+    .verdict-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .copy-status {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .pillar-note {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+
+    .status-chip.visible,
+    .table-pill.visible {
+      color: var(--face);
+      background: var(--face-bg);
+      border-color: oklch(0.740 0.150 305 / 0.45);
+    }
+
+    .status-chip.not-visible,
+    .table-pill.not-visible {
+      color: var(--muted);
+      background: var(--surface-2);
+      border-color: var(--border);
+    }
+
+    .sb-pairs b.visible,
+    .mobile-answer-pairs b.visible {
+      color: var(--face);
+    }
+
+    .sb-pairs b.not-visible,
+    .mobile-answer-pairs b.not-visible {
+      color: var(--muted);
+    }
+
+    .reading-chip.face::before {
+      background: var(--face);
+    }
+
+    .reading-chip.not-visible::before {
+      background: var(--muted);
+    }
+
+    .stage-head .view-seg button {
+      min-height: 26px;
+      padding: 3px 9px;
+      font-size: 11px;
+    }
+
+    .table-head .button {
+      margin-left: auto;
+    }
+
+    .warn-line {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      margin-top: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      background: var(--ok-bg);
+      color: var(--ok);
+      font-size: 12.5px;
+      font-weight: 650;
+    }
   </style>
 </head>
 <body>
@@ -1941,26 +1934,32 @@ function buildHtml(rows) {
           <span>Geometry console</span>
         </div>
       </div>
-
       <div class="tabs" role="tablist" aria-label="View" id="viewTabs">
         <button type="button" role="tab" aria-selected="true" aria-controls="visualizerView" id="visualizerTab" tabindex="0" data-tab="visualizer">Visualizer</button>
         <button type="button" role="tab" aria-selected="false" aria-controls="tableView" id="tableTab" tabindex="-1" data-tab="table">Rule table</button>
       </div>
-
     </header>
-
     <div class="mobile-answer" id="mobileAnswer" data-state="best" aria-hidden="true">
       <span class="sb-dot"></span>
       <span class="mobile-answer-main" id="mobileAnswerOverall">Best</span>
       <span class="mobile-answer-pairs">
         <span>Feet <b id="mobileAnswerFeet" class="best">Best</b></span>
-        <span>Face <b id="mobileAnswerFace" class="best">Best</b></span>
+        <span>Face line <b id="mobileAnswerFace" class="visible">Visible</b></span>
       </span>
-      <span class="mobile-answer-distance" id="mobileAnswerDistance">${fmt(initialRow.recommended_distance_m, 2)} m</span>
+      <span class="mobile-answer-distance" id="mobileAnswerDistance"></span>
     </div>
-
     <div class="workspace">
       <aside class="rail" aria-label="Placement controls">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Scene</h2>
+            <span id="sceneVersion">rules</span>
+          </div>
+          <div class="panel-body">
+            <div class="solve-seg scene-seg" role="group" aria-label="Scene profile" id="sceneSeg"></div>
+            <p class="preset-caption" id="sceneCaption"></p>
+          </div>
+        </section>
         <section class="panel">
           <div class="panel-head">
             <h2>Camera preset</h2>
@@ -1968,15 +1967,11 @@ function buildHtml(rows) {
           </div>
           <div class="panel-body">
             <div class="select-wrap">
-              <select id="presetSelect" aria-label="Camera preset">
-                <option value="custom">No preset - custom</option>
-                <option value="dahua2531">Dahua DH-IPC-HDBW2531R-ZS-S2</option>
-              </select>
+              <select id="presetSelect" aria-label="Camera preset"></select>
             </div>
-            <p class="preset-caption" id="presetCaption">Custom configuration. Sensor format, focal length and resolution are adjustable.</p>
+            <p class="preset-caption" id="presetCaption"></p>
           </div>
         </section>
-
         <section class="panel">
           <div class="panel-head">
             <h2>Geometry</h2>
@@ -1991,33 +1986,30 @@ function buildHtml(rows) {
                 <button type="button" data-solve="height" aria-pressed="false">Height</button>
               </div>
             </div>
-
             <div class="field" id="heightField">
               <div class="field-top">
                 <label class="field-label" for="heightRange">Mounting height <span class="driven-badge">solved</span></label>
                 <span class="value-edit">
-                  <input id="heightInput" type="number" min="${RULE.minCameraHeightM}" max="${RULE.maxCameraHeightM}" step="${RULE.cameraHeightStepM}" value="${RULE.minCameraHeightM.toFixed(1)}" aria-label="Mounting height in meters">
+                  <input id="heightInput" type="number" min="${RULE.minCameraHeightM}" max="${RULE.maxCameraHeightM}" step="${RULE.cameraHeightStepM}" value="${RULE.defaultCameraHeightM.toFixed(1)}" aria-label="Mounting height in meters">
                   <span class="unit">m</span>
                 </span>
               </div>
-              <input id="heightRange" type="range" min="${RULE.minCameraHeightM}" max="${RULE.maxCameraHeightM}" step="${RULE.cameraHeightStepM}" value="${RULE.minCameraHeightM}">
+              <input id="heightRange" type="range" min="${RULE.minCameraHeightM}" max="${RULE.maxCameraHeightM}" step="${RULE.cameraHeightStepM}" value="${RULE.defaultCameraHeightM}">
               <div class="ticks"><span>${RULE.minCameraHeightM.toFixed(1)}</span><span>${RULE.maxCameraHeightM.toFixed(1)}</span></div>
             </div>
-
             <div class="field" id="distanceField">
               <div class="field-top">
-                <label class="field-label" for="distanceRange">Subject distance <span class="driven-badge">solved</span></label>
+                <label class="field-label" for="distanceRange">Counting line distance <span class="driven-badge">solved</span></label>
                 <span class="value-edit">
-                  <input id="distanceInput" type="number" min="0.3" max="36" step="0.01" value="${fmt(initialRow.recommended_distance_m, 2)}" aria-label="Subject distance in meters">
+                  <input id="distanceInput" type="number" min="${RULE.minDistanceM}" max="${RULE.maxDistanceM}" step="0.01" value="4.60" aria-label="Counting line distance in meters">
                   <span class="unit">m</span>
                 </span>
               </div>
-              <input id="distanceRange" type="range" min="0.3" max="36" step="0.01" value="${fmt(initialRow.recommended_distance_m, 2)}">
-              <div class="ticks"><span id="distanceMinTick">0.30</span><span id="distanceMaxTick">36.00</span></div>
+              <input id="distanceRange" type="range" min="${RULE.minDistanceM}" max="${RULE.maxDistanceM}" step="0.01" value="4.60">
+              <div class="ticks"><span id="distanceMinTick">${RULE.minDistanceM.toFixed(2)}</span><span id="distanceMaxTick">${RULE.maxDistanceM.toFixed(2)}</span></div>
             </div>
-
             <div class="rec-row" aria-label="Recommended placement action">
-              <span class="rec-pill"><small>recommended distance</small><b id="recommendedDistance" class="mono">${fmt(initialRow.recommended_distance_m, 2)} m</b></span>
+              <span class="rec-pill"><small>recommended distance</small><b id="recommendedDistance" class="mono"></b></span>
               <button class="use-button" type="button" id="snapButton">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M20 6 9 17l-5-5"></path>
@@ -2025,22 +2017,31 @@ function buildHtml(rows) {
                 Use recommended distance
               </button>
             </div>
-
+            <div class="field" id="depthField">
+              <div class="field-top">
+                <label class="field-label" for="depthInput">Floor depth in view</label>
+                <span class="value-edit">
+                  <input id="depthInput" type="number" min="0" max="80" step="0.1" placeholder="none" aria-describedby="depthHint" aria-label="Floor depth in view in meters">
+                  <span class="unit">m</span>
+                </span>
+              </div>
+              <p class="field-hint" id="depthHint">Optional. From below the camera to the farthest floor where people can stand.</p>
+            </div>
             <details class="advanced" id="advancedPanel">
               <summary>Advanced optics <span aria-hidden="true">v</span></summary>
               <div class="advanced-body">
                 <div class="field" id="tiltField">
                   <div class="field-top">
                     <label class="field-label" for="tiltRange">Tilt angle</label>
+                    <button type="button" class="tilt-auto" id="tiltAuto" aria-pressed="true">Recommended</button>
                     <span class="value-edit">
-                      <input id="tiltInput" type="number" min="${RULE.minTiltAngleDeg}" max="${RULE.maxTiltAngleDeg}" step="${RULE.tiltAngleStepDeg}" value="${initialTiltAngleDeg}" aria-label="Tilt angle in degrees">
+                      <input id="tiltInput" type="number" min="${RULE.minTiltAngleDeg}" max="${RULE.maxTiltAngleDeg}" step="${RULE.tiltAngleStepDeg}" value="30" aria-label="Tilt angle in degrees">
                       <span class="unit">deg</span>
                     </span>
                   </div>
-                  <input id="tiltRange" type="range" min="${RULE.minTiltAngleDeg}" max="${RULE.maxTiltAngleDeg}" step="${RULE.tiltAngleStepDeg}" value="${initialTiltAngleDeg}">
+                  <input id="tiltRange" type="range" min="${RULE.minTiltAngleDeg}" max="${RULE.maxTiltAngleDeg}" step="${RULE.tiltAngleStepDeg}" value="30">
                   <div class="ticks"><span>level</span><span>down</span></div>
                 </div>
-
                 <div class="field" id="sensorField">
                   <div class="field-top">
                     <label class="field-label" for="sensorSelect">Sensor format <span class="driven-badge">preset</span></label>
@@ -2049,7 +2050,6 @@ function buildHtml(rows) {
                     <select id="sensorSelect" aria-label="Sensor format"></select>
                   </div>
                 </div>
-
                 <div class="field" id="focalField">
                   <div class="field-top">
                     <label class="field-label" for="focalRange">Focal length</label>
@@ -2061,7 +2061,6 @@ function buildHtml(rows) {
                   <input id="focalRange" type="range" min="${RULE.minFocalLengthMm}" max="${RULE.maxFocalLengthMm}" step="${RULE.focalLengthStepMm}" value="${RULE.defaultFocalLengthMm}">
                   <div class="ticks"><span id="focalMinTick">${RULE.minFocalLengthMm.toFixed(1)}</span><span id="focalMaxTick">${RULE.maxFocalLengthMm.toFixed(1)}</span></div>
                 </div>
-
                 <div class="field">
                   <div class="field-top">
                     <label class="field-label" for="resolutionSelect">Resolution</label>
@@ -2075,7 +2074,6 @@ function buildHtml(rows) {
           </div>
         </section>
       </aside>
-
       <main class="main">
         <section id="visualizerView" role="tabpanel" aria-labelledby="visualizerTab">
           <div class="main">
@@ -2083,15 +2081,22 @@ function buildHtml(rows) {
               <div class="verdict-lead">
                 <div class="verdict-kicker"><span class="dot"></span><span id="overallLabel">Placement verdict</span></div>
                 <h1 id="verdictHeadline">Placement is best</h1>
-                <p class="verdict-sub" id="verdictSub">The current distance is inside the feet priority band and keeps the face angle in range.</p>
-                <p class="sr-only" id="placementAnnouncement" aria-live="polite" aria-atomic="true">Placement is best. Feet Best. Face Best. Distance ${fmt(initialRow.recommended_distance_m, 2)} meters.</p>
+                <p class="verdict-sub" id="verdictSub"></p>
+                <p class="warn-line" id="heightWarn" hidden></p>
+                <div class="verdict-actions">
+                  <button type="button" class="button" id="copyReadings">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"></path></svg>
+                    Copy readings
+                  </button>
+                  <span class="copy-status" id="copyStatus" aria-live="polite"></span>
+                </div>
+                <p class="sr-only" id="placementAnnouncement" aria-live="polite" aria-atomic="true"></p>
               </div>
-
               <div class="pillar">
                 <div class="pillar-head">
-                  <span class="pillar-name">Feet</span>
+                  <span class="pillar-name">Counting line</span>
                   <button class="tag-info" type="button" id="priorityInfo" aria-expanded="false" aria-describedby="priorityTip">
-                    priority
+                    verdict
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="10"></circle>
                       <path d="M12 16v-4"></path>
@@ -2101,32 +2106,32 @@ function buildHtml(rows) {
                 </div>
                 <span class="status-chip best" id="feetStatus">Best</span>
                 <div class="pillar-meta">
-                  <span class="meta"><span>angle</span><b id="feetAngle">${fmt(initialRow.recommended_feet_angle_deg, 2)}<small>deg</small></b></span>
-                  <span class="meta"><span>bands</span><b>${RULE.bestFeetAngleMinDeg}-${RULE.bestFeetAngleMaxDeg} <small>best</small> / ${RULE.acceptableFeetAngleMinDeg}-${RULE.acceptableFeetAngleMaxDeg} <small>ok</small></b></span>
+                  <span class="meta"><span>feet angle</span><b id="feetAngle"></b></span>
+                  <span class="meta"><span>bands</span><b id="feetBands"></b></span>
                 </div>
+                <p class="pillar-note" id="countNote"></p>
               </div>
-
               <div class="pillar">
                 <div class="pillar-head">
-                  <span class="pillar-name">Face</span>
-                  <span class="tag">safety</span>
+                  <span class="pillar-name">Face line</span>
+                  <span class="tag">demographics</span>
                 </div>
-                <span class="status-chip best" id="faceStatus">Best</span>
+                <span class="status-chip visible" id="faceStatus">Visible</span>
                 <div class="pillar-meta">
-                  <span class="meta"><span>angle</span><b id="faceAngle">${fmt(initialRow.recommended_face_angle_deg, 2)}<small>deg</small></b></span>
-                  <span class="meta"><span>bands</span><b>&lt;${RULE.bestFaceAngleMaxDeg} <small>best</small> / ${RULE.bestFaceAngleMaxDeg}-${RULE.acceptableFaceAngleMaxDeg} <small>ok</small></b></span>
+                  <span class="meta"><span>distance</span><b id="faceLineDistance"></b></span>
+                  <span class="meta"><span>face angle</span><b id="faceAngle"></b></span>
                 </div>
+                <p class="pillar-note" id="faceNote"></p>
               </div>
             </section>
-
             <div class="dual">
               <section class="stage" aria-label="Side-view placement and distance range">
                 <div class="stage-head">
-                  <div class="stage-title"><h2>Side view</h2><span class="stage-badge" id="stageBadge">from lookup table</span></div>
+                  <div class="stage-title"><h2>Side view</h2><span class="stage-badge" id="stageBadge"></span></div>
                   <div class="stage-readings" aria-label="Current side-view readings">
-                    <span class="reading-chip best" id="sideFeetReading">Feet 37.5 deg</span>
-                    <span class="reading-chip best" id="sideFaceReading">Face 7.3 deg</span>
-                    <span class="reading-chip" id="sideTiltReading">Tilt 25 deg / FOV 51.5 deg</span>
+                    <span class="reading-chip best" id="sideFeetReading"></span>
+                    <span class="reading-chip face" id="sideFaceReading"></span>
+                    <span class="reading-chip" id="sideTiltReading"></span>
                   </div>
                 </div>
                 <div class="diagram-wrap">
@@ -2150,74 +2155,71 @@ function buildHtml(rows) {
                   </div>
                 </div>
               </section>
-
-              <section class="stage" aria-label="Top-down coverage diagram">
+              <section class="stage" aria-label="Top-down coverage and camera view">
                 <div class="stage-head">
-                  <h2>Top view</h2>
-                  <span class="stage-badge" id="topStageBadge">H-FOV</span>
+                  <div class="stage-title">
+                    <h2 id="topTitle">Top view</h2>
+                    <div class="solve-seg view-seg" role="group" aria-label="Second diagram">
+                      <button type="button" data-topview="top" aria-pressed="true">Top</button>
+                      <button type="button" data-topview="camera" aria-pressed="false">Camera</button>
+                    </div>
+                  </div>
                 </div>
                 <div class="diagram-wrap">
                   <canvas id="topCanvas" width="600" height="560" role="img" aria-label="Top-down coverage diagram"></canvas>
                 </div>
               </section>
             </div>
-
             <section class="clusters" aria-label="Placement metrics">
               <div class="cluster">
-                <h3>Geometry</h3>
+                <h3>Lines on the floor</h3>
                 <div class="metrics">
-                  <div class="metric"><span class="value" id="faceTiltMetric">${fmt(initialRow.recommended_face_angle_deg, 2)}<small>deg</small></span><span class="label">face tilt angle</span></div>
-                  <div class="metric"><span class="value" id="groundAngleMetric">${fmt(initialRow.recommended_feet_angle_deg, 2)}<small>deg</small></span><span class="label">ground angle</span></div>
+                  <div class="metric"><span class="value" id="countingMetric"></span><span class="label">counting line</span></div>
+                  <div class="metric"><span class="value" id="faceLineMetric"></span><span class="label">face line</span></div>
                 </div>
               </div>
-
               <div class="cluster">
                 <h3>Optics - field of view</h3>
                 <div class="metrics">
-                  <div class="metric"><span class="value" id="horizontalFovMetric">${fmt(initialHorizontalFovDeg, 2)}<small>deg</small></span><span class="label">horizontal FOV</span></div>
-                  <div class="metric"><span class="value" id="verticalFovMetric">${fmt(initialVerticalFovDeg, 2)}<small>deg</small></span><span class="label">vertical FOV</span></div>
+                  <div class="metric"><span class="value" id="horizontalFovMetric"></span><span class="label">horizontal FOV</span></div>
+                  <div class="metric"><span class="value" id="verticalFovMetric"></span><span class="label">vertical FOV</span></div>
                 </div>
               </div>
-
               <div class="cluster">
-                <h3>Coverage at subject</h3>
+                <h3>Coverage at counting line</h3>
                 <div class="metrics">
-                  <div class="metric"><span class="value" id="fullWidthMetric">${fmt(initialFullWidthM, 1)}<small>m</small></span><span class="label">full width</span></div>
-                  <div class="metric"><span class="value" id="effectiveWidthMetric">${fmt(initialEffectiveWidthM, 1)}<small>m</small></span><span class="label">effective 80%</span></div>
+                  <div class="metric"><span class="value" id="fullWidthMetric"></span><span class="label">full width</span></div>
+                  <div class="metric"><span class="value" id="effectiveWidthMetric"></span><span class="label">effective 80%</span></div>
                 </div>
               </div>
-
               <div class="cluster">
                 <h3>Resolution density</h3>
                 <div class="metrics">
-                  <div class="metric"><span class="value" id="horizontalPpmMetric">${fmt(initialHorizontalPpm, 0)}<small>px/m</small></span><span class="label">horizontal PPM</span></div>
-                  <div class="metric"><span class="value" id="verticalPpmMetric">${fmt(initialVerticalPpm, 0)}<small>px/m</small></span><span class="label">vertical PPM</span></div>
+                  <div class="metric"><span class="value" id="horizontalPpmMetric"></span><span class="label">horizontal PPM</span></div>
+                  <div class="metric"><span class="value" id="verticalPpmMetric"></span><span class="label">vertical PPM</span></div>
                 </div>
               </div>
             </section>
           </div>
         </section>
-
         <section id="tableView" role="tabpanel" aria-labelledby="tableTab" hidden>
           <div class="table-card">
             <div class="table-head">
               <h2>Lookup table</h2>
-              <div class="table-meta">${RULE.minCameraHeightM.toFixed(1)}-${RULE.maxCameraHeightM.toFixed(1)} m in ${RULE.cameraHeightStepM.toFixed(1)} m steps</div>
+              <div class="table-meta" id="tableMeta"></div>
+              <button type="button" class="button" id="copyCsv">Copy CSV</button>
             </div>
             <div class="table-scroll">
               <table>
                 <thead>
                   <tr>
                     <th>Height</th>
-                    <th>Recommended</th>
+                    <th>Counting line</th>
                     <th>Feet angle</th>
-                    <th>Face angle</th>
-                    <th>Tier</th>
-                    <th>Face status</th>
-                    <th>Best feet min</th>
-                    <th>Best feet max</th>
-                    <th>Face-safe min</th>
-                    <th>Face-safe max</th>
+                    <th>Feet</th>
+                    <th>Face there</th>
+                    <th>Face</th>
+                    <th>Face line</th>
                   </tr>
                 </thead>
                 <tbody id="lookupBody"></tbody>
@@ -2227,45 +2229,28 @@ function buildHtml(rows) {
         </section>
       </main>
     </div>
-
     <div class="tip" id="priorityTip" role="tooltip">
-      <b>Why feet priority?</b>
-      Feet angle drives reliable people-counting geometry. Face angle sharpens profile quality, but a clean profile does not help if the count is wrong first.
+      <b>Why the counting line decides</b>
+      The feet angle at the counting line drives reliable people counting, so it alone decides the verdict. Demographics use a separate face line where the face angle is best; it never fails a placement.
     </div>
-
     <div class="statusbar" id="statusbar" data-state="best">
       <button type="button" id="jumpToDiagram" aria-label="Current placement status. Jump to placement diagram">
         <span class="sb-dot"></span>
         <span class="sb-overall" id="sbOverall">Best</span>
         <span class="sb-pairs">
           <span>Feet <b id="sbFeet" class="best">Best</b></span>
-          <span>Face <b id="sbFace" class="best">Best</b></span>
+          <span>Face line <b id="sbFace" class="visible">Visible</b></span>
         </span>
         <span class="sb-spacer"></span>
-        <span class="sb-distance" id="sbDistance">${fmt(initialRow.recommended_distance_m, 2)} m</span>
+        <span class="sb-distance" id="sbDistance"></span>
       </button>
     </div>
   </div>
-
   <script>
+${engineSource}
     const RULE = ${ruleJson};
-    const LOOKUP_ROWS = ${rowsJson};
-    const ANGLE_TOLERANCE_DEG = ${ANGLE_TOLERANCE_DEG};
-
-    const RESOLUTIONS = {
-      custom: [
-        { label: "720p - 1280 x 720", w: 1280, h: 720 },
-        { label: "1080p - 1920 x 1080", w: 1920, h: 1080 },
-        { label: "4 MP - 2560 x 1440", w: 2560, h: 1440 },
-        { label: "8 MP - 3840 x 2160", w: 3840, h: 2160 }
-      ],
-      dahua2531: [
-        { label: "5 MP - 2592 x 1944", w: 2592, h: 1944 },
-        { label: "4 MP - 2688 x 1520", w: 2688, h: 1520 },
-        { label: "3 MP - 2304 x 1296", w: 2304, h: 1296 },
-        { label: "1080p - 1920 x 1080", w: 1920, h: 1080 }
-      ]
-    };
+    const RULES = ${rulesJson};
+    const CAMERA_CATALOG = ${camerasJson};
 
     const SENSOR_SIZES = [
       { id: "1/4", label: "1/4\\" format - 3.6 mm width", widthMm: 3.6 },
@@ -2275,28 +2260,40 @@ function buildHtml(rows) {
       { id: "1/1.2", label: "1/1.2\\" format - 8.8 mm width", widthMm: 8.8 }
     ];
 
-    const CAMERAS = {
-      custom: {
-        caption: "Custom configuration. Sensor format, focal length and resolution are adjustable.",
-        sensorId: "1/2.7",
-        sensorLocked: false,
-        focalMinMm: RULE.minFocalLengthMm,
-        focalMaxMm: RULE.maxFocalLengthMm,
-        focalDefaultMm: RULE.defaultFocalLengthMm,
-        resolutions: RESOLUTIONS.custom,
-        defaultResolution: "1920x1080"
-      },
-      dahua2531: {
-        caption: "1/2.7\\" format 5 MP dome, 2.7-13.5 mm motorized lens, up to 2592 x 1944 output.",
-        sensorId: "1/2.7",
-        sensorLocked: true,
-        focalMinMm: 2.7,
-        focalMaxMm: 13.5,
-        focalDefaultMm: 4.0,
-        resolutions: RESOLUTIONS.dahua2531,
-        defaultResolution: "2592x1944"
-      }
+    const CUSTOM_PRESET = {
+      caption: "Custom configuration. Sensor format, focal length and resolution are adjustable.",
+      sensorId: "1/2.7",
+      sensorLocked: false,
+      focalMinMm: RULE.minFocalLengthMm,
+      focalMaxMm: RULE.maxFocalLengthMm,
+      focalDefaultMm: RULE.defaultFocalLengthMm,
+      resolutions: [
+        { label: "720p - 1280 x 720", w: 1280, h: 720 },
+        { label: "1080p - 1920 x 1080", w: 1920, h: 1080 },
+        { label: "4 MP - 2560 x 1440", w: 2560, h: 1440 },
+        { label: "8 MP - 3840 x 2160", w: 3840, h: 2160 }
+      ],
+      defaultResolution: "1920x1080"
     };
+
+    function presetFor(key) {
+      const camera = CAMERA_CATALOG.cameras.find((item) => item.id === key);
+      if (!camera) return CUSTOM_PRESET;
+      const sensor = SENSOR_SIZES.find((item) => Math.abs(item.widthMm - camera.sensorWidthMm) < 0.01);
+      const first = camera.resolutions[0];
+      return {
+        caption: camera.description,
+        sensorId: sensor ? sensor.id : "1/2.7",
+        sensorLocked: true,
+        focalMinMm: camera.focalLengthMm.min,
+        focalMaxMm: camera.focalLengthMm.max,
+        focalDefaultMm: camera.focalLengthMm.default,
+        resolutions: camera.resolutions.map((r) => ({ label: r.label + " - " + r.w + " x " + r.h, w: r.w, h: r.h })),
+        defaultResolution: first.w + "x" + first.h
+      };
+    }
+
+    const STATUS_LABEL = { best: "Best", acceptable: "Acceptable", out_of_range: "Out of range" };
 
     function themeColor(name) {
       return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -2307,150 +2304,68 @@ function buildHtml(rows) {
       ok: themeColor("--ok"),
       bad: themeColor("--bad"),
       accent: themeColor("--accent"),
+      face: themeColor("--face"),
       ink: themeColor("--ink"),
       muted: themeColor("--muted"),
       faint: themeColor("--faint"),
       grid: themeColor("--border"),
-      surface: themeColor("--surface")
+      surface: themeColor("--surface"),
+      surface2: themeColor("--surface-2")
     };
 
+    const byId = (id) => document.getElementById(id);
     const els = {
-      viewTabs: document.getElementById("viewTabs"),
-      visualizerTab: document.getElementById("visualizerTab"),
-      tableTab: document.getElementById("tableTab"),
-      visualizerView: document.getElementById("visualizerView"),
-      tableView: document.getElementById("tableView"),
-      presetSelect: document.getElementById("presetSelect"),
-      presetCaption: document.getElementById("presetCaption"),
-      heightField: document.getElementById("heightField"),
-      heightRange: document.getElementById("heightRange"),
-      heightInput: document.getElementById("heightInput"),
-      distanceField: document.getElementById("distanceField"),
-      distanceRange: document.getElementById("distanceRange"),
-      distanceInput: document.getElementById("distanceInput"),
-      distanceMinTick: document.getElementById("distanceMinTick"),
-      distanceMaxTick: document.getElementById("distanceMaxTick"),
-      tiltRange: document.getElementById("tiltRange"),
-      tiltInput: document.getElementById("tiltInput"),
-      sensorField: document.getElementById("sensorField"),
-      sensorSelect: document.getElementById("sensorSelect"),
-      focalRange: document.getElementById("focalRange"),
-      focalInput: document.getElementById("focalInput"),
-      focalMinTick: document.getElementById("focalMinTick"),
-      focalMaxTick: document.getElementById("focalMaxTick"),
-      resolutionSelect: document.getElementById("resolutionSelect"),
-      advancedPanel: document.getElementById("advancedPanel"),
-      verdict: document.getElementById("verdict"),
-      overallLabel: document.getElementById("overallLabel"),
-      verdictHeadline: document.getElementById("verdictHeadline"),
-      verdictSub: document.getElementById("verdictSub"),
-      placementAnnouncement: document.getElementById("placementAnnouncement"),
-      recommendedDistance: document.getElementById("recommendedDistance"),
-      snapButton: document.getElementById("snapButton"),
-      feetStatus: document.getElementById("feetStatus"),
-      faceStatus: document.getElementById("faceStatus"),
-      feetAngle: document.getElementById("feetAngle"),
-      faceAngle: document.getElementById("faceAngle"),
-      priorityInfo: document.getElementById("priorityInfo"),
-      priorityTip: document.getElementById("priorityTip"),
-      stageBadge: document.getElementById("stageBadge"),
-      sideFeetReading: document.getElementById("sideFeetReading"),
-      sideFaceReading: document.getElementById("sideFaceReading"),
-      sideTiltReading: document.getElementById("sideTiltReading"),
-      topStageBadge: document.getElementById("topStageBadge"),
-      sideCanvas: document.getElementById("sideCanvas"),
-      topCanvas: document.getElementById("topCanvas"),
-      acceptableZone: document.getElementById("acceptableZone"),
-      bestZone: document.getElementById("bestZone"),
-      minMarker: document.getElementById("minMarker"),
-      minMarkerLabel: document.getElementById("minMarkerLabel"),
-      bestMarker: document.getElementById("bestMarker"),
-      bestMarkerLabel: document.getElementById("bestMarkerLabel"),
-      maxMarker: document.getElementById("maxMarker"),
-      maxMarkerLabel: document.getElementById("maxMarkerLabel"),
-      distanceCursor: document.getElementById("distanceCursor"),
-      cursorLabel: document.getElementById("cursorLabel"),
-      faceTiltMetric: document.getElementById("faceTiltMetric"),
-      groundAngleMetric: document.getElementById("groundAngleMetric"),
-      horizontalFovMetric: document.getElementById("horizontalFovMetric"),
-      verticalFovMetric: document.getElementById("verticalFovMetric"),
-      fullWidthMetric: document.getElementById("fullWidthMetric"),
-      effectiveWidthMetric: document.getElementById("effectiveWidthMetric"),
-      horizontalPpmMetric: document.getElementById("horizontalPpmMetric"),
-      verticalPpmMetric: document.getElementById("verticalPpmMetric"),
-      lookupBody: document.getElementById("lookupBody"),
-      mobileAnswer: document.getElementById("mobileAnswer"),
-      mobileAnswerOverall: document.getElementById("mobileAnswerOverall"),
-      mobileAnswerFeet: document.getElementById("mobileAnswerFeet"),
-      mobileAnswerFace: document.getElementById("mobileAnswerFace"),
-      mobileAnswerDistance: document.getElementById("mobileAnswerDistance"),
-      statusbar: document.getElementById("statusbar"),
-      sbOverall: document.getElementById("sbOverall"),
-      sbFeet: document.getElementById("sbFeet"),
-      sbFace: document.getElementById("sbFace"),
-      sbDistance: document.getElementById("sbDistance"),
-      jumpToDiagram: document.getElementById("jumpToDiagram")
+      viewTabs: byId("viewTabs"), visualizerTab: byId("visualizerTab"), tableTab: byId("tableTab"),
+      visualizerView: byId("visualizerView"), tableView: byId("tableView"),
+      sceneSeg: byId("sceneSeg"), sceneCaption: byId("sceneCaption"), sceneVersion: byId("sceneVersion"),
+      presetSelect: byId("presetSelect"), presetCaption: byId("presetCaption"),
+      heightField: byId("heightField"), heightRange: byId("heightRange"), heightInput: byId("heightInput"),
+      distanceField: byId("distanceField"), distanceRange: byId("distanceRange"), distanceInput: byId("distanceInput"),
+      distanceMaxTick: byId("distanceMaxTick"),
+      depthInput: byId("depthInput"),
+      tiltRange: byId("tiltRange"), tiltInput: byId("tiltInput"), tiltAuto: byId("tiltAuto"),
+      sensorField: byId("sensorField"), sensorSelect: byId("sensorSelect"),
+      focalRange: byId("focalRange"), focalInput: byId("focalInput"), focalMinTick: byId("focalMinTick"), focalMaxTick: byId("focalMaxTick"),
+      resolutionSelect: byId("resolutionSelect"),
+      verdict: byId("verdict"), verdictHeadline: byId("verdictHeadline"), verdictSub: byId("verdictSub"), heightWarn: byId("heightWarn"),
+      copyReadings: byId("copyReadings"), copyStatus: byId("copyStatus"), placementAnnouncement: byId("placementAnnouncement"),
+      recommendedDistance: byId("recommendedDistance"), snapButton: byId("snapButton"),
+      feetStatus: byId("feetStatus"), feetAngle: byId("feetAngle"), feetBands: byId("feetBands"), countNote: byId("countNote"),
+      faceStatus: byId("faceStatus"), faceLineDistance: byId("faceLineDistance"), faceAngle: byId("faceAngle"), faceNote: byId("faceNote"),
+      priorityInfo: byId("priorityInfo"), priorityTip: byId("priorityTip"),
+      stageBadge: byId("stageBadge"), sideFeetReading: byId("sideFeetReading"), sideFaceReading: byId("sideFaceReading"), sideTiltReading: byId("sideTiltReading"),
+      topTitle: byId("topTitle"), sideCanvas: byId("sideCanvas"), topCanvas: byId("topCanvas"),
+      acceptableZone: byId("acceptableZone"), bestZone: byId("bestZone"),
+      minMarker: byId("minMarker"), minMarkerLabel: byId("minMarkerLabel"), bestMarker: byId("bestMarker"), bestMarkerLabel: byId("bestMarkerLabel"),
+      maxMarker: byId("maxMarker"), maxMarkerLabel: byId("maxMarkerLabel"), distanceCursor: byId("distanceCursor"), cursorLabel: byId("cursorLabel"),
+      countingMetric: byId("countingMetric"), faceLineMetric: byId("faceLineMetric"),
+      horizontalFovMetric: byId("horizontalFovMetric"), verticalFovMetric: byId("verticalFovMetric"),
+      fullWidthMetric: byId("fullWidthMetric"), effectiveWidthMetric: byId("effectiveWidthMetric"),
+      horizontalPpmMetric: byId("horizontalPpmMetric"), verticalPpmMetric: byId("verticalPpmMetric"),
+      tableMeta: byId("tableMeta"), copyCsv: byId("copyCsv"), lookupBody: byId("lookupBody"),
+      mobileAnswer: byId("mobileAnswer"), mobileAnswerOverall: byId("mobileAnswerOverall"), mobileAnswerFeet: byId("mobileAnswerFeet"),
+      mobileAnswerFace: byId("mobileAnswerFace"), mobileAnswerDistance: byId("mobileAnswerDistance"),
+      statusbar: byId("statusbar"), sbOverall: byId("sbOverall"), sbFeet: byId("sbFeet"), sbFace: byId("sbFace"), sbDistance: byId("sbDistance"),
+      jumpToDiagram: byId("jumpToDiagram")
     };
 
     const state = {
+      profileId: RULES.defaultProfile,
       solveMode: "manual",
-      preset: "custom",
-      tableRendered: false,
+      depthM: null,
+      topView: "top",
+      tiltUserAdjusted: false,
+      tableProfileId: null,
       tableSelectedHeightKey: null,
-      announceTimer: null,
-      tiltUserAdjusted: false
+      announceTimer: null
     };
-
-    function toRad(deg) {
-      return deg * Math.PI / 180;
-    }
-
-    function angleDeg(verticalDeltaM, distanceM) {
-      return Math.atan(Math.abs(verticalDeltaM) / Math.max(distanceM, 0.001)) * 180 / Math.PI;
-    }
-
-    function verticalFovDeg(sensorWidthMm, focalLengthMm, resolution) {
-      const sensorHeightMm = sensorWidthMm * (resolution.h / resolution.w);
-      return 2 * Math.atan(sensorHeightMm / (2 * focalLengthMm)) * 180 / Math.PI;
-    }
-
-    function horizontalFovDeg(sensorWidthMm, focalLengthMm) {
-      return 2 * Math.atan(sensorWidthMm / (2 * focalLengthMm)) * 180 / Math.PI;
-    }
-
-    function tiltAngleForTargetHeight(cameraHeightM, distanceM, targetHeightM) {
-      return Math.atan(Math.max(0, cameraHeightM - targetHeightM) / Math.max(distanceM, 0.001)) * 180 / Math.PI;
-    }
-
-    function aimHeightAtDistance(cameraHeightM, distanceM, tiltAngleDeg) {
-      return cameraHeightM - Math.tan(toRad(tiltAngleDeg)) * distanceM;
-    }
-
-    function syncDefaultTilt(heightM, distanceM) {
-      if (state.tiltUserAdjusted) return;
-      const tilt = tiltAngleForTargetHeight(heightM, distanceM, RULE.defaultTiltTargetHeightM);
-      setFieldValue(els.tiltInput, els.tiltRange, tilt, 0);
-    }
-
-    function distanceForFeetAngle(heightM, angleDegValue) {
-      return heightM / Math.tan(toRad(angleDegValue));
-    }
-
-    function feetDistanceWindow(heightM) {
-      return {
-        acceptableMin: distanceForFeetAngle(heightM, RULE.acceptableFeetAngleMaxDeg),
-        acceptableMax: distanceForFeetAngle(heightM, RULE.acceptableFeetAngleMinDeg),
-        bestMin: distanceForFeetAngle(heightM, RULE.bestFeetAngleMaxDeg),
-        bestMax: distanceForFeetAngle(heightM, RULE.bestFeetAngleMinDeg)
-      };
-    }
 
     function clamp(value, min, max) {
       return Math.min(Math.max(value, min), max);
     }
 
     function fmt(value, decimals, suffix) {
-      if (value === null || value === undefined || Number.isNaN(value)) return "n/a";
+      if (value === null || value === undefined || Number.isNaN(value)) return "none";
       return Number(value).toFixed(decimals) + (suffix || "");
     }
 
@@ -2460,10 +2375,7 @@ function buildHtml(rows) {
     }
 
     function setRangeFill(range) {
-      const min = Number(range.min);
-      const max = Number(range.max);
-      const value = Number(range.value);
-      range.style.setProperty("--fill", pct(value, min, max).toFixed(2) + "%");
+      range.style.setProperty("--fill", pct(Number(range.value), Number(range.min), Number(range.max)).toFixed(2) + "%");
     }
 
     function setFieldValue(input, range, value, decimals) {
@@ -2474,227 +2386,183 @@ function buildHtml(rows) {
       return clamped;
     }
 
-    function rowForHeight(heightM) {
-      const rounded = Number(heightM.toFixed(1));
-      return LOOKUP_ROWS.reduce((best, row) => {
-        return Math.abs(row.camera_height_m - rounded) < Math.abs(best.camera_height_m - rounded) ? row : best;
-      }, LOOKUP_ROWS[0]);
-    }
-
-    function rowForRecommendedDistance(distanceM) {
-      return LOOKUP_ROWS.reduce((best, row) => {
-        return Math.abs(row.recommended_distance_m - distanceM) < Math.abs(best.recommended_distance_m - distanceM) ? row : best;
-      }, LOOKUP_ROWS[0]);
-    }
-
-    function classifyFeet(feetAngleDeg) {
-      if (feetAngleDeg >= RULE.bestFeetAngleMinDeg - ANGLE_TOLERANCE_DEG && feetAngleDeg <= RULE.bestFeetAngleMaxDeg + ANGLE_TOLERANCE_DEG) {
-        return { status: "best", label: "Best" };
-      }
-      if (feetAngleDeg >= RULE.acceptableFeetAngleMinDeg - ANGLE_TOLERANCE_DEG && feetAngleDeg <= RULE.acceptableFeetAngleMaxDeg + ANGLE_TOLERANCE_DEG) {
-        return { status: "acceptable", label: "Acceptable" };
-      }
-      return { status: "out_of_range", label: "Out of range" };
-    }
-
-    function classifyFace(faceAngleDeg) {
-      if (faceAngleDeg < RULE.bestFaceAngleMaxDeg) {
-        return { status: "best", label: "Best" };
-      }
-      if (faceAngleDeg <= RULE.acceptableFaceAngleMaxDeg + ANGLE_TOLERANCE_DEG) {
-        return { status: "acceptable", label: "Acceptable" };
-      }
-      return { status: "out_of_range", label: "Out of range" };
-    }
-
-    function classifyOverall(feetStatus, faceStatus) {
-      if (feetStatus === "out_of_range" || faceStatus === "out_of_range") {
-        return { status: "out_of_range", label: "Out of range" };
-      }
-      if (feetStatus === "best" && faceStatus === "best") {
-        return { status: "best", label: "Best" };
-      }
-      return { status: "acceptable", label: "Acceptable" };
-    }
-
-    function classify(heightM, distanceM) {
-      const feetAngle = angleDeg(heightM, distanceM);
-      const faceAngle = angleDeg(heightM - RULE.faceHeightM, distanceM);
-      const feet = Object.assign({ angle: feetAngle }, classifyFeet(feetAngle));
-      const face = Object.assign({ angle: faceAngle }, classifyFace(faceAngle));
-      return {
-        feet,
-        face,
-        overall: classifyOverall(feet.status, face.status)
-      };
+    function currentProfile() {
+      return RULES.profiles.find((p) => p.id === state.profileId) || RULES.profiles[0];
     }
 
     function selectedResolution() {
-      const value = els.resolutionSelect.value || "1920x1080";
-      const parts = value.split("x").map(Number);
+      const parts = (els.resolutionSelect.value || "1920x1080").split("x").map(Number);
       return { w: parts[0] || 1920, h: parts[1] || 1080 };
     }
 
-    function sensorById(id) {
-      return SENSOR_SIZES.find((sensor) => sensor.id === id) || SENSOR_SIZES[0];
-    }
-
     function selectedSensor() {
-      return sensorById(els.sensorSelect.value);
+      return SENSOR_SIZES.find((sensor) => sensor.id === els.sensorSelect.value) || SENSOR_SIZES[1];
     }
 
-    function populateSensorOptions() {
-      els.sensorSelect.innerHTML = SENSOR_SIZES.map((sensor) => {
-        return "<option value=\\"" + sensor.id + "\\">" + sensor.label + "</option>";
-      }).join("");
+    function feetDistanceWindow(profile, heightM) {
+      const at = (deg) => heightM / Math.tan(toRad(deg));
+      const feet = profile.feetAngleDeg;
+      return {
+        acceptableMin: at(feet.acceptable.max),
+        acceptableMax: at(feet.acceptable.min),
+        bestMin: at(feet.best.max),
+        bestMax: at(feet.best.min)
+      };
     }
 
-    function updateResolutionOptions(camera) {
-      const previous = els.resolutionSelect.value;
-      els.resolutionSelect.innerHTML = camera.resolutions.map((resolution) => {
-        const value = resolution.w + "x" + resolution.h;
-        return "<option value=\\"" + value + "\\">" + resolution.label + "</option>";
-      }).join("");
-      const values = camera.resolutions.map((resolution) => resolution.w + "x" + resolution.h);
-      els.resolutionSelect.value = values.includes(previous) ? previous : camera.defaultResolution;
+    function heightForDistance(profile, distanceM) {
+      return distanceM * Math.tan(toRad(profile.feetAngleDeg.target));
     }
 
-    function applyPreset(presetKey) {
-      const camera = CAMERAS[presetKey] || CAMERAS.custom;
-      state.preset = presetKey;
-      els.presetCaption.textContent = camera.caption;
-      els.sensorField.classList.toggle("locked", camera.sensorLocked);
-      els.sensorSelect.disabled = camera.sensorLocked;
-      els.focalInput.min = camera.focalMinMm;
-      els.focalInput.max = camera.focalMaxMm;
-      els.focalRange.min = camera.focalMinMm;
-      els.focalRange.max = camera.focalMaxMm;
-      els.focalMinTick.textContent = fmt(camera.focalMinMm, 1);
-      els.focalMaxTick.textContent = fmt(camera.focalMaxMm, 1);
-      if (camera.sensorLocked || !els.sensorSelect.value) {
-        els.sensorSelect.value = camera.sensorId;
+    // ---------- Placement from the engine ----------
+    function currentPlacement() {
+      const profile = currentProfile();
+      const heightM = Number(els.heightInput.value);
+      const distanceM = Number(els.distanceInput.value);
+      const sensor = selectedSensor();
+      const resolution = selectedResolution();
+      const camera = { sensorWidthMm: sensor.widthMm, focalLengthMm: Number(els.focalInput.value), resolution: resolution };
+      const result = evaluatePlacement({
+        profile: profile,
+        heightM: heightM,
+        distanceM: distanceM,
+        camera: camera,
+        tiltDeg: state.tiltUserAdjusted ? Number(els.tiltInput.value) : undefined,
+        availableDepthM: state.depthM === null ? undefined : state.depthM
+      });
+      return { profile: profile, heightM: heightM, distanceM: distanceM, camera: camera, resolution: resolution, result: result };
+    }
+
+    function faceLineCopy(p) {
+      const fl = p.result.faceLine;
+      const vFov = p.result.optics.verticalFovDeg;
+      if (fl.reason === "camera_below_face_point") return { visible: false, label: "Not visible", note: "The camera is not above the " + fmt(p.profile.facePointM, 2) + " m face point." };
+      if (fl.reason === "beyond_available_depth") return { visible: false, label: "Not visible", note: "Needs " + fmt(fl.distanceM, 2) + " m of floor; the site has " + fmt(state.depthM, 2) + " m. Mount lower to bring it closer." };
+      if (fl.reason === "outside_frame") {
+        const lo = Math.max(0, p.result.feet.angleDeg - vFov / 2);
+        const hi = Math.min(fl.angleDeg + vFov / 2, p.result.countingLine.headAngleDeg + vFov / 2);
+        return {
+          visible: false,
+          label: "Not visible",
+          note: lo <= hi
+            ? "Outside the frame. A tilt between " + fmt(lo, 1) + " and " + fmt(hi, 1) + " deg shows both lines."
+            : "Outside the frame, and no single tilt shows both lines. Use a shorter focal length."
+        };
       }
-      setFieldValue(els.focalInput, els.focalRange, clamp(Number(els.focalInput.value), camera.focalMinMm, camera.focalMaxMm) || camera.focalDefaultMm, 1);
-      updateResolutionOptions(camera);
-      if (presetKey !== "custom") {
-        els.resolutionSelect.value = camera.defaultResolution;
-        els.sensorSelect.value = camera.sensorId;
-        setFieldValue(els.focalInput, els.focalRange, camera.focalDefaultMm, 1);
+      if (fl.coincides) return { visible: true, label: "Visible", note: "Face is already best at the counting line, so both lines are the same." };
+      const gap = fl.distanceM - p.distanceM;
+      return { visible: true, label: "Visible", note: fmt(Math.abs(gap), 2) + " m " + (gap > 0 ? "beyond" : "in front of") + " the counting line. Demographics only; never fails the placement." };
+    }
+
+    function verdictCopy(p) {
+      const r = p.result;
+      if (!r.countingLine.framed) return "The person at the counting line is cut off in the frame. Adjust tilt or use a shorter focal length.";
+      const delta = r.countingLine.recommendedDistanceM - p.distanceM;
+      if (Math.abs(delta) < 0.01) return "On the recommended distance for " + p.profile.name + ".";
+      return "Move the counting line " + fmt(Math.abs(delta), 2) + " m " + (delta > 0 ? "farther" : "closer") + ", to " + fmt(r.countingLine.recommendedDistanceM, 2) + " m.";
+    }
+
+    // ---------- Controls ----------
+    function populateScenes() {
+      els.sceneSeg.innerHTML = RULES.profiles.map((p) => '<button type="button" data-scene="' + p.id + '" aria-pressed="false">' + p.name + '</button>').join("");
+      els.sceneVersion.textContent = "rules " + RULES.version;
+    }
+
+    function populatePresets() {
+      els.presetSelect.innerHTML = CAMERA_CATALOG.cameras.map((c) => '<option value="' + c.id + '">' + c.name + '</option>').join("") +
+        '<option value="custom">No preset - custom</option>';
+      els.sensorSelect.innerHTML = SENSOR_SIZES.map((s) => '<option value="' + s.id + '">' + s.label + '</option>').join("");
+    }
+
+    function updateResolutionOptions(preset) {
+      const previous = els.resolutionSelect.value;
+      els.resolutionSelect.innerHTML = preset.resolutions.map((r) => '<option value="' + r.w + 'x' + r.h + '">' + r.label + '</option>').join("");
+      const values = preset.resolutions.map((r) => r.w + "x" + r.h);
+      els.resolutionSelect.value = values.includes(previous) ? previous : preset.defaultResolution;
+    }
+
+    function applyPreset(key) {
+      const preset = presetFor(key);
+      els.presetCaption.textContent = preset.caption;
+      els.sensorField.classList.toggle("locked", preset.sensorLocked);
+      els.sensorSelect.disabled = preset.sensorLocked;
+      [els.focalInput, els.focalRange].forEach((el) => { el.min = preset.focalMinMm; el.max = preset.focalMaxMm; });
+      els.focalMinTick.textContent = fmt(preset.focalMinMm, 1);
+      els.focalMaxTick.textContent = fmt(preset.focalMaxMm, 1);
+      els.sensorSelect.value = preset.sensorId;
+      updateResolutionOptions(preset);
+      els.resolutionSelect.value = preset.defaultResolution;
+      setFieldValue(els.focalInput, els.focalRange, preset.focalDefaultMm, 1);
+      update();
+    }
+
+    function setScene(id) {
+      state.profileId = id;
+      if (state.solveMode === "height") {
+        setFieldValue(els.heightInput, els.heightRange, heightForDistance(currentProfile(), Number(els.distanceInput.value)), 1);
+      } else {
+        setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(Number(els.heightInput.value), currentProfile()), 2);
       }
       update();
     }
 
     function setSolveMode(mode) {
       state.solveMode = mode;
-      document.querySelectorAll("[data-solve]").forEach((button) => {
-        const selected = button.dataset.solve === mode;
-        button.setAttribute("aria-pressed", String(selected));
-      });
+      document.querySelectorAll("[data-solve]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.solve === mode)));
       els.heightField.classList.toggle("driven", mode === "height");
       els.distanceField.classList.toggle("driven", mode === "distance");
-      els.heightInput.disabled = mode === "height";
-      els.heightRange.disabled = mode === "height";
-      els.distanceInput.disabled = mode === "distance";
-      els.distanceRange.disabled = mode === "distance";
-
-      if (mode === "distance") {
-        const row = rowForHeight(Number(els.heightInput.value));
-        setFieldValue(els.distanceInput, els.distanceRange, row.recommended_distance_m, 2);
-      }
-      if (mode === "height") {
-        const row = rowForRecommendedDistance(Number(els.distanceInput.value));
-        setFieldValue(els.heightInput, els.heightRange, row.camera_height_m, 1);
-      }
+      els.heightInput.disabled = els.heightRange.disabled = mode === "height";
+      els.distanceInput.disabled = els.distanceRange.disabled = mode === "distance";
+      if (mode === "distance") setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(Number(els.heightInput.value), currentProfile()), 2);
+      if (mode === "height") setFieldValue(els.heightInput, els.heightRange, heightForDistance(currentProfile(), Number(els.distanceInput.value)), 1);
       update();
-    }
-
-    function syncDistanceBounds(row, currentDistanceM) {
-      const maxFromRule = Math.max(
-        row.face_safe_acceptable_distance_max_m || 0,
-        row.best_feet_distance_max_m || 0,
-        row.recommended_distance_m || 0,
-        currentDistanceM || 0
-      );
-      const maxDistance = Math.max(36, Math.ceil(maxFromRule + 2));
-      els.distanceRange.max = String(maxDistance);
-      els.distanceInput.max = String(maxDistance);
-      els.distanceMaxTick.textContent = fmt(maxDistance, 2);
-      setRangeFill(els.distanceRange);
     }
 
     function setHeight(value) {
       if (state.solveMode === "height") return;
       const heightM = setFieldValue(els.heightInput, els.heightRange, value, 1);
-      if (state.solveMode === "distance") {
-        const row = rowForHeight(heightM);
-        setFieldValue(els.distanceInput, els.distanceRange, row.recommended_distance_m, 2);
-      }
+      if (state.solveMode === "distance") setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(heightM, currentProfile()), 2);
       update();
     }
 
     function setDistance(value) {
       if (state.solveMode === "distance") return;
       const distanceM = setFieldValue(els.distanceInput, els.distanceRange, value, 2);
-      if (state.solveMode === "height") {
-        const row = rowForRecommendedDistance(distanceM);
-        setFieldValue(els.heightInput, els.heightRange, row.camera_height_m, 1);
-      }
+      if (state.solveMode === "height") setFieldValue(els.heightInput, els.heightRange, heightForDistance(currentProfile(), distanceM), 1);
       update();
     }
 
     function setTilt(value) {
       state.tiltUserAdjusted = true;
-      setFieldValue(els.tiltInput, els.tiltRange, value, 0);
+      setFieldValue(els.tiltInput, els.tiltRange, value, 1);
       update();
     }
 
-    function setSensor(value) {
-      if (els.sensorSelect.disabled) return;
-      els.sensorSelect.value = sensorById(value).id;
+    function setDepth(value) {
+      const depth = parseFloat(value);
+      state.depthM = value === "" || Number.isNaN(depth) || depth <= 0 ? null : depth;
       update();
     }
 
-    function setFocal(value) {
-      setFieldValue(els.focalInput, els.focalRange, value, 1);
-      update();
+    function syncDistanceBounds(p) {
+      const needed = Math.max(p.result.countingLine.recommendedDistanceM, p.distanceM, p.result.faceLine.distanceM || 0);
+      const maxDistance = Math.max(RULE.maxDistanceM, Math.ceil(needed + 2));
+      els.distanceRange.max = String(maxDistance);
+      els.distanceInput.max = String(maxDistance);
+      els.distanceMaxTick.textContent = fmt(maxDistance, 2);
     }
 
-    function statusLabelForFace(faceStatus) {
-      if (faceStatus === "ideal_under_25") return "best";
-      if (faceStatus === "acceptable_25_to_30") return "acceptable";
-      return "out of range";
+    // ---------- Readouts ----------
+    function updateStatusElement(element, status, label) {
+      element.textContent = label;
+      element.className = "status-chip " + status;
     }
 
-    function statusClassForFace(faceStatus) {
-      if (faceStatus === "ideal_under_25") return "best";
-      if (faceStatus === "acceptable_25_to_30") return "acceptable";
-      return "out_of_range";
-    }
-
-    function updateStatusElement(element, result) {
-      element.textContent = result.label;
-      element.className = "status-chip " + result.status;
-    }
-
-    function recommendationCopy(distanceM, recommendedM, overall) {
-      const delta = recommendedM - distanceM;
-      if (Math.abs(delta) < 0.01) {
-        return overall.status === "best"
-          ? "Already on the recommended distance from the lookup table."
-          : "Distance matches the recommendation, but the face rule is limiting the overall status.";
-      }
-      const direction = delta > 0 ? "farther" : "closer";
-      return "Move the subject " + Math.abs(delta).toFixed(2) + " m " + direction + ", to " + recommendedM.toFixed(2) + " m.";
-    }
-
-    function updateRangeBar(heightM, row, distanceM) {
-      const window = feetDistanceWindow(heightM);
-      const acceptableMin = window.acceptableMin;
-      const acceptableMax = window.acceptableMax;
-      const bestMin = window.bestMin;
-      const bestMax = window.bestMax;
-      const domainMin = Math.max(0, Math.min(acceptableMin, bestMin, distanceM, row.recommended_distance_m) - 1);
-      const domainMax = Math.max(acceptableMax, bestMax, distanceM, row.recommended_distance_m) + 1;
+    function updateRangeBar(p) {
+      const win = feetDistanceWindow(p.profile, p.heightM);
+      const rec = p.result.countingLine.recommendedDistanceM;
+      const domainMin = Math.max(0, Math.min(win.acceptableMin, win.bestMin, p.distanceM, rec) - 1);
+      const domainMax = Math.max(win.acceptableMax, win.bestMax, p.distanceM, rec) + 1;
       const setZone = (el, min, max) => {
         el.style.left = pct(min, domainMin, domainMax).toFixed(2) + "%";
         el.style.width = Math.max(0, pct(max, domainMin, domainMax) - pct(min, domainMin, domainMax)).toFixed(2) + "%";
@@ -2703,44 +2571,42 @@ function buildHtml(rows) {
         el.style.left = pct(value, domainMin, domainMax).toFixed(2) + "%";
         label.textContent = fmt(value, 2) + " m";
       };
-
-      setZone(els.acceptableZone, acceptableMin, acceptableMax);
-      setZone(els.bestZone, bestMin, bestMax);
-      setMarker(els.minMarker, els.minMarkerLabel, acceptableMin);
-      setMarker(els.bestMarker, els.bestMarkerLabel, row.recommended_distance_m);
-      setMarker(els.maxMarker, els.maxMarkerLabel, acceptableMax);
-      els.distanceCursor.style.left = pct(distanceM, domainMin, domainMax).toFixed(2) + "%";
-      els.cursorLabel.textContent = fmt(distanceM, 2) + " m";
+      setZone(els.acceptableZone, win.acceptableMin, win.acceptableMax);
+      setZone(els.bestZone, win.bestMin, win.bestMax);
+      setMarker(els.minMarker, els.minMarkerLabel, win.acceptableMin);
+      setMarker(els.bestMarker, els.bestMarkerLabel, rec);
+      setMarker(els.maxMarker, els.maxMarkerLabel, win.acceptableMax);
+      els.distanceCursor.style.left = pct(p.distanceM, domainMin, domainMax).toFixed(2) + "%";
+      els.cursorLabel.textContent = fmt(p.distanceM, 2) + " m";
     }
 
-    function updateMetrics(result, horizontalFov, verticalFov, fullWidthM, effectiveWidthM, horizontalPpm, verticalPpm) {
-      els.faceTiltMetric.innerHTML = fmt(result.face.angle, 2) + "<small>deg</small>";
-      els.groundAngleMetric.innerHTML = fmt(result.feet.angle, 2) + "<small>deg</small>";
-      els.horizontalFovMetric.innerHTML = fmt(horizontalFov, 2) + "<small>deg</small>";
-      els.verticalFovMetric.innerHTML = fmt(verticalFov, 2) + "<small>deg</small>";
-      els.fullWidthMetric.innerHTML = fmt(fullWidthM, 1) + "<small>m</small>";
-      els.effectiveWidthMetric.innerHTML = fmt(effectiveWidthM, 1) + "<small>m</small>";
-      els.horizontalPpmMetric.innerHTML = fmt(horizontalPpm, 0) + "<small>px/m</small>";
+    function updateMetrics(p, verticalPpm) {
+      const o = p.result.optics;
+      const fl = p.result.faceLine;
+      els.countingMetric.innerHTML = fmt(p.distanceM, 2) + "<small>m</small>";
+      els.faceLineMetric.innerHTML = fl.distanceM === null ? "none" : fmt(fl.distanceM, 2) + "<small>m</small>";
+      els.horizontalFovMetric.innerHTML = fmt(o.horizontalFovDeg, 2) + "<small>deg</small>";
+      els.verticalFovMetric.innerHTML = fmt(o.verticalFovDeg, 2) + "<small>deg</small>";
+      els.fullWidthMetric.innerHTML = fmt(o.coverageWidthM, 1) + "<small>m</small>";
+      els.effectiveWidthMetric.innerHTML = fmt(o.coverageWidthM * 0.8, 1) + "<small>m</small>";
+      els.horizontalPpmMetric.innerHTML = fmt(o.pixelsPerMetre, 0) + "<small>px/m</small>";
       els.verticalPpmMetric.innerHTML = fmt(verticalPpm, 0) + "<small>px/m</small>";
     }
 
+    // ---------- Canvas ----------
     function colorWithAlpha(color, alpha) {
       return color.replace(")", " / " + alpha + ")");
-    }
-
-    function canvasDpr() {
-      return Math.min(2, window.devicePixelRatio || 1);
     }
 
     function fitCanvas(canvas) {
       const rect = canvas.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0) return null;
-      const scale = canvasDpr();
+      const scale = Math.min(2, window.devicePixelRatio || 1);
       canvas.width = Math.round(rect.width * scale);
       canvas.height = Math.round(rect.height * scale);
       const ctx = canvas.getContext("2d");
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
-      return { ctx, w: rect.width, h: rect.height };
+      return { ctx: ctx, w: rect.width, h: rect.height };
     }
 
     function roundRect(ctx, x, y, w, h, r) {
@@ -2753,10 +2619,10 @@ function buildHtml(rows) {
       ctx.closePath();
     }
 
-    function drawPerson(ctx, x, groundY, yForHeight, color) {
-      const headY = yForHeight(RULE.humanHeightM);
-      const faceY = yForHeight(RULE.faceHeightM);
-      const hipY = yForHeight(0.95);
+    function drawPerson(ctx, x, groundY, yForHeight, color, profile, withLabels) {
+      const headY = yForHeight(profile.humanHeightM);
+      const faceY = yForHeight(profile.facePointM);
+      const hipY = yForHeight(profile.humanHeightM * 0.56);
       ctx.strokeStyle = color;
       ctx.fillStyle = color;
       ctx.lineWidth = 3;
@@ -2767,60 +2633,43 @@ function buildHtml(rows) {
       ctx.beginPath();
       ctx.moveTo(x, headY + 1);
       ctx.lineTo(x, hipY);
-      ctx.stroke();
-      ctx.beginPath();
       ctx.moveTo(x, hipY);
       ctx.lineTo(x - 7, groundY);
       ctx.moveTo(x, hipY);
       ctx.lineTo(x + 7, groundY);
-      ctx.stroke();
-      ctx.beginPath();
       ctx.moveTo(x, headY + 12);
       ctx.lineTo(x - 8, hipY - 8);
       ctx.moveTo(x, headY + 12);
       ctx.lineTo(x + 8, hipY - 8);
       ctx.stroke();
+      if (!withLabels) return;
       ctx.fillStyle = COL.muted;
       ctx.font = "10px JetBrains Mono, monospace";
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      ctx.fillText("1.7 head", x + 12, headY - 6);
-      ctx.fillText("1.5 face", x + 12, faceY);
-      ctx.strokeStyle = COL.faint;
-      ctx.lineWidth = 1;
-      ctx.setLineDash([2, 2]);
-      ctx.beginPath();
-      ctx.moveTo(x + 8, faceY);
-      ctx.lineTo(x + 10, faceY);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      ctx.fillText(fmt(profile.humanHeightM, 1) + " head", x + 12, headY - 6);
+      ctx.fillText(fmt(profile.facePointM, 1) + " face", x + 12, faceY);
     }
 
-    function drawSide(heightM, distanceM, row, feet, face, verticalFov, tiltAngle) {
+    function drawSide(p) {
       const fit = fitCanvas(els.sideCanvas);
       if (!fit) return;
-      const { ctx, w, h } = fit;
+      const ctx = fit.ctx, w = fit.w, h = fit.h;
       ctx.clearRect(0, 0, w, h);
-      const padL = 60;
-      const padR = 70;
-      const padB = 58;
-      const padT = 40;
+      const r = p.result, profile = p.profile, heightM = p.heightM, distanceM = p.distanceM;
+      const fl = r.faceLine;
+      const padL = 60, padR = 70, padB = 58, padT = 40;
       const groundY = h - padB;
-      const window = feetDistanceWindow(heightM);
-      const acceptableMin = window.acceptableMin;
-      const acceptableMax = window.acceptableMax;
-      const maxX = Math.max(distanceM * 1.25, acceptableMax * 1.15, window.bestMax * 1.15, 6);
-      const maxY = Math.max(heightM * 1.25, RULE.humanHeightM, 4);
+      const win = feetDistanceWindow(profile, heightM);
+      const maxX = Math.max(distanceM * 1.25, win.acceptableMax * 1.15, (fl.distanceM || 0) * 1.12, (state.depthM || 0) * 1.08, 6);
+      const maxY = Math.max(heightM * 1.25, profile.humanHeightM, 4);
       const sx = (w - padL - padR) / maxX;
       const sy = (groundY - padT) / maxY;
-      const xFor = (meters) => padL + meters * sx;
-      const yFor = (meters) => groundY - meters * sy;
-      const camX = xFor(0);
-      const camY = yFor(heightM);
-      const subX = xFor(distanceM);
-      const faceY = yFor(RULE.faceHeightM);
-      const feetColor = feet.status === "best" ? COL.best : feet.status === "acceptable" ? COL.ok : COL.bad;
-      const faceColor = face.status === "best" ? COL.best : face.status === "acceptable" ? COL.ok : COL.bad;
+      const xFor = (m) => padL + m * sx;
+      const yFor = (m) => groundY - m * sy;
+      const camX = xFor(0), camY = yFor(heightM), subX = xFor(distanceM);
+      const feetColor = r.feet.status === "best" ? COL.best : r.feet.status === "acceptable" ? COL.ok : COL.bad;
+      const personColor = r.countingLine.framed ? feetColor : COL.bad;
 
       ctx.strokeStyle = COL.grid;
       ctx.lineWidth = 1;
@@ -2828,7 +2677,8 @@ function buildHtml(rows) {
       ctx.fillStyle = COL.faint;
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      for (let gx = 0; gx <= maxX; gx += 2) {
+      const step = maxX > 24 ? 4 : 2;
+      for (let gx = 0; gx <= maxX; gx += step) {
         ctx.globalAlpha = 0.35;
         ctx.beginPath();
         ctx.moveTo(xFor(gx), padT);
@@ -2836,6 +2686,23 @@ function buildHtml(rows) {
         ctx.stroke();
         ctx.globalAlpha = 1;
         if (gx > 0) ctx.fillText(gx + "m", xFor(gx), groundY + 8);
+      }
+
+      if (state.depthM !== null) {
+        const wallX = xFor(state.depthM);
+        ctx.fillStyle = colorWithAlpha(COL.muted, "0.10");
+        ctx.fillRect(wallX, padT - 10, Math.max(0, w - padR + 10 - wallX), groundY - padT + 10);
+        ctx.strokeStyle = COL.muted;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(wallX, padT - 10);
+        ctx.lineTo(wallX, groundY);
+        ctx.stroke();
+        ctx.fillStyle = COL.ink;
+        ctx.font = "600 11px Inter, sans-serif";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "top";
+        ctx.fillText("floor ends " + fmt(state.depthM, 2, " m"), wallX - 6, padT - 6);
       }
 
       ctx.strokeStyle = COL.muted;
@@ -2857,38 +2724,28 @@ function buildHtml(rows) {
       ctx.translate(camX - 12, (groundY + camY) / 2);
       ctx.rotate(-Math.PI / 2);
       ctx.fillStyle = COL.muted;
+      ctx.font = "11px JetBrains Mono, monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
       ctx.fillText(fmt(heightM, 1, " m"), 0, 0);
       ctx.restore();
 
-      const aimDown = toRad(clamp(tiltAngle, RULE.minTiltAngleDeg, RULE.maxTiltAngleDeg));
-      const half = toRad(verticalFov / 2);
+      const tilt = r.tilt.value;
+      const aimDown = toRad(clamp(tilt, RULE.minTiltAngleDeg, RULE.maxTiltAngleDeg));
+      const half = toRad(r.optics.verticalFovDeg / 2);
       const ray = (angle) => {
         const slope = Math.tan(angle);
         const candidates = [];
         const push = (x, y) => {
-          if (Number.isFinite(x) && Number.isFinite(y) && x >= 0 && x <= maxX && y >= 0 && y <= maxY) {
-            candidates.push({ x, y });
-          }
+          if (Number.isFinite(x) && Number.isFinite(y) && x >= 0 && x <= maxX && y >= 0 && y <= maxY) candidates.push({ x: x, y: y });
         };
-
         push(maxX, heightM - slope * maxX);
         if (slope > 0.0001) push(heightM / slope, 0);
         if (slope < -0.0001) push((heightM - maxY) / slope, maxY);
-
-        const endpoint = candidates.sort((a, b) => a.x - b.x)[0] || {
-          x: maxX,
-          y: clamp(heightM - slope * maxX, 0, maxY)
-        };
-        return { x: xFor(endpoint.x), y: yFor(endpoint.y) };
+        const end = candidates.sort((a, b) => a.x - b.x)[0] || { x: maxX, y: clamp(heightM - slope * maxX, 0, maxY) };
+        return { x: xFor(end.x), y: yFor(end.y) };
       };
-      const upper = ray(aimDown - half);
-      const center = ray(aimDown);
-      const lower = ray(aimDown + half);
-      const aimHeightM = aimHeightAtDistance(heightM, distanceM, tiltAngle);
-      const clampedAimHeightM = clamp(aimHeightM, 0, maxY);
-      const aimSubjectY = yFor(clampedAimHeightM);
+      const upper = ray(aimDown - half), center = ray(aimDown), lower = ray(aimDown + half);
       const gradient = ctx.createLinearGradient(camX, camY, lower.x, lower.y);
       gradient.addColorStop(0, colorWithAlpha(COL.accent, "0.22"));
       gradient.addColorStop(1, colorWithAlpha(COL.accent, "0.02"));
@@ -2907,7 +2764,6 @@ function buildHtml(rows) {
       ctx.moveTo(camX, camY);
       ctx.lineTo(lower.x, lower.y);
       ctx.stroke();
-
       ctx.strokeStyle = colorWithAlpha(COL.accent, "0.88");
       ctx.lineWidth = 2;
       ctx.lineCap = "round";
@@ -2917,8 +2773,7 @@ function buildHtml(rows) {
       ctx.stroke();
 
       const bandSegment = (start, end, color, width) => {
-        const x1 = xFor(Math.max(0, start));
-        const x2 = xFor(Math.min(maxX, end));
+        const x1 = xFor(Math.max(0, start)), x2 = xFor(Math.min(maxX, end));
         if (x2 <= x1) return;
         ctx.strokeStyle = color;
         ctx.lineWidth = width;
@@ -2930,8 +2785,52 @@ function buildHtml(rows) {
         ctx.stroke();
         ctx.globalAlpha = 1;
       };
-      bandSegment(acceptableMin, acceptableMax, colorWithAlpha(COL.ok, "0.55"), 5);
-      bandSegment(window.bestMin, window.bestMax, COL.best, 6);
+      bandSegment(win.acceptableMin, win.acceptableMax, colorWithAlpha(COL.ok, "0.55"), 5);
+      bandSegment(win.bestMin, win.bestMax, COL.best, 6);
+
+      const faceLineX = fl.distanceM === null ? null : xFor(fl.distanceM);
+      const crowded = faceLineX !== null && !fl.coincides && Math.abs(faceLineX - subX) < 110;
+      // Face line: its own person, where the face angle is best.
+      if (fl.distanceM !== null) {
+        const faceX = faceLineX;
+        const faceY = yFor(profile.facePointM);
+        ctx.globalAlpha = fl.visible ? 1 : 0.45;
+        ctx.strokeStyle = COL.face;
+        ctx.lineWidth = 2;
+        ctx.setLineDash(fl.visible ? [7, 4] : [2, 5]);
+        ctx.beginPath();
+        ctx.moveTo(camX, camY);
+        ctx.lineTo(faceX, faceY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        if (!fl.coincides) {
+          ctx.strokeStyle = COL.face;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(faceX - 9, groundY);
+          ctx.lineTo(faceX + 9, groundY);
+          ctx.stroke();
+          ctx.globalAlpha = fl.visible ? 0.75 : 0.35;
+          drawPerson(ctx, faceX, groundY, yFor, COL.face, profile, false);
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = COL.face;
+          ctx.font = "700 12px Inter, sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "bottom";
+          ctx.fillText("Face line", faceX, Math.max(22, yFor(profile.humanHeightM) - (crowded ? 30 : 14)));
+          ctx.font = "600 11px JetBrains Mono, monospace";
+          ctx.textBaseline = "top";
+          ctx.fillText(fmt(fl.distanceM, 2, " m"), faceX, groundY + 22);
+        }
+        ctx.globalAlpha = 1;
+        const faceLabelX = camX + (faceX - camX) * 0.30;
+        const faceLabelY = camY + (faceY - camY) * 0.30;
+        ctx.fillStyle = COL.face;
+        ctx.font = "600 12px Inter, sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(fmt(fl.angleDeg, 1, " deg face"), faceLabelX + 6, faceLabelY - 11);
+      }
 
       ctx.strokeStyle = feetColor;
       ctx.lineWidth = 2.25;
@@ -2940,46 +2839,28 @@ function buildHtml(rows) {
       ctx.moveTo(camX, camY);
       ctx.lineTo(subX, groundY);
       ctx.stroke();
-      ctx.strokeStyle = faceColor;
-      ctx.beginPath();
-      ctx.moveTo(camX, camY);
-      ctx.lineTo(subX, faceY);
-      ctx.stroke();
       ctx.setLineDash([]);
-
       ctx.font = "600 12px Inter, sans-serif";
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      const feetLabelX = camX + (subX - camX) * 0.34;
-      const feetLabelY = camY + (groundY - camY) * 0.34;
-      const faceLabelX = camX + (subX - camX) * 0.30;
-      const faceLabelY = camY + (faceY - camY) * 0.30;
       ctx.fillStyle = feetColor;
-      ctx.fillText(fmt(feet.angle, 1, " deg feet"), feetLabelX + 6, feetLabelY + 13);
-      ctx.fillStyle = faceColor;
-      ctx.fillText(fmt(face.angle, 1, " deg face"), faceLabelX + 6, faceLabelY - 11);
+      ctx.fillText(fmt(r.feet.angleDeg, 1, " deg feet"), camX + (subX - camX) * 0.34 + 6, camY + (groundY - camY) * 0.34 + 13);
 
-      drawPerson(ctx, subX, groundY, yFor, feetColor);
+      drawPerson(ctx, subX, groundY, yFor, personColor, profile, !crowded);
 
-      const tiltLabelX = camX + (subX - camX) * 0.20;
-      const tiltLabelY = camY + (aimSubjectY - camY) * 0.20;
-      ctx.fillStyle = COL.accent;
-      ctx.fillText(fmt(tiltAngle, 0, " deg tilt"), tiltLabelX + 6, tiltLabelY - 12);
+      const aimHeightM = heightM - Math.tan(aimDown) * distanceM;
       if (aimHeightM >= 0 && aimHeightM <= maxY) {
-        ctx.strokeStyle = colorWithAlpha(COL.accent, "0.58");
-        ctx.lineWidth = 1;
-        ctx.setLineDash([3, 4]);
-        ctx.beginPath();
-        ctx.moveTo(subX - 10, aimSubjectY);
-        ctx.lineTo(subX + 10, aimSubjectY);
-        ctx.stroke();
-        ctx.setLineDash([]);
+        const aimY = yFor(aimHeightM);
         ctx.fillStyle = COL.accent;
         ctx.beginPath();
-        ctx.arc(subX, aimSubjectY, 4.2, 0, Math.PI * 2);
+        ctx.arc(subX, aimY, 4.2, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillText(fmt(aimHeightM, 2, " m aim"), subX + 10, aimSubjectY - 8);
+        ctx.font = "600 12px Inter, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(fmt(aimHeightM, 2, " m aim"), subX + 10, aimY - 8);
       }
+      ctx.fillStyle = COL.accent;
+      ctx.fillText(fmt(tilt, 1, " deg tilt"), camX + (subX - camX) * 0.20 + 6, camY + (yFor(Math.max(0, aimHeightM)) - camY) * 0.20 - 12);
 
       ctx.fillStyle = COL.accent;
       roundRect(ctx, camX - 12, camY - 7, 24, 14, 4);
@@ -3003,32 +2884,30 @@ function buildHtml(rows) {
       ctx.textBaseline = "top";
       ctx.fillText(fmt(distanceM, 2, " m"), (camX + subX) / 2, groundY + 34);
 
-      ctx.fillStyle = COL.ink;
       ctx.font = "700 13px Inter, sans-serif";
-      ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
       ctx.fillText("Camera", camX, Math.max(22, camY - 14));
-      ctx.fillText("Human", subX, Math.max(22, yFor(RULE.humanHeightM) - 14));
+      ctx.fillStyle = personColor;
+      ctx.fillText("Counting line", subX, Math.max(22, yFor(profile.humanHeightM) - 14));
     }
 
-    function drawTop(distanceM, horizontalFov, fullWidthM, effectiveWidthM, feet) {
+    function drawTop(p) {
       const fit = fitCanvas(els.topCanvas);
       if (!fit) return;
-      const { ctx, w, h } = fit;
+      const ctx = fit.ctx, w = fit.w, h = fit.h;
       ctx.clearRect(0, 0, w, h);
-      const camX = w / 2;
-      const camY = 34;
-      const padB = 50;
-      const half = toRad(horizontalFov / 2);
+      const o = p.result.optics;
+      const camX = w / 2, camY = 34, padB = 50;
+      const half = toRad(o.horizontalFovDeg / 2);
       const reach = h - camY - padB;
       const maxSubjectPx = reach * 0.82;
       const fitSubjectPx = Math.tan(half) > 0 ? (w * 0.42) / Math.tan(half) : maxSubjectPx;
       const subjectPx = Math.max(100, Math.min(maxSubjectPx, fitSubjectPx));
       const subjectY = camY + subjectPx;
       const halfWidthPx = Math.tan(half) * subjectPx;
-      const leftX = camX - halfWidthPx;
-      const rightX = camX + halfWidthPx;
-      const feetColor = feet.status === "best" ? COL.best : feet.status === "acceptable" ? COL.ok : COL.bad;
+      const leftX = camX - halfWidthPx, rightX = camX + halfWidthPx;
+      const r = p.result;
+      const feetColor = r.feet.status === "best" ? COL.best : r.feet.status === "acceptable" ? COL.ok : COL.bad;
       const bottomY = h - padB;
       const bottomHalfWidth = Math.tan(half) * (bottomY - camY);
       const gradient = ctx.createLinearGradient(camX, camY, camX, bottomY);
@@ -3041,7 +2920,6 @@ function buildHtml(rows) {
       ctx.lineTo(camX + bottomHalfWidth, bottomY);
       ctx.closePath();
       ctx.fill();
-
       ctx.strokeStyle = feetColor;
       ctx.lineWidth = 1.5;
       ctx.globalAlpha = 0.82;
@@ -3052,7 +2930,6 @@ function buildHtml(rows) {
       ctx.lineTo(camX + bottomHalfWidth, bottomY);
       ctx.stroke();
       ctx.globalAlpha = 1;
-
       ctx.strokeStyle = COL.faint;
       ctx.setLineDash([4, 4]);
       ctx.lineWidth = 1;
@@ -3061,24 +2938,19 @@ function buildHtml(rows) {
       ctx.lineTo(camX, bottomY);
       ctx.stroke();
       ctx.setLineDash([]);
-
       ctx.strokeStyle = COL.ink;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(leftX, subjectY);
       ctx.lineTo(rightX, subjectY);
       ctx.stroke();
-      const effLeft = camX - (camX - leftX) * 0.8;
-      const effRight = camX + (rightX - camX) * 0.8;
       ctx.strokeStyle = COL.best;
       ctx.setLineDash([6, 4]);
-      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(effLeft, subjectY);
-      ctx.lineTo(effRight, subjectY);
+      ctx.moveTo(camX - halfWidthPx * 0.8, subjectY);
+      ctx.lineTo(camX + halfWidthPx * 0.8, subjectY);
       ctx.stroke();
       ctx.setLineDash([]);
-
       ctx.fillStyle = COL.ink;
       ctx.beginPath();
       ctx.arc(camX, subjectY, 4, 0, Math.PI * 2);
@@ -3091,134 +2963,222 @@ function buildHtml(rows) {
       ctx.textBaseline = "bottom";
       ctx.font = "10px JetBrains Mono, monospace";
       ctx.fillText("camera", camX, camY - 12);
-
       ctx.fillStyle = COL.ink;
       ctx.font = "700 12px JetBrains Mono, monospace";
       ctx.textBaseline = "top";
-      ctx.fillText(fmt(fullWidthM, 1, " m"), camX, subjectY + 8);
+      ctx.fillText(fmt(o.coverageWidthM, 1, " m"), camX, subjectY + 8);
       ctx.fillStyle = COL.best;
-      ctx.fillText(fmt(effectiveWidthM, 1, " m") + " (80%)", camX, subjectY + 25);
-
+      ctx.fillText(fmt(o.coverageWidthM * 0.8, 1, " m") + " (80%)", camX, subjectY + 25);
       ctx.fillStyle = COL.muted;
       ctx.font = "600 11px Inter, sans-serif";
-      ctx.fillText("subject plane", camX, Math.min(bottomY - 18, subjectY + 47));
+      ctx.fillText("counting line", camX, Math.min(bottomY - 18, subjectY + 47));
     }
 
-    function renderTable(selectedHeightM) {
-      if (!state.tableRendered) {
-        els.lookupBody.innerHTML = LOOKUP_ROWS.map((row) => {
-          const heightKey = row.camera_height_m.toFixed(1);
-          const faceClass = statusClassForFace(row.face_status);
-          return "<tr data-height=\\"" + heightKey + "\\">" +
-            "<td>" + fmt(row.camera_height_m, 1, " m") + "</td>" +
-            "<td>" + fmt(row.recommended_distance_m, 2, " m") + "</td>" +
-            "<td>" + fmt(row.recommended_feet_angle_deg, 2, " deg") + "</td>" +
-            "<td>" + fmt(row.recommended_face_angle_deg, 2, " deg") + "</td>" +
-            "<td><span class=\\"table-pill best\\">" + row.recommendation_tier.replaceAll("_", " ") + "</span></td>" +
-            "<td><span class=\\"table-pill " + faceClass + "\\">" + statusLabelForFace(row.face_status) + "</span></td>" +
-            "<td>" + fmt(row.best_feet_distance_min_m, 2, " m") + "</td>" +
-            "<td>" + fmt(row.best_feet_distance_max_m, 2, " m") + "</td>" +
-            "<td>" + fmt(row.face_safe_acceptable_distance_min_m, 2, " m") + "</td>" +
-            "<td>" + fmt(row.face_safe_acceptable_distance_max_m, 2, " m") + "</td>" +
+    // What the camera sees: the frame at the current tilt, with both lines and a person on each.
+    function drawCameraView(p) {
+      const fit = fitCanvas(els.topCanvas);
+      if (!fit) return;
+      const ctx = fit.ctx, w = fit.w, h = fit.h;
+      ctx.clearRect(0, 0, w, h);
+      const r = p.result, profile = p.profile, heightM = p.heightM;
+      const aspect = p.resolution.h / p.resolution.w;
+      const fw = Math.min(w - 32, (h - 70) / aspect), fh = fw * aspect;
+      const fx = (w - fw) / 2, fy = 30;
+      const tilt = r.tilt.value, v = r.optics.verticalFovDeg, hf = r.optics.horizontalFovDeg;
+      const yAt = (deg) => fy + fh * (0.5 + Math.tan(toRad(deg - tilt)) / (2 * Math.tan(toRad(v / 2))));
+      const pxPerM = (dist) => fw / (2 * Math.hypot(heightM, dist) * Math.tan(toRad(hf / 2)));
+      ctx.save();
+      roundRect(ctx, fx, fy, fw, fh, 10);
+      ctx.fillStyle = COL.surface2;
+      ctx.fill();
+      ctx.clip();
+      const horizon = yAt(0);
+      ctx.fillStyle = colorWithAlpha(COL.muted, "0.10");
+      ctx.fillRect(fx, Math.max(fy, horizon), fw, fh);
+      ctx.font = "10px JetBrains Mono, monospace";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "bottom";
+      const far = Math.ceil(Math.max(p.distanceM, r.faceLine.distanceM || 0) * 2.5);
+      let lastLabelY = Infinity;
+      for (let m = 1; m <= far; m += 1) {
+        const ly = yAt(feetAngle(heightM, m));
+        if (ly < fy + 4 || ly > fy + fh - 2 || lastLabelY - ly < 14) continue;
+        lastLabelY = ly;
+        ctx.strokeStyle = colorWithAlpha(COL.muted, "0.25");
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(fx, ly);
+        ctx.lineTo(fx + fw, ly);
+        ctx.stroke();
+        ctx.fillStyle = COL.faint;
+        ctx.fillText(m + " m", fx + 6, ly - 2);
+      }
+      const figure = (dist, color, alpha, width) => {
+        const feetY = yAt(feetAngle(heightM, dist));
+        const headY = yAt(Math.atan2(heightM - profile.humanHeightM, dist) * 180 / Math.PI);
+        const bodyW = 0.45 * pxPerM(dist);
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        ctx.moveTo(fx, feetY);
+        ctx.lineTo(fx + fw, feetY);
+        ctx.stroke();
+        roundRect(ctx, fx + fw / 2 - bodyW / 2, headY, bodyW, Math.max(2, feetY - headY), Math.min(bodyW / 2.5, 12));
+        ctx.fillStyle = colorWithAlpha(color, "0.75");
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      };
+      if (r.faceLine.distanceM !== null && !r.faceLine.coincides) figure(r.faceLine.distanceM, COL.face, r.faceLine.visible ? 1 : 0.5, 2);
+      const feetColor = r.feet.status === "best" ? COL.best : r.feet.status === "acceptable" ? COL.ok : COL.bad;
+      figure(p.distanceM, r.countingLine.framed ? feetColor : COL.bad, 1, 3);
+      ctx.restore();
+      ctx.strokeStyle = COL.grid;
+      ctx.lineWidth = 1;
+      roundRect(ctx, fx, fy, fw, fh, 10);
+      ctx.stroke();
+      ctx.fillStyle = COL.muted;
+      ctx.font = "600 11px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      const note = r.faceLine.reason === "outside_frame" ? "Face line is above the frame" : r.countingLine.framed ? "Whole person in frame at the counting line" : "Person cut off at the counting line";
+      ctx.fillText(note, w / 2, fy + fh + 12);
+    }
+
+    // ---------- Lookup table ----------
+    function lookupRows(profile) {
+      return lookupTable(profile);
+    }
+
+    function renderTable(p) {
+      if (state.tableProfileId !== p.profile.id) {
+        const rows = lookupRows(p.profile);
+        els.tableMeta.textContent = p.profile.name + ", " + fmt(p.profile.heightRangeM.min, 1) + "-" + fmt(p.profile.heightRangeM.max, 1) + " m in " + fmt(p.profile.heightRangeM.step, 1) + " m steps, rules " + RULES.version;
+        els.lookupBody.innerHTML = rows.map((row) => {
+          return '<tr data-height="' + row.heightM.toFixed(1) + '">' +
+            "<td>" + fmt(row.heightM, 1, " m") + "</td>" +
+            "<td>" + fmt(row.recommendedDistanceM, 2, " m") + "</td>" +
+            "<td>" + fmt(row.feetAngleDeg, 2, " deg") + "</td>" +
+            '<td><span class="table-pill ' + row.feetStatus + '">' + STATUS_LABEL[row.feetStatus] + "</span></td>" +
+            "<td>" + fmt(row.faceAngleDeg, 2, " deg") + "</td>" +
+            '<td><span class="table-pill ' + row.faceStatus + '">' + STATUS_LABEL[row.faceStatus] + "</span></td>" +
+            "<td>" + (row.faceLineDistanceM === null ? "none" : fmt(row.faceLineDistanceM, 2, " m")) + "</td>" +
             "</tr>";
         }).join("");
-        state.tableRendered = true;
+        state.tableProfileId = p.profile.id;
+        state.tableSelectedHeightKey = null;
       }
-
-      const selectedKey = selectedHeightM.toFixed(1);
-      if (state.tableSelectedHeightKey === selectedKey) return;
+      const key = p.heightM.toFixed(1);
+      if (state.tableSelectedHeightKey === key) return;
       const previous = els.lookupBody.querySelector("tr.is-selected");
       if (previous) previous.classList.remove("is-selected");
-      const selected = els.lookupBody.querySelector("tr[data-height=\\"" + selectedKey + "\\"]");
+      const selected = els.lookupBody.querySelector('tr[data-height="' + key + '"]');
       if (selected) selected.classList.add("is-selected");
-      state.tableSelectedHeightKey = selectedKey;
+      state.tableSelectedHeightKey = key;
     }
 
-    function queuePlacementAnnouncement(result, distanceM) {
-      const text = "Placement is " + result.overall.label.toLowerCase() + ". Feet " + result.feet.label + ". Face " + result.face.label + ". Distance " + fmt(distanceM, 2, " meters") + ".";
-      window.clearTimeout(state.announceTimer);
-      state.announceTimer = window.setTimeout(() => {
-        els.placementAnnouncement.textContent = text;
-      }, 240);
+    // ---------- Copy ----------
+    function copyText(text, okMessage) {
+      const done = (message) => {
+        els.copyStatus.textContent = message;
+        window.setTimeout(() => { if (els.copyStatus.textContent === message) els.copyStatus.textContent = ""; }, 2400);
+      };
+      if (!navigator.clipboard) { done("Copy is not available in this browser."); return; }
+      navigator.clipboard.writeText(text).then(() => done(okMessage)).catch(() => done("Copy was blocked by the browser."));
     }
 
+    function readingsText(p) {
+      const r = p.result;
+      const face = faceLineCopy(p);
+      const camera = els.presetSelect.options[els.presetSelect.selectedIndex].text;
+      return [
+        p.profile.name + ", mount height " + fmt(p.heightM, 1) + " m, " + camera + " at " + fmt(Number(els.focalInput.value), 1) + " mm",
+        "Verdict: " + STATUS_LABEL[r.verdict] + " (feet angle " + fmt(r.feet.angleDeg, 1) + " deg)",
+        "Counting line: " + fmt(p.distanceM, 2) + " m from below the camera",
+        "Face line: " + (r.faceLine.distanceM === null ? "none" : fmt(r.faceLine.distanceM, 2) + " m") + " (" + face.label.toLowerCase() + ")",
+        "Tilt: " + fmt(r.tilt.value, 1) + " deg down",
+        "Rules " + RULES.version
+      ].join("\\n");
+    }
+
+    // ---------- Update ----------
     function update() {
       const heightM = Number(els.heightInput.value);
       const distanceM = Number(els.distanceInput.value);
-      const tiltAngle = Number(els.tiltInput.value);
-      const sensor = selectedSensor();
-      const sensorWidth = sensor.widthMm;
-      const focalLength = Number(els.focalInput.value);
-      if (![heightM, distanceM, tiltAngle, sensorWidth, focalLength].every(Number.isFinite)) return;
+      if (![heightM, distanceM, Number(els.focalInput.value)].every(Number.isFinite)) return;
+      const p = currentPlacement();
+      const r = p.result;
+      const profile = p.profile;
 
-      const row = rowForHeight(heightM);
-      syncDistanceBounds(row, distanceM);
-      syncDefaultTilt(heightM, distanceM);
-      const syncedTiltAngle = Number(els.tiltInput.value);
+      if (!state.tiltUserAdjusted) setFieldValue(els.tiltInput, els.tiltRange, r.tilt.recommended, 1);
+      els.tiltAuto.setAttribute("aria-pressed", String(!state.tiltUserAdjusted));
+      syncDistanceBounds(p);
       [els.heightRange, els.distanceRange, els.tiltRange, els.focalRange].forEach(setRangeFill);
+      document.querySelectorAll("[data-scene]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.scene === profile.id)));
+      els.sceneCaption.textContent = profile.description;
 
-      const result = classify(heightM, distanceM);
-      const resolution = selectedResolution();
-      const verticalFov = verticalFovDeg(sensorWidth, focalLength, resolution);
-      const horizontalFov = horizontalFovDeg(sensorWidth, focalLength);
-      const visibleVerticalSpanM = Math.max(0.001, 2 * distanceM * Math.tan(toRad(verticalFov / 2)));
-      const fullWidthM = Math.max(0.001, 2 * distanceM * Math.tan(toRad(horizontalFov / 2)));
-      const effectiveWidthM = fullWidthM * 0.8;
-      const verticalPpm = resolution.h / visibleVerticalSpanM;
-      const horizontalPpm = resolution.w / fullWidthM;
-      const copy = recommendationCopy(distanceM, row.recommended_distance_m, result.overall);
-      const canSnap = Math.abs(row.recommended_distance_m - distanceM) >= 0.01 && state.solveMode !== "distance";
+      const face = faceLineCopy(p);
+      const verdictLabel = STATUS_LABEL[r.verdict];
+      const visibleClass = face.visible ? "visible" : "not-visible";
+      const resolution = p.resolution;
+      const verticalSpanM = Math.max(0.001, 2 * Math.hypot(heightM, distanceM) * Math.tan(toRad(r.optics.verticalFovDeg / 2)));
+      const verticalPpm = resolution.h / verticalSpanM;
 
-      els.verdict.dataset.state = result.overall.status;
-      els.overallLabel.textContent = "Placement verdict";
-      els.verdictHeadline.textContent = "Placement is " + result.overall.label.toLowerCase();
-      els.verdictSub.textContent = copy;
-      els.recommendedDistance.textContent = fmt(row.recommended_distance_m, 2, " m");
-      els.snapButton.disabled = !canSnap;
-      updateStatusElement(els.feetStatus, result.feet);
-      updateStatusElement(els.faceStatus, result.face);
-      els.feetAngle.innerHTML = fmt(result.feet.angle, 2) + "<small>deg</small>";
-      els.faceAngle.innerHTML = fmt(result.face.angle, 2) + "<small>deg</small>";
-      els.stageBadge.textContent = row.priority_mode === "strict_best" ? "strict best row" : "feet-priority row";
-      els.topStageBadge.textContent = "H-FOV " + fmt(horizontalFov, 1, " deg");
-      els.sideFeetReading.textContent = "Feet: " + result.feet.label + ", " + fmt(result.feet.angle, 1, " deg");
-      els.sideFaceReading.textContent = "Face: " + result.face.label + ", " + fmt(result.face.angle, 1, " deg");
-      const aimHeightM = aimHeightAtDistance(heightM, distanceM, syncedTiltAngle);
-      const aimCopy = aimHeightM < 0
-        ? "below ground"
-        : aimHeightM > heightM
-          ? "above camera"
-          : fmt(aimHeightM, 2, " m");
-      els.sideTiltReading.textContent = "Tilt: " + fmt(syncedTiltAngle, 0, " deg") + " to " + aimCopy + " / FOV " + fmt(verticalFov, 1, " deg");
-      els.sideFeetReading.className = "reading-chip " + result.feet.status;
-      els.sideFaceReading.className = "reading-chip " + result.face.status;
-      els.sideTiltReading.className = "reading-chip";
+      els.verdict.dataset.state = r.verdict;
+      els.verdictHeadline.textContent = "Placement is " + verdictLabel.toLowerCase();
+      els.verdictSub.textContent = verdictCopy(p);
+      const outside = r.warnings.indexOf("height_outside_range") >= 0;
+      els.heightWarn.hidden = !outside;
+      els.heightWarn.textContent = outside ? fmt(heightM, 1) + " m is outside the " + profile.name + " height range (" + fmt(profile.heightRangeM.min, 1) + "-" + fmt(profile.heightRangeM.max, 1) + " m). Judged anyway." : "";
+      els.recommendedDistance.textContent = fmt(r.countingLine.recommendedDistanceM, 2, " m");
+      els.snapButton.disabled = Math.abs(r.countingLine.recommendedDistanceM - distanceM) < 0.01 || state.solveMode === "distance";
 
-      updateRangeBar(heightM, row, distanceM);
-      updateMetrics(result, horizontalFov, verticalFov, fullWidthM, effectiveWidthM, horizontalPpm, verticalPpm);
-      els.sideCanvas.setAttribute("aria-label", "Side elevation. Camera height " + fmt(heightM, 1, " meters") + ", subject distance " + fmt(distanceM, 2, " meters") + ". Tilt " + fmt(syncedTiltAngle, 0, " degrees") + " aiming at " + aimCopy + ". Feet angle " + fmt(result.feet.angle, 1, " degrees") + ", " + result.feet.label + ". Face angle " + fmt(result.face.angle, 1, " degrees") + ", " + result.face.label + ".");
-      els.topCanvas.setAttribute("aria-label", "Top-down coverage. Horizontal field of view " + fmt(horizontalFov, 1, " degrees") + ". Full width " + fmt(fullWidthM, 1, " meters") + ", effective width " + fmt(effectiveWidthM, 1, " meters") + ".");
-      drawSide(heightM, distanceM, row, result.feet, result.face, verticalFov, syncedTiltAngle);
-      drawTop(distanceM, horizontalFov, fullWidthM, effectiveWidthM, result.feet);
-      if (state.tableRendered) renderTable(row.camera_height_m);
+      updateStatusElement(els.feetStatus, r.feet.status, STATUS_LABEL[r.feet.status]);
+      els.feetAngle.innerHTML = fmt(r.feet.angleDeg, 2) + "<small>deg</small>";
+      els.feetBands.innerHTML = profile.feetAngleDeg.best.min + "-" + profile.feetAngleDeg.best.max + " <small>best</small> / " + profile.feetAngleDeg.acceptable.min + "-" + profile.feetAngleDeg.acceptable.max + " <small>ok</small>";
+      els.countNote.textContent = r.countingLine.framed ? "Whole person in frame. Target " + profile.feetAngleDeg.target + " deg." : "The person here is cut off in the frame.";
+      updateStatusElement(els.faceStatus, visibleClass, face.label);
+      els.faceLineDistance.innerHTML = r.faceLine.distanceM === null ? "none" : fmt(r.faceLine.distanceM, 2) + "<small>m</small>";
+      els.faceAngle.innerHTML = r.faceLine.angleDeg === null ? "none" : fmt(r.faceLine.angleDeg, 1) + "<small>deg</small>";
+      els.faceNote.textContent = face.note;
 
-      els.mobileAnswer.dataset.state = result.overall.status;
-      els.mobileAnswerOverall.textContent = result.overall.label;
-      els.mobileAnswerFeet.textContent = result.feet.label;
-      els.mobileAnswerFeet.className = result.feet.status;
-      els.mobileAnswerFace.textContent = result.face.label;
-      els.mobileAnswerFace.className = result.face.status;
+      els.stageBadge.textContent = profile.name;
+      els.sideFeetReading.textContent = "Feet: " + STATUS_LABEL[r.feet.status] + ", " + fmt(r.feet.angleDeg, 1, " deg");
+      els.sideFeetReading.className = "reading-chip " + r.feet.status;
+      els.sideFaceReading.textContent = "Face line: " + (r.faceLine.distanceM === null ? "none" : fmt(r.faceLine.distanceM, 2, " m")) + ", " + face.label.toLowerCase();
+      els.sideFaceReading.className = "reading-chip " + (face.visible ? "face" : "not-visible");
+      els.sideTiltReading.textContent = "Tilt: " + fmt(r.tilt.value, 1, " deg") + (state.tiltUserAdjusted ? " manual" : " recommended") + " / FOV " + fmt(r.optics.verticalFovDeg, 1, " deg");
+      els.topTitle.textContent = state.topView === "top" ? "Top view" : "Camera view";
+
+      updateRangeBar(p);
+      updateMetrics(p, verticalPpm);
+      els.sideCanvas.setAttribute("aria-label", "Side elevation. Camera height " + fmt(heightM, 1, " meters") + ", counting line at " + fmt(distanceM, 2, " meters") + ", feet angle " + fmt(r.feet.angleDeg, 1, " degrees") + ", " + STATUS_LABEL[r.feet.status] + ". Face line " + (r.faceLine.distanceM === null ? "none" : "at " + fmt(r.faceLine.distanceM, 2, " meters") + ", " + face.label) + ".");
+      els.topCanvas.setAttribute("aria-label", state.topView === "top" ? "Top-down coverage. Width " + fmt(r.optics.coverageWidthM, 1, " meters") + " at the counting line." : "Camera view at " + fmt(r.tilt.value, 1, " degrees") + " tilt.");
+      drawSide(p);
+      if (state.topView === "top") drawTop(p); else drawCameraView(p);
+      if (!els.tableView.hidden) renderTable(p);
+
+      els.mobileAnswer.dataset.state = r.verdict;
+      els.mobileAnswerOverall.textContent = verdictLabel;
+      els.mobileAnswerFeet.textContent = STATUS_LABEL[r.feet.status];
+      els.mobileAnswerFeet.className = r.feet.status;
+      els.mobileAnswerFace.textContent = face.label;
+      els.mobileAnswerFace.className = visibleClass;
       els.mobileAnswerDistance.textContent = fmt(distanceM, 2, " m");
-      els.statusbar.dataset.state = result.overall.status;
-      els.sbOverall.textContent = result.overall.label;
-      els.sbFeet.textContent = result.feet.label;
-      els.sbFeet.className = result.feet.status;
-      els.sbFace.textContent = result.face.label;
-      els.sbFace.className = result.face.status;
+      els.statusbar.dataset.state = r.verdict;
+      els.sbOverall.textContent = verdictLabel;
+      els.sbFeet.textContent = STATUS_LABEL[r.feet.status];
+      els.sbFeet.className = r.feet.status;
+      els.sbFace.textContent = face.label;
+      els.sbFace.className = visibleClass;
       els.sbDistance.textContent = fmt(distanceM, 2, " m");
-      queuePlacementAnnouncement(result, distanceM);
+
+      const announcement = "Placement is " + verdictLabel.toLowerCase() + ". Feet " + STATUS_LABEL[r.feet.status] + ". Face line " + face.label + ". Counting line " + fmt(distanceM, 2, " meters") + ".";
+      window.clearTimeout(state.announceTimer);
+      state.announceTimer = window.setTimeout(() => { els.placementAnnouncement.textContent = announcement; }, 240);
     }
 
+    // ---------- Tabs and tip ----------
     function setTab(tab) {
       const isTable = tab === "table";
       els.visualizerView.hidden = isTable;
@@ -3227,11 +3187,7 @@ function buildHtml(rows) {
       els.tableTab.setAttribute("aria-selected", String(isTable));
       els.visualizerTab.tabIndex = isTable ? -1 : 0;
       els.tableTab.tabIndex = isTable ? 0 : -1;
-      if (isTable) {
-        renderTable(rowForHeight(Number(els.heightInput.value)).camera_height_m);
-      } else {
-        requestAnimationFrame(update);
-      }
+      if (isTable) renderTable(currentPlacement()); else requestAnimationFrame(update);
     }
 
     function onTabKey(event) {
@@ -3252,10 +3208,8 @@ function buildHtml(rows) {
 
     function showPriorityTip() {
       const rect = els.priorityInfo.getBoundingClientRect();
-      const left = Math.min(window.innerWidth - 296, Math.max(16, rect.left));
-      const top = Math.min(window.innerHeight - 140, rect.bottom + 8);
-      els.priorityTip.style.left = left + "px";
-      els.priorityTip.style.top = top + "px";
+      els.priorityTip.style.left = Math.min(window.innerWidth - 296, Math.max(16, rect.left)) + "px";
+      els.priorityTip.style.top = Math.min(window.innerHeight - 140, rect.bottom + 8) + "px";
       els.priorityTip.classList.add("show");
       els.priorityInfo.setAttribute("aria-expanded", "true");
     }
@@ -3265,16 +3219,22 @@ function buildHtml(rows) {
       els.priorityInfo.setAttribute("aria-expanded", "false");
     }
 
+    // ---------- Events ----------
     els.viewTabs.addEventListener("click", (event) => {
       const button = event.target.closest("[data-tab]");
       if (button) setTab(button.dataset.tab);
     });
     els.viewTabs.addEventListener("keydown", onTabKey);
-
-    document.querySelectorAll("[data-solve]").forEach((button) => {
-      button.addEventListener("click", () => setSolveMode(button.dataset.solve));
+    els.sceneSeg.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-scene]");
+      if (button) setScene(button.dataset.scene);
     });
-
+    document.querySelectorAll("[data-solve]").forEach((button) => button.addEventListener("click", () => setSolveMode(button.dataset.solve)));
+    document.querySelectorAll("[data-topview]").forEach((button) => button.addEventListener("click", () => {
+      state.topView = button.dataset.topview;
+      document.querySelectorAll("[data-topview]").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+      update();
+    }));
     els.presetSelect.addEventListener("change", (event) => applyPreset(event.target.value));
     els.heightRange.addEventListener("input", (event) => setHeight(event.target.value));
     els.heightInput.addEventListener("input", (event) => setHeight(event.target.value));
@@ -3282,24 +3242,29 @@ function buildHtml(rows) {
     els.distanceRange.addEventListener("input", (event) => setDistance(event.target.value));
     els.distanceInput.addEventListener("input", (event) => setDistance(event.target.value));
     els.distanceInput.addEventListener("change", (event) => setDistance(event.target.value));
+    els.depthInput.addEventListener("input", (event) => setDepth(event.target.value));
     els.tiltRange.addEventListener("input", (event) => setTilt(event.target.value));
     els.tiltInput.addEventListener("input", (event) => setTilt(event.target.value));
     els.tiltInput.addEventListener("change", (event) => setTilt(event.target.value));
-    els.sensorSelect.addEventListener("change", (event) => setSensor(event.target.value));
-    els.focalRange.addEventListener("input", (event) => setFocal(event.target.value));
-    els.focalInput.addEventListener("input", (event) => setFocal(event.target.value));
-    els.focalInput.addEventListener("change", (event) => setFocal(event.target.value));
+    els.tiltAuto.addEventListener("click", () => { state.tiltUserAdjusted = false; update(); });
+    els.sensorSelect.addEventListener("change", update);
+    els.focalRange.addEventListener("input", (event) => { setFieldValue(els.focalInput, els.focalRange, event.target.value, 1); update(); });
+    els.focalInput.addEventListener("input", (event) => { setFieldValue(els.focalInput, els.focalRange, event.target.value, 1); update(); });
     els.resolutionSelect.addEventListener("change", update);
-
-    els.snapButton.addEventListener("click", () => {
-      const row = rowForHeight(Number(els.heightInput.value));
-      setDistance(row.recommended_distance_m);
+    els.snapButton.addEventListener("click", () => setDistance(recommendedDistance(Number(els.heightInput.value), currentProfile())));
+    els.copyReadings.addEventListener("click", () => copyText(readingsText(currentPlacement()), "Readings copied."));
+    els.copyCsv.addEventListener("click", () => copyText(toCsv(lookupRows(currentProfile())), "CSV copied."));
+    els.lookupBody.addEventListener("click", (event) => {
+      const row = event.target.closest("tr[data-height]");
+      if (!row) return;
+      setSolveMode("manual");
+      setFieldValue(els.heightInput, els.heightRange, Number(row.dataset.height), 1);
+      setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(Number(row.dataset.height), currentProfile()), 2);
+      setTab("visualizer");
     });
-
     els.jumpToDiagram.addEventListener("click", () => {
       document.querySelector(".stage").scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
     });
-
     els.priorityInfo.addEventListener("mouseenter", showPriorityTip);
     els.priorityInfo.addEventListener("focus", showPriorityTip);
     els.priorityInfo.addEventListener("click", (event) => {
@@ -3308,16 +3273,25 @@ function buildHtml(rows) {
     });
     els.priorityInfo.addEventListener("mouseleave", hidePriorityTip);
     document.addEventListener("click", hidePriorityTip);
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") hidePriorityTip();
-    });
+    document.addEventListener("keydown", (event) => { if (event.key === "Escape") hidePriorityTip(); });
+    window.addEventListener("resize", () => requestAnimationFrame(update));
 
-    populateSensorOptions();
-    els.sensorSelect.value = CAMERAS.custom.sensorId;
-    updateResolutionOptions(CAMERAS.custom);
-    setFieldValue(els.distanceInput, els.distanceRange, ${fmt(initialRow.recommended_distance_m, 2)}, 2);
-    setFieldValue(els.tiltInput, els.tiltRange, ${initialTiltAngleDeg}, 0);
-    [els.heightRange, els.distanceRange, els.tiltRange, els.focalRange].forEach(setRangeFill);
+    // ---------- Start ----------
+    populateScenes();
+    populatePresets();
+    els.presetSelect.value = CAMERA_CATALOG.defaultCamera;
+    const startPreset = presetFor(CAMERA_CATALOG.defaultCamera);
+    els.presetCaption.textContent = startPreset.caption;
+    els.sensorSelect.value = startPreset.sensorId;
+    els.sensorSelect.disabled = startPreset.sensorLocked;
+    els.sensorField.classList.toggle("locked", startPreset.sensorLocked);
+    [els.focalInput, els.focalRange].forEach((el) => { el.min = startPreset.focalMinMm; el.max = startPreset.focalMaxMm; });
+    els.focalMinTick.textContent = fmt(startPreset.focalMinMm, 1);
+    els.focalMaxTick.textContent = fmt(startPreset.focalMaxMm, 1);
+    updateResolutionOptions(startPreset);
+    setFieldValue(els.focalInput, els.focalRange, startPreset.focalDefaultMm, 1);
+    setFieldValue(els.heightInput, els.heightRange, RULE.defaultCameraHeightM, 1);
+    setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(RULE.defaultCameraHeightM, currentProfile()), 2);
     update();
   </script>
 </body>
@@ -3325,11 +3299,13 @@ function buildHtml(rows) {
 `;
 }
 
-const rows = buildRows();
 const publicDir = path.join(__dirname, "public");
 
 await fs.mkdir(publicDir, { recursive: true });
-await fs.writeFile(path.join(publicDir, "index.html"), buildHtml(rows), "utf8");
+await fs.writeFile(path.join(publicDir, "index.html"), buildHtml(), "utf8");
+for (const profile of rules.profiles) {
+  await fs.writeFile(path.join(publicDir, `camera-placement-lookup-${profile.id}.csv`), toCsv(lookupTable(profile)), "utf8");
+}
 
-console.log(`Generated ${rows.length} rows.`);
-console.log(path.join(publicDir, "index.html"));
+console.log(`Generated index.html and ${rules.profiles.length} lookup CSVs (rules ${rules.version}).`);
+console.log(publicDir);
