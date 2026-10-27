@@ -57,6 +57,10 @@ The tilt the tool suggests: aimed at half the human height of a person standing 
 The optional on-site distance to the farthest floor where people can stand in view. Entered per placement, not part of a scene profile.
 _Avoid_: Floor depth, room length
 
+**Entrance width**:
+The optional on-site width of the door or entrance people pass through, checked against the width the camera covers at the counting line. Fully covered within the middle 80% of the view, tight in the outer 20%, too wide beyond it. Never changes the verdict.
+_Avoid_: Door size, opening
+
 **Camera model**:
 A specific camera's sensor, lens range and resolutions, used to work out what is in frame. Independent of any scene profile.
 _Avoid_: Preset

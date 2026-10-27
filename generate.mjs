@@ -1905,6 +1905,30 @@ function buildHtml() {
       margin-left: auto;
     }
 
+    .entrance-line {
+      margin-top: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 12.5px;
+      font-weight: 650;
+      line-height: 1.45;
+    }
+
+    .entrance-line[data-state="covered"] {
+      background: var(--best-bg);
+      color: var(--best);
+    }
+
+    .entrance-line[data-state="tight"] {
+      background: var(--ok-bg);
+      color: var(--ok);
+    }
+
+    .entrance-line[data-state="too_wide"] {
+      background: var(--bad-bg);
+      color: var(--bad);
+    }
+
     .sim-stage {
       position: relative;
     }
@@ -2079,6 +2103,16 @@ function buildHtml() {
               </div>
               <p class="field-hint" id="depthHint">Optional. From below the camera to the farthest floor where people can stand.</p>
             </div>
+            <div class="field" id="entranceField">
+              <div class="field-top">
+                <label class="field-label" for="entranceInput">Entrance width</label>
+                <span class="value-edit">
+                  <input id="entranceInput" type="number" min="0" max="60" step="0.1" placeholder="none" aria-describedby="entranceHint" aria-label="Entrance width in meters">
+                  <span class="unit">m</span>
+                </span>
+              </div>
+              <p class="field-hint" id="entranceHint">Optional. Width of the door or entrance people pass through, checked against what the camera covers at the counting line.</p>
+            </div>
             <details class="advanced" id="advancedPanel">
               <summary>Advanced optics <span aria-hidden="true">v</span></summary>
               <div class="advanced-body">
@@ -2135,6 +2169,7 @@ function buildHtml() {
                 <h1 id="verdictHeadline">Placement is best</h1>
                 <p class="verdict-sub" id="verdictSub"></p>
                 <p class="warn-line" id="heightWarn" hidden></p>
+                <p class="entrance-line" id="entranceLine" data-state="covered" hidden></p>
                 <div class="verdict-actions">
                   <button type="button" class="button" id="copyReadings">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"></path></svg>
@@ -2394,7 +2429,7 @@ ${engineSource}
       heightField: byId("heightField"), heightRange: byId("heightRange"), heightInput: byId("heightInput"),
       distanceField: byId("distanceField"), distanceRange: byId("distanceRange"), distanceInput: byId("distanceInput"),
       distanceMaxTick: byId("distanceMaxTick"),
-      depthInput: byId("depthInput"),
+      depthInput: byId("depthInput"), entranceInput: byId("entranceInput"), entranceLine: byId("entranceLine"),
       tiltRange: byId("tiltRange"), tiltInput: byId("tiltInput"), tiltAuto: byId("tiltAuto"),
       sensorField: byId("sensorField"), sensorSelect: byId("sensorSelect"),
       focalRange: byId("focalRange"), focalInput: byId("focalInput"), focalMinTick: byId("focalMinTick"), focalMaxTick: byId("focalMaxTick"),
@@ -2450,6 +2485,7 @@ ${engineSource}
         faceLineDistanceM: r.faceLine.distanceM,
         faceLineVisible: r.faceLine.visible,
         depthM: state.depthM,
+        entranceWidthM: state.entranceM,
         coverageWidthM: r.optics.coverageWidthM,
         humanHeightM: p.profile.humanHeightM,
         facePointM: p.profile.facePointM,
@@ -2463,6 +2499,7 @@ ${engineSource}
       profileId: RULES.defaultProfile,
       solveMode: "distance",
       depthM: null,
+      entranceM: null,
       topView: "top",
       tiltUserAdjusted: false,
       tableProfileId: null,
@@ -2540,7 +2577,8 @@ ${engineSource}
         distanceM: distanceM,
         camera: camera,
         tiltDeg: state.tiltUserAdjusted ? Number(els.tiltInput.value) : undefined,
-        availableDepthM: state.depthM === null ? undefined : state.depthM
+        availableDepthM: state.depthM === null ? undefined : state.depthM,
+        entranceWidthM: state.entranceM === null ? undefined : state.entranceM
       });
       return { profile: profile, heightM: heightM, distanceM: distanceM, camera: camera, resolution: resolution, result: result };
     }
@@ -2654,6 +2692,23 @@ ${engineSource}
       const depth = parseFloat(value);
       state.depthM = value === "" || Number.isNaN(depth) || depth <= 0 ? null : depth;
       update();
+    }
+
+    function setEntrance(value) {
+      const width = parseFloat(value);
+      state.entranceM = value === "" || Number.isNaN(width) || width <= 0 ? null : width;
+      update();
+    }
+
+    function entranceCopy(entrance, coverageWidthM) {
+      const covered = fmt(coverageWidthM, 1) + " m";
+      if (entrance.status === "too_wide") {
+        return "Entrance " + fmt(entrance.widthM, 2) + " m is wider than the " + covered + " the camera covers at the counting line; " + fmt(entrance.uncoveredM, 2) + " m is out of view. Mount higher, use a shorter focal length, or add a camera.";
+      }
+      if (entrance.status === "tight") {
+        return "Entrance " + fmt(entrance.widthM, 2) + " m fits the " + covered + " view, but its edges fall in the outer 20% of the frame where detection is weaker.";
+      }
+      return "Entrance " + fmt(entrance.widthM, 2) + " m is fully in view: the camera covers " + covered + " at the counting line.";
     }
 
     function syncDistanceBounds(p) {
@@ -3077,6 +3132,46 @@ ${engineSource}
       ctx.lineTo(camX + halfWidthPx * 0.8, subjectY);
       ctx.stroke();
       ctx.setLineDash([]);
+
+      // The entrance to scale against what the camera covers; any part outside the view is red.
+      if (r.entrance !== null) {
+        const pxPerMetre = (halfWidthPx * 2) / o.coverageWidthM;
+        const entranceHalfPx = Math.min(w / 2 - 6, (r.entrance.widthM / 2) * pxPerMetre);
+        const entranceY = subjectY - 14;
+        const statusColor = r.entrance.status === "covered" ? COL.best : r.entrance.status === "tight" ? COL.ok : COL.bad;
+        const inView = Math.min(entranceHalfPx, halfWidthPx);
+        ctx.lineCap = "butt";
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = statusColor;
+        ctx.beginPath();
+        ctx.moveTo(camX - inView, entranceY);
+        ctx.lineTo(camX + inView, entranceY);
+        ctx.stroke();
+        if (entranceHalfPx > halfWidthPx) {
+          ctx.strokeStyle = COL.bad;
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath();
+          ctx.moveTo(camX - entranceHalfPx, entranceY);
+          ctx.lineTo(camX - halfWidthPx, entranceY);
+          ctx.moveTo(camX + halfWidthPx, entranceY);
+          ctx.lineTo(camX + entranceHalfPx, entranceY);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = statusColor;
+        ctx.beginPath();
+        ctx.moveTo(camX - entranceHalfPx, entranceY - 7);
+        ctx.lineTo(camX - entranceHalfPx, entranceY + 7);
+        ctx.moveTo(camX + entranceHalfPx, entranceY - 7);
+        ctx.lineTo(camX + entranceHalfPx, entranceY + 7);
+        ctx.stroke();
+        ctx.fillStyle = statusColor;
+        ctx.font = "600 11px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText("entrance " + fmt(r.entrance.widthM, 1, " m"), camX, entranceY - 8);
+      }
       ctx.fillStyle = COL.ink;
       ctx.beginPath();
       ctx.arc(camX, subjectY, 4, 0, Math.PI * 2);
@@ -3222,9 +3317,8 @@ ${engineSource}
         "Verdict: " + STATUS_LABEL[r.verdict] + " (feet angle " + fmt(r.feet.angleDeg, 1) + " deg)",
         "Counting line: " + fmt(p.distanceM, 2) + " m from below the camera",
         "Face line: " + (r.faceLine.distanceM === null ? "none" : fmt(r.faceLine.distanceM, 2) + " m") + " (" + face.label.toLowerCase() + ")",
-        "Tilt: " + fmt(r.tilt.value, 1) + " deg down",
-        "Rules " + RULES.version
-      ].join("\\n");
+        "Tilt: " + fmt(r.tilt.value, 1) + " deg down"
+      ].concat(r.entrance === null ? [] : ["Entrance: " + entranceCopy(r.entrance, r.optics.coverageWidthM)], ["Rules " + RULES.version]).join("\\n");
     }
 
     // ---------- Update ----------
@@ -3256,6 +3350,11 @@ ${engineSource}
       const outside = r.warnings.indexOf("height_outside_range") >= 0;
       els.heightWarn.hidden = !outside;
       els.heightWarn.textContent = outside ? fmt(heightM, 1) + " m is outside the " + profile.name + " height range (" + fmt(profile.heightRangeM.min, 1) + "-" + fmt(profile.heightRangeM.max, 1) + " m). Judged anyway." : "";
+      els.entranceLine.hidden = r.entrance === null;
+      if (r.entrance !== null) {
+        els.entranceLine.dataset.state = r.entrance.status;
+        els.entranceLine.textContent = entranceCopy(r.entrance, r.optics.coverageWidthM);
+      }
       els.recommendedDistance.textContent = fmt(r.countingLine.recommendedDistanceM, 2, " m");
       els.snapButton.disabled = Math.abs(r.countingLine.recommendedDistanceM - distanceM) < 0.01 || state.solveMode === "distance";
 
@@ -3383,6 +3482,7 @@ ${engineSource}
     els.distanceInput.addEventListener("input", (event) => setDistance(event.target.value));
     els.distanceInput.addEventListener("change", (event) => setDistance(event.target.value));
     els.depthInput.addEventListener("input", (event) => setDepth(event.target.value));
+    els.entranceInput.addEventListener("input", (event) => setEntrance(event.target.value));
     els.tiltRange.addEventListener("input", (event) => setTilt(event.target.value));
     els.tiltInput.addEventListener("input", (event) => setTilt(event.target.value));
     els.tiltInput.addEventListener("change", (event) => setTilt(event.target.value));

@@ -122,12 +122,29 @@ function judgeFaceLine({ profile, heightM, distanceM, tiltDeg, vFovDeg, availabl
   return { ...base, visible: true, reason: null };
 }
 
+// Detection is unreliable in the outer edge of the frame, so only the middle 80% counts as fully covered.
+const EFFECTIVE_COVERAGE = 0.8;
+
+/**
+ * Whether an entrance of a given width fits the width the camera covers at the counting line.
+ * @param {number} entranceWidthM
+ * @param {number} coverageWidthM
+ * @returns {{ widthM: number, status: "covered" | "tight" | "too_wide", uncoveredM: number }}
+ */
+export function entranceCoverage(entranceWidthM, coverageWidthM) {
+  if (entranceWidthM > coverageWidthM) {
+    return { widthM: entranceWidthM, status: "too_wide", uncoveredM: entranceWidthM - coverageWidthM };
+  }
+  const status = entranceWidthM <= coverageWidthM * EFFECTIVE_COVERAGE ? "covered" : "tight";
+  return { widthM: entranceWidthM, status, uncoveredM: 0 };
+}
+
 /**
  * Judges one placement: a camera at heightM with its counting line distanceM away.
  * @param {{ profile: SceneProfile, heightM: number, distanceM: number, camera: CameraOptics,
- *           tiltDeg?: number, availableDepthM?: number }} placement
+ *           tiltDeg?: number, availableDepthM?: number, entranceWidthM?: number }} placement
  */
-export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg, availableDepthM }) {
+export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg, availableDepthM, entranceWidthM }) {
   const feetAngleDeg = feetAngle(heightM, distanceM);
   const faceAngleDeg = faceAngle(heightM, distanceM, profile.facePointM);
   const feetStatus = judgeFeet(feetAngleDeg, profile);
@@ -147,6 +164,7 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
     faceLine: judgeFaceLine({ profile, heightM, distanceM, tiltDeg: tilt, vFovDeg, availableDepthM }),
     tilt: { value: tilt, recommended },
     optics: { verticalFovDeg: vFovDeg, horizontalFovDeg: hFovDeg, coverageWidthM, pixelsPerMetre: camera.resolution.w / coverageWidthM },
+    entrance: entranceWidthM == null ? null : entranceCoverage(entranceWidthM, coverageWidthM),
     verdict: framed ? feetStatus : "out_of_range",
     warnings: heightM < min || heightM > max ? ["height_outside_range"] : [],
   };

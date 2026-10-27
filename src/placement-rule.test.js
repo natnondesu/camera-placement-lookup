@@ -14,6 +14,7 @@ import {
   lookupTable,
   validateProfile,
   toCsv,
+  entranceCoverage,
 } from "./placement-rule.js";
 
 const rules = JSON.parse(readFileSync(new URL("../rules/scene-profiles.json", import.meta.url), "utf8"));
@@ -149,6 +150,34 @@ test("a tilt override replaces the recommended tilt", () => {
   assert.equal(result.tilt.value, 80);
   assert.notEqual(result.tilt.recommended, 80);
   assert.equal(result.countingLine.framed, false);
+});
+
+test("an entrance inside the effective 80% of the view is fully covered", () => {
+  assert.deepEqual(entranceCoverage(3, 10), { widthM: 3, status: "covered", uncoveredM: 0 });
+  assert.equal(entranceCoverage(8, 10).status, "covered");
+});
+
+test("an entrance in the outer 20% of the view is covered but tight", () => {
+  assert.deepEqual(entranceCoverage(9, 10), { widthM: 9, status: "tight", uncoveredM: 0 });
+  assert.equal(entranceCoverage(10, 10).status, "tight");
+});
+
+test("an entrance wider than the view reports how much is missed", () => {
+  const result = entranceCoverage(12, 10);
+  assert.equal(result.status, "too_wide");
+  close(result.uncoveredM, 2, 1e-9);
+});
+
+test("no entrance width means no entrance check", () => {
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: wideCamera });
+  assert.equal(result.entrance, null);
+});
+
+test("the entrance is checked against the width covered at the counting line, never the verdict", () => {
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: wideCamera, entranceWidthM: 40 });
+  assert.deepEqual(result.entrance, entranceCoverage(40, result.optics.coverageWidthM));
+  assert.equal(result.entrance.status, "too_wide");
+  assert.equal(result.verdict, "best");
 });
 
 test("heights outside the profile range are judged with a warning", () => {

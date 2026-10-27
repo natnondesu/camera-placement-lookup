@@ -129,7 +129,10 @@ export function createWalkSim(THREE, ui) {
     const doorZ = p.scene === "open_door" ? p.distanceM + 0.35 : null;
     const farZ = Math.max(p.distanceM, p.faceLineDistanceM || 0) + 5;
     const endZ = p.depthM ? Math.max(p.distanceM + 1, Math.min(farZ, p.depthM - 0.4)) : farZ;
-    return { doorZ, endZ, doorHalf: 1.1, corridorHalf: 1.5, passZ: doorZ === null ? null : doorZ + 1.4 };
+    // The doorway or corridor is as wide as the entered entrance; typical sizes otherwise.
+    const doorHalf = p.entranceWidthM ? p.entranceWidthM / 2 : 1.1;
+    const corridorHalf = p.entranceWidthM ? p.entranceWidthM / 2 : 1.5;
+    return { doorZ, endZ, doorHalf, corridorHalf, passZ: doorZ === null ? null : doorZ + 1.4 };
   }
 
   function rebuildProps(p) {
@@ -173,15 +176,16 @@ export function createWalkSim(THREE, ui) {
       // Walks left to right across the view, on the camera side of the door, without crossing the counting line.
       const farthest = lay.doorZ !== null ? lay.doorZ - 0.5 : lay.endZ - 1;
       const z = 1.2 + random() * Math.max(0.5, farthest - 1.2);
-      const span = lay.doorZ !== null ? 7 : lay.corridorHalf - 0.25;
+      const span = lay.doorZ !== null ? Math.max(7, lay.doorHalf + 2) : lay.corridorHalf - 0.25;
       const dir = random() < 0.5 ? -1 : 1;
       from = { x: -span * dir, z };
       to = { x: span * dir, z };
     } else if (kind === "pass") {
       const z = lay.passZ + (random() - 0.5) * 0.6;
       const dir = random() < 0.5 ? -1 : 1;
-      from = { x: -9 * dir, z };
-      to = { x: 9 * dir, z };
+      const span = Math.max(9, lay.doorHalf + 4);
+      from = { x: -span * dir, z };
+      to = { x: span * dir, z };
     } else if (kind === "in") {
       from = { x: lane, z: lay.endZ };
       to = { x: lane * 0.6, z: nearZ };
@@ -451,7 +455,7 @@ export function createWalkSim(THREE, ui) {
       camera.updateProjectionMatrix();
       rebuildProps(placement);
       syncPassersRow();
-      const key = [placement.scene, placement.distanceM.toFixed(1), placement.depthM || 0, (placement.faceLineDistanceM || 0).toFixed(1)].join("|");
+      const key = [placement.scene, placement.distanceM.toFixed(1), placement.depthM || 0, placement.entranceWidthM || 0, (placement.faceLineDistanceM || 0).toFixed(1)].join("|");
       if (first || key !== layoutKey) respawnAll(placement);
       layoutKey = key;
       if (active) {
