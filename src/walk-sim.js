@@ -1,5 +1,5 @@
 // Walk simulation seen through the placement camera. Three.js is passed in so this module
-// loads without it; crossingDirection is the pure part and is unit-tested.
+// loads without it; crossingDirection and pixelsPerMetre are the pure parts and are unit-tested.
 
 /**
  * @param {number} previousZ distance from the camera on the last frame (m)
@@ -13,6 +13,17 @@ export function crossingDirection(previousZ, z, lineZ) {
   return null;
 }
 
+/**
+ * Horizontal pixel density at a straight-line distance from the camera.
+ * @param {number} resolutionWidthPx
+ * @param {number} horizontalFovDeg
+ * @param {number} distanceM straight-line distance from the camera (m)
+ * @returns {number} pixels per metre
+ */
+export function pixelsPerMetre(resolutionWidthPx, horizontalFovDeg, distanceM) {
+  return resolutionWidthPx / (2 * distanceM * Math.tan((horizontalFovDeg * Math.PI) / 360));
+}
+
 const MODEL_HEIGHT_M = 1.7;
 const SKIN = ["#f1c7a5", "#d9a47c", "#b97b52", "#8d5a3b", "#5f3b26"];
 const TOPS = ["#3d6fb6", "#7a8796", "#b5443c", "#2f7d5b", "#c9a227", "#e6e1d6", "#5a4a8c", "#26313d"];
@@ -22,7 +33,7 @@ const HAIR = ["#1b1612", "#3b2a1e", "#6b4a2b", "#8a8a8a"];
 /**
  * @param {typeof import("three")} THREE
  * @param {{ canvas: HTMLCanvasElement, overlay: HTMLCanvasElement, playButton: HTMLButtonElement,
- *           resetButton: HTMLButtonElement, passersRow: HTMLElement,
+ *           resetButton: HTMLButtonElement, crossButton: HTMLButtonElement, passersRow: HTMLElement,
  *           counts: { in: HTMLElement, out: HTMLElement, faces: HTMLElement, passers: HTMLElement } }} ui
  */
 export function createWalkSim(THREE, ui) {
@@ -55,6 +66,7 @@ export function createWalkSim(THREE, ui) {
   let agents = [];
   let active = false;
   let playing = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let crossTraffic = false;
   let lastTime = 0;
   let seed = 7;
   // Seeded so a reset replays a believable crowd rather than a new random one each time.
@@ -149,12 +161,23 @@ export function createWalkSim(THREE, ui) {
   }
 
   function spawn(agent, lay, p, fresh) {
-    const kind = lay.doorZ !== null && random() < 0.4 ? "pass" : random() < 0.6 ? "in" : "out";
+    const roll = random();
+    const kind = crossTraffic && roll < 0.35
+      ? "cross"
+      : lay.doorZ !== null && random() < 0.4 ? "pass" : random() < 0.6 ? "in" : "out";
     const lane = (random() * 2 - 1) * ((lay.doorZ !== null ? lay.doorHalf : lay.corridorHalf) - 0.35);
     const nearZ = 0.8;
     let from;
     let to;
-    if (kind === "pass") {
+    if (kind === "cross") {
+      // Walks left to right across the view, on the camera side of the door, without crossing the counting line.
+      const farthest = lay.doorZ !== null ? lay.doorZ - 0.5 : lay.endZ - 1;
+      const z = 1.2 + random() * Math.max(0.5, farthest - 1.2);
+      const span = lay.doorZ !== null ? 7 : lay.corridorHalf - 0.25;
+      const dir = random() < 0.5 ? -1 : 1;
+      from = { x: -span * dir, z };
+      to = { x: span * dir, z };
+    } else if (kind === "pass") {
       const z = lay.passZ + (random() - 0.5) * 0.6;
       const dir = random() < 0.5 ? -1 : 1;
       from = { x: -9 * dir, z };
@@ -213,7 +236,7 @@ export function createWalkSim(THREE, ui) {
     for (const agent of agents) {
       agent.travelled += agent.speed * dt;
       if (agent.travelled >= agent.length) {
-        if (agent.kind === "pass") counts.passers += 1;
+        if (agent.kind === "pass" || agent.kind === "cross") counts.passers += 1;
         spawn(agent, lay, input, false);
       }
       const t = agent.travelled / agent.length;
@@ -229,7 +252,7 @@ export function createWalkSim(THREE, ui) {
       agent.body.armL.rotation.x = -swing * 0.45;
       agent.body.armR.rotation.x = swing * 0.45;
 
-      if (agent.kind !== "pass" && agent.lastZ !== null) {
+      if (agent.kind !== "pass" && agent.kind !== "cross" && agent.lastZ !== null) {
         const crossed = crossingDirection(agent.lastZ, z, input.distanceM);
         if (crossed) {
           counts[crossed] += 1;
@@ -290,9 +313,24 @@ export function createWalkSim(THREE, ui) {
       ctx.strokeStyle = counted ? input.colors.count : "rgba(230, 236, 245, 0.55)";
       ctx.lineWidth = counted ? 2 : 1;
       ctx.strokeRect(box.x, box.y, box.w, box.h);
+      // Density at this person's face, the figure demographics depend on.
+      if (box.h >= 28) {
+        const faceY = tall * (input.facePointM / input.humanHeightM);
+        const faceDistance = Math.hypot(g.position.x, input.heightM - faceY, g.position.z);
+        const ppm = pixelsPerMetre(input.resolutionW, input.hFovDeg, faceDistance);
+        ctx.font = "600 10px JetBrains Mono, monospace";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "rgba(230, 236, 245, 0.85)";
+        ctx.fillText(Math.round(ppm) + " px/m", feet.x, box.y - 3);
+        ctx.textAlign = "left";
+        ctx.font = "600 11px Inter, sans-serif";
+      }
       if (counted) {
+        const tagWidth = ctx.measureText(agent.flashText).width + 8;
         ctx.fillStyle = input.colors.count;
-        ctx.fillText(agent.flashText, box.x, box.y - 2);
+        ctx.fillRect(box.x, box.y, tagWidth, 15);
+        ctx.fillStyle = "#0f1217";
+        ctx.fillText(agent.flashText, box.x + 4, box.y + 13);
       }
       if (agent.faceFlash > 0) {
         const head = box.h * 0.16;
@@ -307,6 +345,35 @@ export function createWalkSim(THREE, ui) {
       ctx.fillStyle = input.colors.bad;
       ctx.fillText("Counting line is outside the frame", 8, h - 8);
     }
+    drawDensityReadout(ctx, w);
+  }
+
+  // Top-right readout: pixel density where each line meets the floor (counting) or the face point (face).
+  function drawDensityReadout(ctx, w) {
+    const rows = [["Counting line", input.colors.count, Math.hypot(input.heightM, input.distanceM)]];
+    if (input.faceLineDistanceM !== null) {
+      rows.push(["Face line", input.colors.face, Math.hypot(input.heightM - input.facePointM, input.faceLineDistanceM)]);
+    }
+    const lineHeight = 17;
+    const boxW = 168;
+    const boxH = 10 + rows.length * lineHeight;
+    const x = w - boxW - 8;
+    const y = 8;
+    ctx.fillStyle = "rgba(12, 15, 20, 0.72)";
+    ctx.fillRect(x, y, boxW, boxH);
+    rows.forEach(([name, color, distance], i) => {
+      const rowY = y + 5 + (i + 1) * lineHeight - 4;
+      ctx.fillStyle = color;
+      ctx.fillRect(x + 8, rowY - 8, 8, 3);
+      ctx.font = "600 11px Inter, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillStyle = "rgba(230, 236, 245, 0.9)";
+      ctx.fillText(name, x + 22, rowY);
+      ctx.font = "600 11px JetBrains Mono, monospace";
+      ctx.textAlign = "right";
+      ctx.fillText(Math.round(pixelsPerMetre(input.resolutionW, input.hFovDeg, distance)) + " px/m", x + boxW - 8, rowY);
+    });
+    ctx.textAlign = "left";
   }
 
   function render() {
@@ -340,6 +407,19 @@ export function createWalkSim(THREE, ui) {
     ui.playButton.setAttribute("aria-pressed", String(playing));
   }
 
+  function syncPassersRow() {
+    if (input) ui.passersRow.hidden = input.scene !== "open_door" && !crossTraffic;
+  }
+
+  ui.crossButton.setAttribute("aria-pressed", "false");
+  ui.crossButton.addEventListener("click", () => {
+    crossTraffic = !crossTraffic;
+    ui.crossButton.setAttribute("aria-pressed", String(crossTraffic));
+    syncPassersRow();
+    if (input) respawnAll(input);
+    start();
+  });
+
   ui.playButton.addEventListener("click", () => {
     playing = !playing;
     syncPlayButton();
@@ -370,7 +450,7 @@ export function createWalkSim(THREE, ui) {
       camera.rotation.set((-placement.tiltDeg * Math.PI) / 180, Math.PI, 0);
       camera.updateProjectionMatrix();
       rebuildProps(placement);
-      ui.passersRow.hidden = placement.scene !== "open_door";
+      syncPassersRow();
       const key = [placement.scene, placement.distanceM.toFixed(1), placement.depthM || 0, (placement.faceLineDistanceM || 0).toFixed(1)].join("|");
       if (first || key !== layoutKey) respawnAll(placement);
       layoutKey = key;

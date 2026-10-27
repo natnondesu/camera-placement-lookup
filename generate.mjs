@@ -1935,8 +1935,15 @@ function buildHtml() {
 
     .sim-actions {
       display: flex;
+      flex-wrap: wrap;
       gap: 6px;
       margin-left: auto;
+    }
+
+    .sim-toggle[aria-pressed="true"] {
+      color: var(--accent);
+      border-color: oklch(0.715 0.150 256 / 0.45);
+      background: var(--accent-dim);
     }
 
     .sim-note {
@@ -2224,6 +2231,7 @@ function buildHtml() {
                       <span>Faces <b id="simFaces">0</b></span>
                       <span id="simPassersRow">Passers-by, not counted <b id="simPassers">0</b></span>
                       <span class="sim-actions">
+                        <button type="button" class="button sim-toggle" id="simCross" aria-pressed="false" title="People also walk left to right across the view, without crossing the counting line">Cross traffic</button>
                         <button type="button" class="button" id="simPlay" aria-pressed="true">Pause</button>
                         <button type="button" class="button" id="simReset">Reset</button>
                       </span>
@@ -2444,6 +2452,9 @@ ${engineSource}
         depthM: state.depthM,
         coverageWidthM: r.optics.coverageWidthM,
         humanHeightM: p.profile.humanHeightM,
+        facePointM: p.profile.facePointM,
+        resolutionW: p.resolution.w,
+        hFovDeg: r.optics.horizontalFovDeg,
         colors: { count: SIM_COLORS[r.feet.status], face: SIM_COLORS.face, bad: SIM_COLORS.bad }
       };
     }
@@ -3466,6 +3477,7 @@ ${simSource}
         overlay: document.getElementById("simOverlay"),
         playButton: document.getElementById("simPlay"),
         resetButton: document.getElementById("simReset"),
+        crossButton: document.getElementById("simCross"),
         passersRow: document.getElementById("simPassersRow"),
         counts: {
           in: document.getElementById("simIn"),
