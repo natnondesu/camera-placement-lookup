@@ -51,7 +51,7 @@ The assumed height of a person, set per scene profile. A person at the counting 
 How far the camera itself is aimed downward. Not a property of a person's position.
 
 **Recommended tilt**:
-The tilt the tool suggests: it frames the whole person at the counting line first, and the face point at the face line if it can. The installer may override it.
+The tilt the tool suggests: aimed at half the human height of a person standing at the counting line. The face line is checked at that aim, not chased. The installer may override it.
 
 **Available depth**:
 The optional on-site distance to the farthest floor where people can stand in view. Entered per placement, not part of a scene profile.
