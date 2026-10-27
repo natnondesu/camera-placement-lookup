@@ -13,6 +13,30 @@ export function crossingDirection(previousZ, z, lineZ) {
   return null;
 }
 
+/**
+ * Places one label per person without overlaps: above the box if free, else below, else left out.
+ * Higher priority (a bigger, nearer person) claims its spot first.
+ * @param {{ text: string, width: number, height: number, centreX: number, top: number, bottom: number, priority: number }[]} candidates
+ * @param {{ x: number, y: number, w: number, h: number }[]} blocked areas already drawn, such as the readout box
+ * @param {number} canvasWidth
+ * @returns {{ text: string, x: number, y: number, w: number, h: number }[]} in placement order
+ */
+export function placeLabels(candidates, blocked, canvasWidth) {
+  const taken = [...blocked];
+  const overlaps = (a) => taken.some((b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h);
+  const placed = [];
+  [...candidates].sort((a, b) => b.priority - a.priority).forEach((c) => {
+    const x = Math.max(0, Math.min(canvasWidth - c.width, c.centreX - c.width / 2));
+    const spot = [c.top - 3 - c.height, c.bottom + 3]
+      .map((y) => ({ text: c.text, x, y, w: c.width, h: c.height }))
+      .find((rect) => rect.y >= 0 && !overlaps(rect));
+    if (!spot) return;
+    taken.push(spot);
+    placed.push(spot);
+  });
+  return placed;
+}
+
 const MODEL_HEIGHT_M = 1.7;
 // Matches the engine's 80% effective coverage: the outer 10% each side, or 20% of a fisheye's radius.
 const EFFECTIVE_SHARE = 0.8;
@@ -399,11 +423,17 @@ export function createWalkSim(THREE, ui) {
     ctx.textBaseline = "bottom";
     ctx.textAlign = "left";
     const lay = layout(input);
+    const lineLabels = [];
+    const densityLabels = [];
     const label = (z, text, color) => {
       const left = toScreen(-1.4, 0, z, w, h);
       if (left.behind || left.y < 0 || left.y > h) return false;
+      let y = Math.min(h - 4, left.y - 4);
+      // Lines a few centimetres apart land on the same row; stack the later label above the earlier one.
+      lineLabels.forEach((prev) => { if (Math.abs(prev.y + 13 - y) < 14) y = prev.y - 1; });
       ctx.fillStyle = color;
-      ctx.fillText(text, 8, Math.min(h - 4, left.y - 4));
+      ctx.fillText(text, 8, y);
+      lineLabels.push({ x: 8, y: y - 13, w: ctx.measureText(text).width, h: 14 });
       return true;
     };
     const countingVisible = label(input.distanceM, input.text.countingLine + " " + input.distanceM.toFixed(2) + " m", input.colors.count);
@@ -426,12 +456,8 @@ export function createWalkSim(THREE, ui) {
       // Density at this person's face, the figure demographics depend on.
       if (box.h >= 28) {
         const faceY = tall * (input.facePointM / input.humanHeightM);
-        ctx.font = "600 10px JetBrains Mono, monospace";
-        ctx.textAlign = "center";
-        ctx.fillStyle = "rgba(230, 236, 245, 0.85)";
-        ctx.fillText(Math.round(densityAt(g.position.x, faceY, g.position.z)) + " px/m", centreX, box.y - 3);
-        ctx.textAlign = "left";
-        ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
+        const text = Math.round(densityAt(g.position.x, faceY, g.position.z)) + " px/m";
+        densityLabels.push({ text, centreX, top: box.y, bottom: box.y + box.h, priority: box.h });
       }
       if (counted) {
         const tag = agent.flashDirection === "out" ? input.text.out : input.text.in;
@@ -450,11 +476,30 @@ export function createWalkSim(THREE, ui) {
         ctx.fillText(input.text.face, centreX + head / 2 + 3, box.y + head);
       }
     }
+    // Density labels go last, placed around each other, the line labels and the readout box.
+    ctx.font = "600 11px JetBrains Mono, monospace";
+    const candidates = densityLabels.map((c) => ({ ...c, width: ctx.measureText(c.text).width + 8, height: 15 }));
+    placeLabels(candidates, [densityReadoutRect(w), ...lineLabels], w).forEach((spot) => {
+      ctx.fillStyle = "rgba(12, 15, 20, 0.62)";
+      ctx.fillRect(spot.x, spot.y, spot.w, spot.h);
+      ctx.fillStyle = "rgba(230, 236, 245, 0.92)";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(spot.text, spot.x + spot.w / 2, spot.y + spot.h / 2 + 0.5);
+    });
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
     if (!countingVisible) {
       ctx.fillStyle = input.colors.bad;
       ctx.fillText(input.text.outsideFrame, 8, h - 8);
     }
     drawDensityReadout(ctx, w);
+  }
+
+  function densityReadoutRect(w) {
+    const rows = input.faceLineDistanceM !== null ? 2 : 1;
+    return { x: w - 184, y: 8, w: 176, h: 10 + rows * 17 };
   }
 
   // Top-right readout: pixel density where each line meets the floor (counting) or the face point (face).
@@ -464,10 +509,7 @@ export function createWalkSim(THREE, ui) {
       rows.push([input.text.faceLine, input.colors.face, densityAt(0, input.facePointM, input.faceLineDistanceM)]);
     }
     const lineHeight = 17;
-    const boxW = 176;
-    const boxH = 10 + rows.length * lineHeight;
-    const x = w - boxW - 8;
-    const y = 8;
+    const { x, y, w: boxW, h: boxH } = densityReadoutRect(w);
     ctx.fillStyle = "rgba(12, 15, 20, 0.72)";
     ctx.fillRect(x, y, boxW, boxH);
     rows.forEach(([name, color, density], i) => {

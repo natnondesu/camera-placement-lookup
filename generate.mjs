@@ -69,7 +69,7 @@ function buildHtml() {
       --ink: oklch(0.970 0.004 256);
       --ink-soft: oklch(0.835 0.010 256);
       --muted: oklch(0.710 0.016 256);
-      --faint: oklch(0.650 0.016 256);
+      --faint: oklch(0.680 0.016 256);
       --accent: oklch(0.715 0.150 256);
       --accent-ink: oklch(0.985 0.004 256);
       --accent-dim: oklch(0.715 0.150 256 / 0.16);
@@ -383,7 +383,7 @@ function buildHtml() {
 
     .panel-head span {
       color: var(--faint);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
     }
 
@@ -464,7 +464,7 @@ function buildHtml() {
     .solve-seg button {
       min-height: 30px;
       padding: 6px 10px;
-      font-size: 11px;
+      font-size: 12px;
     }
 
     .field {
@@ -495,7 +495,7 @@ function buildHtml() {
       padding: 2px 6px;
       background: var(--accent-dim);
       color: var(--accent);
-      font-size: 9px;
+      font-size: 11px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0;
@@ -548,7 +548,7 @@ function buildHtml() {
     .unit {
       color: var(--muted);
       font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
     }
 
@@ -626,7 +626,7 @@ function buildHtml() {
       justify-content: space-between;
       color: var(--faint);
       font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 600;
       margin-top: -4px;
     }
@@ -766,7 +766,7 @@ function buildHtml() {
 
     .rec-pill small {
       color: var(--muted);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
     }
 
@@ -805,6 +805,17 @@ function buildHtml() {
       color: var(--muted);
     }
 
+    .use-button[hidden] {
+      display: none;
+    }
+
+    .use-button.on-target:disabled {
+      opacity: 1;
+      border-color: oklch(0.780 0.165 152 / 0.35);
+      background: var(--best-bg);
+      color: var(--best);
+    }
+
     .pillar {
       display: grid;
       gap: 12px;
@@ -836,7 +847,7 @@ function buildHtml() {
       border-radius: 5px;
       background: var(--accent-dim);
       color: var(--accent);
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0;
@@ -939,7 +950,7 @@ function buildHtml() {
 
     .meta span {
       color: var(--muted);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
     }
 
@@ -953,7 +964,7 @@ function buildHtml() {
     .meta b small {
       margin-left: 2px;
       color: var(--muted);
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
     }
 
@@ -1003,7 +1014,7 @@ function buildHtml() {
       padding: 4px 8px;
       color: var(--ink-soft);
       font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 800;
       white-space: nowrap;
     }
@@ -1035,7 +1046,7 @@ function buildHtml() {
       color: var(--muted);
       padding: 3px 8px;
       font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
     }
 
@@ -1207,7 +1218,7 @@ function buildHtml() {
       gap: 13px;
       flex-wrap: wrap;
       color: var(--muted);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
     }
 
@@ -1276,7 +1287,7 @@ function buildHtml() {
       white-space: nowrap;
       color: var(--muted);
       font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
     }
 
@@ -1288,7 +1299,7 @@ function buildHtml() {
       white-space: nowrap;
       color: var(--ink);
       font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
     }
 
@@ -1363,7 +1374,7 @@ function buildHtml() {
 
     .metric .label {
       color: var(--muted);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
       line-height: 1.35;
     }
@@ -1379,7 +1390,7 @@ function buildHtml() {
     .table-meta {
       color: var(--muted);
       font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
       white-space: nowrap;
     }
@@ -1412,7 +1423,7 @@ function buildHtml() {
       z-index: 1;
       background: var(--surface-2);
       color: var(--muted);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 800;
     }
 
@@ -1441,7 +1452,7 @@ function buildHtml() {
       border-radius: 999px;
       padding: 3px 8px;
       font-family: "Inter", "Noto Sans Thai", ui-sans-serif, system-ui, sans-serif;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 800;
     }
 
@@ -1839,7 +1850,7 @@ function buildHtml() {
       border-radius: 999px;
       background: var(--surface-2);
       color: var(--muted);
-      font-size: 10.5px;
+      font-size: 12px;
       font-weight: 750;
       padding: 2px 8px;
       margin-left: auto;
@@ -1912,7 +1923,7 @@ function buildHtml() {
     .stage-head .view-seg button {
       min-height: 26px;
       padding: 3px 9px;
-      font-size: 11px;
+      font-size: 12px;
     }
 
     .table-head .button {
@@ -2271,6 +2282,15 @@ function buildHtml() {
         grid-template-columns: 1fr 1fr;
       }
 
+      .solve {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .solve .solve-seg button {
+        flex: 1;
+      }
+
       .verdict-lead {
         grid-column: 1 / -1;
         border-right: 0;
@@ -2407,7 +2427,7 @@ function buildHtml() {
       .sheet-handle {
         display: grid;
         width: 100%;
-        height: 22px;
+        height: 32px;
         place-items: center;
         padding: 0;
         border: 0;
@@ -2557,6 +2577,27 @@ function buildHtml() {
         max-height: calc(100dvh - var(--topbar-h, 64px) - var(--sheet-h, 170px) - 150px);
       }
     }
+
+    @media (max-width: 1080px), (pointer: coarse) {
+      .solve-seg button,
+      .scene-seg button,
+      .stage-head .view-seg button,
+      .tilt-auto,
+      .tag-info,
+      .button,
+      select {
+        min-height: 44px;
+      }
+
+      .lang-seg button {
+        min-width: 44px;
+      }
+
+      .stage-head .view-seg button,
+      .tilt-auto {
+        padding: 0 12px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -2696,7 +2737,7 @@ function buildHtml() {
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M20 6 9 17l-5-5"></path>
                 </svg>
-                <span data-i18n="useRecommended">Use recommended distance</span>
+                <span id="snapLabel">Use recommended distance</span>
               </button>
             </div>
             <div class="field" id="entranceField">
@@ -2999,7 +3040,7 @@ ${engineSource}
 
     const I18N = {
       en: {
-        mountAt: "Mount the camera at {height} m ({exact} m before rounding).",
+        mountAt: "Mount the camera at {height} m ({exact} m before rounding).", onRecommended: "On the recommended distance",
         densityWarn: "Only {ppm} px/m at the counting line, below the {min} px/m floor: people may be missed. Mount lower, or use a higher-resolution camera or a longer lens.",
         tooSmall: "Too small",
         faceTooSmall: "In frame, but only {ppm} px/m at the face (floor {min} px/m): too few pixels for demographics. Never fails the placement.",
@@ -3077,7 +3118,7 @@ ${engineSource}
         sceneDesc_corridor: "People can only move in one direction through the view, e.g. a mall entrance or an escalator."
       },
       th: {
-        mountAt: "ติดตั้งกล้องที่ความสูง {height} m (ค่าก่อนปัดเศษ {exact} m)",
+        mountAt: "ติดตั้งกล้องที่ความสูง {height} m (ค่าก่อนปัดเศษ {exact} m)", onRecommended: "อยู่ที่ระยะแนะนำแล้ว",
         densityWarn: "ที่เส้นนับมีเพียง {ppm} px/m ต่ำกว่าเกณฑ์ {min} px/m อาจนับคนได้ไม่ครบ ติดตั้งให้ต่ำลง หรือใช้กล้องความละเอียดสูงขึ้นหรือเลนส์ยาวขึ้น",
         tooSmall: "เล็กเกินไป",
         faceTooSmall: "อยู่ในภาพ แต่ที่ใบหน้ามีเพียง {ppm} px/m (เกณฑ์ {min} px/m) พิกเซลน้อยเกินไปสำหรับข้อมูลเพศ/อายุ ไม่ทำให้ตำแหน่งไม่ผ่าน",
@@ -3248,7 +3289,7 @@ ${engineSource}
       resolutionSelect: byId("resolutionSelect"),
       verdict: byId("verdict"), verdictHeadline: byId("verdictHeadline"), verdictSub: byId("verdictSub"), heightWarn: byId("heightWarn"),
       copyReadings: byId("copyReadings"), copyStatus: byId("copyStatus"), placementAnnouncement: byId("placementAnnouncement"),
-      recommendedDistance: byId("recommendedDistance"), snapButton: byId("snapButton"), densityWarn: byId("densityWarn"),
+      recommendedDistance: byId("recommendedDistance"), snapButton: byId("snapButton"), snapLabel: byId("snapLabel"), densityWarn: byId("densityWarn"),
       answerFaceChip: byId("answerFaceChip"), answerFaceState: byId("answerFaceState"), answerPpmChip: byId("answerPpmChip"),
       feetStatus: byId("feetStatus"), feetAngle: byId("feetAngle"), feetBands: byId("feetBands"), countNote: byId("countNote"),
       faceStatus: byId("faceStatus"), faceLineDistance: byId("faceLineDistance"), faceAngle: byId("faceAngle"), faceNote: byId("faceNote"),
@@ -3630,11 +3671,22 @@ ${engineSource}
       ctx.stroke();
       if (!withLabels) return;
       ctx.fillStyle = COL.muted;
-      ctx.font = "10px JetBrains Mono, monospace";
+      ctx.font = "11px JetBrains Mono, monospace";
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       ctx.fillText(fmt(profile.humanHeightM, 1) + " " + t("canvasHead"), x + 12, headY - 6);
       ctx.fillText(fmt(profile.facePointM, 1) + " " + t("canvasFace"), x + 12, faceY);
+    }
+
+    // A thin outline in the panel colour keeps diagram labels readable where they cross rays and figures.
+    function haloText(ctx, text, x, y) {
+      ctx.save();
+      ctx.lineWidth = 3.5;
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = COL.surface;
+      ctx.strokeText(text, x, y);
+      ctx.restore();
+      ctx.fillText(text, x, y);
     }
 
     function drawSide(p) {
@@ -3779,6 +3831,9 @@ ${engineSource}
 
       const faceLineX = fl.distanceM === null ? null : xFor(fl.distanceM);
       const crowded = faceLineX !== null && !fl.coincides && Math.abs(faceLineX - subX) < 110;
+      // When the lines are close, each title grows away from the other instead of centring over its figure.
+      const faceRight = faceLineX !== null && faceLineX > subX;
+      const nearlyTouching = crowded && Math.abs(faceLineX - subX) < 40;
       // Face line: its own person, where the face angle is best.
       if (fl.distanceM !== null) {
         const faceX = faceLineX;
@@ -3804,19 +3859,20 @@ ${engineSource}
           ctx.globalAlpha = 1;
           ctx.fillStyle = COL.face;
           ctx.font = "700 12px Inter, 'Noto Sans Thai', sans-serif";
-          ctx.textAlign = "center";
+          ctx.textAlign = crowded ? (faceRight ? "left" : "right") : "center";
           ctx.textBaseline = "bottom";
-          ctx.fillText(t("faceLine"), faceX, Math.max(22, yFor(profile.humanHeightM) - (crowded ? 30 : 14)));
+          haloText(ctx, t("faceLine"), crowded ? faceX + (faceRight ? -6 : 6) : faceX, Math.max(22, yFor(profile.humanHeightM) - (nearlyTouching ? 30 : 14)));
           ctx.font = "600 11px JetBrains Mono, monospace";
+          ctx.textAlign = "center";
           ctx.textBaseline = "top";
-          ctx.fillText(fmt(fl.distanceM, 2, " m"), faceX, groundY + 22);
+          haloText(ctx, fmt(fl.distanceM, 2, " m"), faceX, groundY + 22);
         }
         ctx.globalAlpha = 1;
         ctx.fillStyle = COL.face;
         ctx.font = "700 12px Inter, 'Noto Sans Thai', sans-serif";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.fillText(t("canvasFaceAngle", { angle: fmt(fl.angleDeg, 1) }), faceX + 12, faceY);
+        haloText(ctx, t("canvasFaceAngle", { angle: fmt(fl.angleDeg, 1) }), faceX + 12, faceY);
       }
 
       ctx.strokeStyle = feetColor;
@@ -3831,7 +3887,7 @@ ${engineSource}
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
       ctx.fillStyle = feetColor;
-      ctx.fillText(t("canvasFeetAngle", { angle: fmt(r.feet.angleDeg, 1) }), subX - 12, groundY - 6);
+      haloText(ctx, t("canvasFeetAngle", { angle: fmt(r.feet.angleDeg, 1) }), subX - 12, groundY - 6);
 
       drawPerson(ctx, subX, groundY, yFor, personColor, profile, !crowded);
 
@@ -3843,8 +3899,10 @@ ${engineSource}
         ctx.arc(subX, aimY, 4.2, 0, Math.PI * 2);
         ctx.fill();
         ctx.font = "600 12px Inter, 'Noto Sans Thai', sans-serif";
-        ctx.textAlign = "left";
-        ctx.fillText(t("canvasAim", { height: fmt(aimHeightM, 2) }), subX + 10, aimY - 8);
+        // The aim label sits on the side away from a close face line.
+        const aimLeft = crowded && faceRight;
+        ctx.textAlign = aimLeft ? "right" : "left";
+        haloText(ctx, t("canvasAim", { height: fmt(aimHeightM, 2) }), subX + (aimLeft ? -10 : 10), aimY - 8);
       }
 
       ctx.fillStyle = COL.accent;
@@ -3867,13 +3925,14 @@ ${engineSource}
       ctx.font = "600 12px JetBrains Mono, monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      ctx.fillText(fmt(distanceM, 2, " m"), (camX + subX) / 2, groundY + 34);
+      haloText(ctx, fmt(distanceM, 2, " m"), (camX + subX) / 2, groundY + 34);
 
       ctx.font = "700 13px Inter, 'Noto Sans Thai', sans-serif";
       ctx.textBaseline = "bottom";
-      ctx.fillText(t("canvasCamera"), camX, Math.max(22, camY - 14));
+      haloText(ctx, t("canvasCamera"), camX, Math.max(22, camY - 14));
       ctx.fillStyle = personColor;
-      ctx.fillText(t("countingLine"), subX, Math.max(22, yFor(profile.humanHeightM) - 14));
+      ctx.textAlign = crowded ? (faceRight ? "right" : "left") : "center";
+      haloText(ctx, t("countingLine"), crowded ? subX + (faceRight ? 6 : -6) : subX, Math.max(22, yFor(profile.humanHeightM) - 14));
     }
 
     function drawTop(p) {
@@ -3987,7 +4046,7 @@ ${engineSource}
       ctx.fillStyle = COL.muted;
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
-      ctx.font = "10px JetBrains Mono, monospace";
+      ctx.font = "11px JetBrains Mono, monospace";
       ctx.fillText(t("cameraBelow"), camX, camY - 12);
       ctx.fillStyle = COL.ink;
       ctx.font = "700 12px JetBrains Mono, monospace";
@@ -4022,7 +4081,7 @@ ${engineSource}
       const horizon = yAt(0);
       ctx.fillStyle = colorWithAlpha(COL.muted, "0.10");
       ctx.fillRect(fx, Math.max(fy, horizon), fw, fh);
-      ctx.font = "10px JetBrains Mono, monospace";
+      ctx.font = "11px JetBrains Mono, monospace";
       ctx.textAlign = "left";
       ctx.textBaseline = "bottom";
       const far = Math.ceil(Math.max(p.distanceM, r.faceLine.distanceM || 0) * 2.5);
@@ -4126,7 +4185,7 @@ ${engineSource}
       ctx.arc(cx, cy, 7, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = COL.muted;
-      ctx.font = "10px JetBrains Mono, monospace";
+      ctx.font = "11px JetBrains Mono, monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
       ctx.fillText(t("cameraBelow"), cx, cy + 10);
@@ -4170,7 +4229,7 @@ ${engineSource}
         ctx.stroke();
       };
       const far = Math.ceil(Math.max(p.distanceM, r.faceLine.distanceM || 0) * 2.5);
-      ctx.font = "10px JetBrains Mono, monospace";
+      ctx.font = "11px JetBrains Mono, monospace";
       ctx.textAlign = "left";
       ctx.textBaseline = "bottom";
       let lastLabelY = Infinity;
@@ -4317,7 +4376,12 @@ ${engineSource}
         els.entranceLine.textContent = entranceCopy(r.entrance, r.optics.coverageWidthM);
       }
       els.recommendedDistance.textContent = fmt(r.countingLine.recommendedDistanceM, 2, " m");
-      els.snapButton.disabled = Math.abs(r.countingLine.recommendedDistanceM - distanceM) < 0.01 || state.solveMode !== "manual";
+      // Only Manual mode leaves the line where the installer put it, so only there can the button act.
+      const onTarget = Math.abs(r.countingLine.recommendedDistanceM - distanceM) < 0.01;
+      els.snapButton.hidden = state.solveMode !== "manual";
+      els.snapButton.disabled = onTarget;
+      els.snapButton.classList.toggle("on-target", onTarget);
+      els.snapLabel.textContent = t(onTarget ? "onRecommended" : "useRecommended");
 
       updateStatusElement(els.feetStatus, r.feet.status, STATUS_LABEL[r.feet.status]);
       els.feetAngle.innerHTML = fmt(r.feet.angleDeg, 2) + "<small>deg</small>";
