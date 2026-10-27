@@ -25,6 +25,8 @@ export function pixelsPerMetre(resolutionWidthPx, horizontalFovDeg, distanceM) {
 }
 
 const MODEL_HEIGHT_M = 1.7;
+// Matches the engine's 80% effective coverage: the outer 10% on each side is shaded.
+const EFFECTIVE_EDGE = 0.1;
 const SKIN = ["#f1c7a5", "#d9a47c", "#b97b52", "#8d5a3b", "#5f3b26"];
 const TOPS = ["#3d6fb6", "#7a8796", "#b5443c", "#2f7d5b", "#c9a227", "#e6e1d6", "#5a4a8c", "#26313d"];
 const BOTTOMS = ["#2b3440", "#3c4f6b", "#5b5148", "#1f2329", "#6b6f75"];
@@ -282,12 +284,36 @@ export function createWalkSim(THREE, ui) {
     return { x: ((projected.x + 1) / 2) * w, y: ((1 - projected.y) / 2) * h, behind: projected.z > 1 };
   }
 
+  // The middle 80% of the frame width, the part the console treats as reliable coverage.
+  function drawEffectiveCoverage(ctx, w, h) {
+    const edge = w * EFFECTIVE_EDGE;
+    ctx.fillStyle = "rgba(8, 10, 14, 0.38)";
+    ctx.fillRect(0, 0, edge, h);
+    ctx.fillRect(w - edge, 0, edge, h);
+    ctx.strokeStyle = "rgba(120, 220, 160, 0.75)";
+    ctx.lineWidth = 1.25;
+    ctx.setLineDash([6, 5]);
+    ctx.beginPath();
+    ctx.moveTo(edge, 0);
+    ctx.lineTo(edge, h);
+    ctx.moveTo(w - edge, 0);
+    ctx.lineTo(w - edge, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = "600 10px Inter, sans-serif";
+    ctx.textBaseline = "bottom";
+    ctx.textAlign = "left";
+    ctx.fillStyle = "rgba(120, 220, 160, 0.9)";
+    ctx.fillText("effective 80%", edge + 5, h - 6);
+  }
+
   // Detection boxes and line labels, drawn the way a counting camera's overlay shows them.
   function drawOverlay() {
     const ctx = ui.overlay.getContext("2d");
     const w = parseFloat(ui.overlay.style.width) || 0;
     const h = parseFloat(ui.overlay.style.height) || 0;
     ctx.clearRect(0, 0, w, h);
+    drawEffectiveCoverage(ctx, w, h);
     ctx.font = "600 11px Inter, sans-serif";
     ctx.textBaseline = "bottom";
     const lay = layout(input);

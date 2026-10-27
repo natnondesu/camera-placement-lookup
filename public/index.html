@@ -2174,7 +2174,7 @@
                 <p class="pillar-note" id="faceNote"></p>
               </div>
             </section>
-            <div class="dual">
+            <div class="dual sim-mode">
               <section class="stage" aria-label="Side-view placement and distance range">
                 <div class="stage-head">
                   <div class="stage-title"><h2>Side view</h2><span class="stage-badge" id="stageBadge"></span></div>
@@ -2208,17 +2208,17 @@
               <section class="stage" aria-label="Top-down coverage and camera view">
                 <div class="stage-head">
                   <div class="stage-title">
-                    <h2 id="topTitle">Top view</h2>
+                    <h2 id="topTitle">Simulation</h2>
                     <div class="solve-seg view-seg" role="group" aria-label="Second diagram">
-                      <button type="button" data-topview="top" aria-pressed="true">Top</button>
+                      <button type="button" data-topview="top" aria-pressed="false">Top</button>
                       <button type="button" data-topview="camera" aria-pressed="false">Camera</button>
-                      <button type="button" data-topview="sim" aria-pressed="false">Simulate</button>
+                      <button type="button" data-topview="sim" aria-pressed="true">Simulate</button>
                     </div>
                   </div>
                 </div>
                 <div class="diagram-wrap">
-                  <canvas id="topCanvas" width="600" height="560" role="img" aria-label="Top-down coverage diagram"></canvas>
-                  <div class="sim" id="simWrap" hidden>
+                  <canvas id="topCanvas" width="600" height="560" role="img" aria-label="Top-down coverage diagram" hidden></canvas>
+                  <div class="sim" id="simWrap">
                     <div class="sim-stage">
                       <canvas id="simCanvas" role="img" aria-label="Simulated camera view with people walking past"></canvas>
                       <canvas id="simOverlay" class="sim-overlay" aria-hidden="true"></canvas>
@@ -2560,7 +2560,7 @@ function toCsv(rows) {
   "defaultFocalLengthMm": 2.8
 };
     const RULES = {"version":"2026-10-27","defaultProfile":"open_door","profiles":[{"id":"open_door","name":"Open door","description":"People can also walk across the front of the counted doorway, e.g. a store entrance.","heightRangeM":{"min":2,"max":10,"step":0.1},"facePointM":1.5,"humanHeightM":1.7,"feetAngleDeg":{"target":41,"best":{"min":38,"max":43},"acceptable":{"min":38,"max":48}},"faceAngleDeg":{"best":{"min":10,"max":25},"acceptableMax":30}},{"id":"corridor","name":"Corridor","description":"People can only move in one direction through the view, e.g. a mall entrance or an escalator.","heightRangeM":{"min":2,"max":10,"step":0.1},"facePointM":1.5,"humanHeightM":1.7,"feetAngleDeg":{"target":38,"best":{"min":35,"max":43},"acceptable":{"min":33,"max":48}},"faceAngleDeg":{"best":{"min":10,"max":25},"acceptableMax":30}}]};
-    const CAMERA_CATALOG = {"version":"2026-10-27","defaultCamera":"dahua_hdbw2531r_zs_s2","cameras":[{"id":"dahua_hdbw2531r_zs_s2","name":"Dahua DH-IPC-HDBW2531R-ZS-S2","description":"1/2.7\" 5 MP dome, 2.7-13.5 mm motorized lens.","sensorWidthMm":4.8,"focalLengthMm":{"min":2.7,"max":13.5,"default":4},"resolutions":[{"label":"5 MP","w":2592,"h":1944},{"label":"4 MP","w":2688,"h":1520},{"label":"3 MP","w":2304,"h":1296},{"label":"1080p","w":1920,"h":1080}]},{"id":"generic_bullet_2mp","name":"Bullet 2 MP (generic)","description":"Fixed 2.8 mm lens, 1/2.8\" class sensor.","sensorWidthMm":5.37,"focalLengthMm":{"min":2.8,"max":2.8,"default":2.8},"resolutions":[{"label":"1080p","w":1920,"h":1080}]},{"id":"generic_dome_4mp","name":"Dome 4 MP (generic)","description":"Fixed 2.8 mm lens.","sensorWidthMm":4.8,"focalLengthMm":{"min":2.8,"max":2.8,"default":2.8},"resolutions":[{"label":"4 MP","w":2560,"h":1440}]},{"id":"generic_varifocal_4mp","name":"Varifocal 4 MP (generic)","description":"Varifocal lens, 1/2\" class sensor.","sensorWidthMm":6.4,"focalLengthMm":{"min":2.8,"max":12,"default":6},"resolutions":[{"label":"4 MP","w":2560,"h":1440}]},{"id":"generic_box_12mp","name":"Box 12 MP (generic)","description":"8 mm lens, 1/1.2\" class sensor.","sensorWidthMm":8.8,"focalLengthMm":{"min":8,"max":8,"default":8},"resolutions":[{"label":"12 MP","w":4000,"h":3000}]}]};
+    const CAMERA_CATALOG = {"version":"2026-10-27","defaultCamera":"dahua_hdbw2531r_zs_s2","cameras":[{"id":"dahua_hdbw2531r_zs_s2","name":"Dahua DH-IPC-HDBW2531R-ZS-S2","description":"1/2.7\" 5 MP dome, 2.7-13.5 mm motorized lens.","sensorWidthMm":4.8,"focalLengthMm":{"min":2.7,"max":13.5},"resolutions":[{"label":"5 MP","w":2592,"h":1944},{"label":"4 MP","w":2688,"h":1520},{"label":"3 MP","w":2304,"h":1296},{"label":"1080p","w":1920,"h":1080}]},{"id":"generic_bullet_2mp","name":"Bullet 2 MP (generic)","description":"Fixed 2.8 mm lens, 1/2.8\" class sensor.","sensorWidthMm":5.37,"focalLengthMm":{"min":2.8,"max":2.8},"resolutions":[{"label":"1080p","w":1920,"h":1080}]},{"id":"generic_dome_4mp","name":"Dome 4 MP (generic)","description":"Fixed 2.8 mm lens.","sensorWidthMm":4.8,"focalLengthMm":{"min":2.8,"max":2.8},"resolutions":[{"label":"4 MP","w":2560,"h":1440}]},{"id":"generic_varifocal_4mp","name":"Varifocal 4 MP (generic)","description":"Varifocal lens, 1/2\" class sensor.","sensorWidthMm":6.4,"focalLengthMm":{"min":2.8,"max":12},"resolutions":[{"label":"4 MP","w":2560,"h":1440}]},{"id":"generic_box_12mp","name":"Box 12 MP (generic)","description":"8 mm lens, 1/1.2\" class sensor.","sensorWidthMm":8.8,"focalLengthMm":{"min":8,"max":8},"resolutions":[{"label":"12 MP","w":4000,"h":3000}]}]};
 
     const SENSOR_SIZES = [
       { id: "1/4", label: "1/4\" format - 3.6 mm width", widthMm: 3.6 },
@@ -2597,7 +2597,8 @@ function toCsv(rows) {
         sensorLocked: true,
         focalMinMm: camera.focalLengthMm.min,
         focalMaxMm: camera.focalLengthMm.max,
-        focalDefaultMm: camera.focalLengthMm.default,
+        // Start at the widest end of the lens: the most coverage for the entrance.
+        focalDefaultMm: camera.focalLengthMm.min,
         resolutions: camera.resolutions.map((r) => ({ label: r.label + " - " + r.w + " x " + r.h, w: r.w, h: r.h })),
         defaultResolution: first.w + "x" + first.h
       };
@@ -2703,7 +2704,7 @@ function toCsv(rows) {
       solveMode: "distance",
       depthM: null,
       entranceM: null,
-      topView: "top",
+      topView: "sim",
       tiltUserAdjusted: false,
       tableProfileId: null,
       tableSelectedHeightKey: null,
@@ -3799,6 +3800,8 @@ function pixelsPerMetre(resolutionWidthPx, horizontalFovDeg, distanceM) {
 }
 
 const MODEL_HEIGHT_M = 1.7;
+// Matches the engine's 80% effective coverage: the outer 10% on each side is shaded.
+const EFFECTIVE_EDGE = 0.1;
 const SKIN = ["#f1c7a5", "#d9a47c", "#b97b52", "#8d5a3b", "#5f3b26"];
 const TOPS = ["#3d6fb6", "#7a8796", "#b5443c", "#2f7d5b", "#c9a227", "#e6e1d6", "#5a4a8c", "#26313d"];
 const BOTTOMS = ["#2b3440", "#3c4f6b", "#5b5148", "#1f2329", "#6b6f75"];
@@ -4056,12 +4059,36 @@ function createWalkSim(THREE, ui) {
     return { x: ((projected.x + 1) / 2) * w, y: ((1 - projected.y) / 2) * h, behind: projected.z > 1 };
   }
 
+  // The middle 80% of the frame width, the part the console treats as reliable coverage.
+  function drawEffectiveCoverage(ctx, w, h) {
+    const edge = w * EFFECTIVE_EDGE;
+    ctx.fillStyle = "rgba(8, 10, 14, 0.38)";
+    ctx.fillRect(0, 0, edge, h);
+    ctx.fillRect(w - edge, 0, edge, h);
+    ctx.strokeStyle = "rgba(120, 220, 160, 0.75)";
+    ctx.lineWidth = 1.25;
+    ctx.setLineDash([6, 5]);
+    ctx.beginPath();
+    ctx.moveTo(edge, 0);
+    ctx.lineTo(edge, h);
+    ctx.moveTo(w - edge, 0);
+    ctx.lineTo(w - edge, h);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = "600 10px Inter, sans-serif";
+    ctx.textBaseline = "bottom";
+    ctx.textAlign = "left";
+    ctx.fillStyle = "rgba(120, 220, 160, 0.9)";
+    ctx.fillText("effective 80%", edge + 5, h - 6);
+  }
+
   // Detection boxes and line labels, drawn the way a counting camera's overlay shows them.
   function drawOverlay() {
     const ctx = ui.overlay.getContext("2d");
     const w = parseFloat(ui.overlay.style.width) || 0;
     const h = parseFloat(ui.overlay.style.height) || 0;
     ctx.clearRect(0, 0, w, h);
+    drawEffectiveCoverage(ctx, w, h);
     ctx.font = "600 11px Inter, sans-serif";
     ctx.textBaseline = "bottom";
     const lay = layout(input);

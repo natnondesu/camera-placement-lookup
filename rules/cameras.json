@@ -7,7 +7,7 @@
       "name": "Dahua DH-IPC-HDBW2531R-ZS-S2",
       "description": "1/2.7\" 5 MP dome, 2.7-13.5 mm motorized lens.",
       "sensorWidthMm": 4.8,
-      "focalLengthMm": { "min": 2.7, "max": 13.5, "default": 4.0 },
+      "focalLengthMm": { "min": 2.7, "max": 13.5 },
       "resolutions": [
         { "label": "5 MP", "w": 2592, "h": 1944 },
         { "label": "4 MP", "w": 2688, "h": 1520 },
@@ -20,7 +20,7 @@
       "name": "Bullet 2 MP (generic)",
       "description": "Fixed 2.8 mm lens, 1/2.8\" class sensor.",
       "sensorWidthMm": 5.37,
-      "focalLengthMm": { "min": 2.8, "max": 2.8, "default": 2.8 },
+      "focalLengthMm": { "min": 2.8, "max": 2.8 },
       "resolutions": [{ "label": "1080p", "w": 1920, "h": 1080 }]
     },
     {
@@ -28,7 +28,7 @@
       "name": "Dome 4 MP (generic)",
       "description": "Fixed 2.8 mm lens.",
       "sensorWidthMm": 4.8,
-      "focalLengthMm": { "min": 2.8, "max": 2.8, "default": 2.8 },
+      "focalLengthMm": { "min": 2.8, "max": 2.8 },
       "resolutions": [{ "label": "4 MP", "w": 2560, "h": 1440 }]
     },
     {
@@ -36,7 +36,7 @@
       "name": "Varifocal 4 MP (generic)",
       "description": "Varifocal lens, 1/2\" class sensor.",
       "sensorWidthMm": 6.4,
-      "focalLengthMm": { "min": 2.8, "max": 12, "default": 6.0 },
+      "focalLengthMm": { "min": 2.8, "max": 12 },
       "resolutions": [{ "label": "4 MP", "w": 2560, "h": 1440 }]
     },
     {
@@ -44,7 +44,7 @@
       "name": "Box 12 MP (generic)",
       "description": "8 mm lens, 1/1.2\" class sensor.",
       "sensorWidthMm": 8.8,
-      "focalLengthMm": { "min": 8, "max": 8, "default": 8 },
+      "focalLengthMm": { "min": 8, "max": 8 },
       "resolutions": [{ "label": "12 MP", "w": 4000, "h": 3000 }]
     }
   ]

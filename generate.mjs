@@ -2211,7 +2211,7 @@ function buildHtml() {
                 <p class="pillar-note" id="faceNote"></p>
               </div>
             </section>
-            <div class="dual">
+            <div class="dual sim-mode">
               <section class="stage" aria-label="Side-view placement and distance range">
                 <div class="stage-head">
                   <div class="stage-title"><h2>Side view</h2><span class="stage-badge" id="stageBadge"></span></div>
@@ -2245,17 +2245,17 @@ function buildHtml() {
               <section class="stage" aria-label="Top-down coverage and camera view">
                 <div class="stage-head">
                   <div class="stage-title">
-                    <h2 id="topTitle">Top view</h2>
+                    <h2 id="topTitle">Simulation</h2>
                     <div class="solve-seg view-seg" role="group" aria-label="Second diagram">
-                      <button type="button" data-topview="top" aria-pressed="true">Top</button>
+                      <button type="button" data-topview="top" aria-pressed="false">Top</button>
                       <button type="button" data-topview="camera" aria-pressed="false">Camera</button>
-                      <button type="button" data-topview="sim" aria-pressed="false">Simulate</button>
+                      <button type="button" data-topview="sim" aria-pressed="true">Simulate</button>
                     </div>
                   </div>
                 </div>
                 <div class="diagram-wrap">
-                  <canvas id="topCanvas" width="600" height="560" role="img" aria-label="Top-down coverage diagram"></canvas>
-                  <div class="sim" id="simWrap" hidden>
+                  <canvas id="topCanvas" width="600" height="560" role="img" aria-label="Top-down coverage diagram" hidden></canvas>
+                  <div class="sim" id="simWrap">
                     <div class="sim-stage">
                       <canvas id="simCanvas" role="img" aria-label="Simulated camera view with people walking past"></canvas>
                       <canvas id="simOverlay" class="sim-overlay" aria-hidden="true"></canvas>
@@ -2394,7 +2394,8 @@ ${engineSource}
         sensorLocked: true,
         focalMinMm: camera.focalLengthMm.min,
         focalMaxMm: camera.focalLengthMm.max,
-        focalDefaultMm: camera.focalLengthMm.default,
+        // Start at the widest end of the lens: the most coverage for the entrance.
+        focalDefaultMm: camera.focalLengthMm.min,
         resolutions: camera.resolutions.map((r) => ({ label: r.label + " - " + r.w + " x " + r.h, w: r.w, h: r.h })),
         defaultResolution: first.w + "x" + first.h
       };
@@ -2500,7 +2501,7 @@ ${engineSource}
       solveMode: "distance",
       depthM: null,
       entranceM: null,
-      topView: "top",
+      topView: "sim",
       tiltUserAdjusted: false,
       tableProfileId: null,
       tableSelectedHeightKey: null,
