@@ -5,6 +5,8 @@
   "scripts": {
     "check": "node --check generate.mjs",
     "build": "node generate.mjs",
-    "test": "node --test src/"
+    "test": "node --test src/",
+    "dev": "node --watch-path=generate.mjs --watch-path=src --watch-path=rules generate.mjs",
+    "serve": "python3 -m http.server 5173 --bind 127.0.0.1 --directory public"
   }
 }
