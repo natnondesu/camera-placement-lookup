@@ -155,6 +155,13 @@ test("a ceiling fisheye looks straight down with its full field of view", () => 
   assert.equal(result.verdict, "best");
 });
 
+test("a person beyond 80 deg off a fisheye's axis is not framed", () => {
+  // Feet at atan(4 / 40) = 5.7 deg below level, 84.3 deg off the axis
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 40, camera: fisheyeCamera });
+  assert.equal(result.countingLine.framed, false);
+  assert.equal(result.verdict, "out_of_range");
+});
+
 test("a tilt override does not move a ceiling fisheye", () => {
   const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: fisheyeCamera, tiltDeg: 30 });
   assert.equal(result.tilt.value, 90);
@@ -284,7 +291,7 @@ test("the entrance is checked against the width covered at the counting line, ne
 test("heights outside the profile range are judged with a warning", () => {
   const result = evaluatePlacement({ profile: openDoor, heightM: 12, distanceM: recommendedDistance(12, openDoor), camera: wideCamera });
   assert.equal(result.verdict, "best");
-  assert.deepEqual(result.warnings, ["height_outside_range"]);
+  assert.ok(result.warnings.includes("height_outside_range"));
 });
 
 test("lookup table covers the height range in 0.1 m steps", () => {
@@ -309,6 +316,41 @@ test("a target outside the best band is rejected", () => {
 test("a best band wider than the acceptable band is rejected", () => {
   const broken = { ...corridor, feetAngleDeg: { ...corridor.feetAngleDeg, best: { min: 30, max: 43 } } };
   assert.throws(() => validateProfile(broken), /best band/);
+});
+
+// 90 deg horizontal view over 1920 px: 960 / slant distance pixels per metre
+const ninetyDegCamera = { sensorWidthMm: 4, focalLengthMm: 2, resolution: { w: 1920, h: 1080 } };
+
+test("a counting line below the counting pixel floor warns but keeps the verdict", () => {
+  // 9 m mount, line at 10.35 m: about 70 px/m against an 80 px/m floor
+  const result = evaluatePlacement({ profile: openDoor, heightM: 9, distanceM: 10.35, camera: ninetyDegCamera });
+  assert.equal(result.verdict, "best");
+  assert.ok(result.optics.pixelsPerMetre < openDoor.minPixelsPerMetre.counting);
+  assert.ok(result.warnings.includes("low_pixel_density"));
+});
+
+test("a counting line above the counting pixel floor has no density warning", () => {
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: ninetyDegCamera });
+  assert.ok(!result.warnings.includes("low_pixel_density"));
+});
+
+test("a visible face line below the face pixel floor is too small", () => {
+  // Face line at 5.38 m from a 4 m mount: about 162 px/m at the face against a 200 px/m floor
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: ninetyDegCamera });
+  assert.equal(result.faceLine.visible, true);
+  close(result.faceLine.pixelsPerMetre, 960 / Math.hypot(2.5, 5.38), 0.01);
+  assert.equal(result.faceLine.tooSmall, true);
+});
+
+test("a face line with enough pixels is not too small", () => {
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: wideCamera });
+  assert.equal(result.faceLine.visible, true);
+  assert.equal(result.faceLine.tooSmall, false);
+});
+
+test("a profile without pixel floors is rejected", () => {
+  const { minPixelsPerMetre, ...broken } = openDoor;
+  assert.throws(() => validateProfile(broken), /pixel/);
 });
 
 test("csv export has a header and one line per row", () => {

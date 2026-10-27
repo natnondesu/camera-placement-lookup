@@ -90,6 +90,18 @@ The distance closest to the counting line at which the face angle is Best.
 The face line's state when demographic capture is impossible at the placement, because the face point is outside the frame or the camera is not above the face point. Always shown with its reason.
 _Avoid_: Out of view
 
+**Too small**:
+The face line's state when it is in frame but the pixel density at the face is below the profile's face floor, so faces are too few pixels across for demographics. Never fails a placement.
+_Avoid_: Blurry, low quality
+
+**Pixel density**:
+How many image pixels cover one metre across at a point, in px/m. Read at the counting line for counting and at the face point on the face line for faces.
+_Avoid_: PPM (in prose), resolution
+
+**Pixel floor**:
+The minimum pixel density a scene profile asks for, one for counting and one for faces. A counting line below its floor carries a low-density warning; the verdict is unchanged.
+_Avoid_: Minimum resolution
+
 ## Judgement
 
 **Status**:

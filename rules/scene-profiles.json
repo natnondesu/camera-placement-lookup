@@ -17,7 +17,8 @@
       "faceAngleDeg": {
         "best": { "min": 10, "max": 25 },
         "acceptableMax": 30
-      }
+      },
+      "minPixelsPerMetre": { "counting": 80, "face": 200 }
     },
     {
       "id": "corridor",
@@ -34,7 +35,8 @@
       "faceAngleDeg": {
         "best": { "min": 10, "max": 25 },
         "acceptableMax": 30
-      }
+      },
+      "minPixelsPerMetre": { "counting": 80, "face": 200 }
     }
   ]
 }

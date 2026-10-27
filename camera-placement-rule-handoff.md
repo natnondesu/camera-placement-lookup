@@ -20,6 +20,7 @@ The thresholds live in [rules/scene-profiles.json](rules/scene-profiles.json), o
 | Face Best | 10 deg up to (not including) 25 deg | same |
 | Face Acceptable | up to 30 deg; under 10 deg (too flat) is also Acceptable | same |
 | Face point / human height | 1.5 m / 1.7 m | same |
+| Pixel floor, counting / face | 80 / 200 px/m | same |
 
 Open door has no Acceptable zone farther than its Best band: a counting line too far away is Out of range, because passers-by in front of the door would be miscounted.
 
@@ -38,6 +39,8 @@ recommended tilt      = atan((H - human height / 2) / D)    aims at the middle o
 `H` is the camera height and `D` the horizontal distance from the point below the camera. Heights outside the profile's range are still judged, with a warning. The framing check uses the camera's vertical field of view (sensor width, focal length, resolution aspect) around the tilt.
 
 A **ceiling fisheye** looks straight down (tilt fixed at 90 deg) through an equidistant lens: the image radius grows in step with the angle from straight down. The same rule places its counting line; coverage at the line is the floor seen within 80 deg of straight down, effective coverage the floor inside 80% of the image radius, and pixel density follows the lens model.
+
+The **pixel floor** never changes the verdict: a counting line below it carries a low-density warning, and a face line below the face floor is shown as **too small** ([ADR 0004](docs/adr/0004-pixel-density-floor-warns-without-changing-the-verdict.md)). The starting numbers are defaults; replace them with the analytics vendor's minimums.
 
 ## Where it lives
 

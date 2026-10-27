@@ -27,6 +27,20 @@ const rules = await readJson("rules/scene-profiles.json");
 const cameras = await readJson("rules/cameras.json");
 rules.profiles.forEach(validateProfile);
 // The page runs the same engine the tests cover, inlined without its export keywords.
+const SENSOR_SIZES = [
+  { id: "1/4", label: '1/4" format - 3.6 mm width', widthMm: 3.6 },
+  { id: "1/2.7", label: '1/2.7" format - 4.8 mm width', widthMm: 4.8 },
+  { id: "1/2.3", label: '1/2.3" format - 5.37 mm width', widthMm: 5.37 },
+  { id: "1/2", label: '1/2" format - 6.4 mm width', widthMm: 6.4 },
+  { id: "1/1.2", label: '1/1.2" format - 8.8 mm width', widthMm: 8.8 }
+];
+// The console shows and computes a catalogue camera through its sensor format, so an unlisted width would silently use the wrong one.
+cameras.cameras.filter((camera) => camera.lens !== "fisheye").forEach((camera) => {
+  if (!SENSOR_SIZES.some((sensor) => Math.abs(sensor.widthMm - camera.sensorWidthMm) < 0.01)) {
+    throw new Error(`Camera ${camera.id}: sensor width ${camera.sensorWidthMm} mm matches no format in SENSOR_SIZES (generate.mjs); add the format first.`);
+  }
+});
+
 const engineSource = (await fs.readFile(path.join(__dirname, "src/placement-rule.js"), "utf8")).replace(/^export /gm, "");
 const simSource = (await fs.readFile(path.join(__dirname, "src/walk-sim.js"), "utf8")).replace(/^export /gm, "");
 
@@ -2136,6 +2150,22 @@ function buildHtml() {
       color: var(--face);
     }
 
+    .answer-chip.face[data-state="too_small"],
+    .answer-chip[data-state="low"] {
+      color: var(--ok);
+      border-color: oklch(0.820 0.140 82 / 0.45);
+    }
+
+    .answer-chip.face[data-state="not_visible"] {
+      color: var(--muted);
+    }
+
+    .status-chip.too-small {
+      color: var(--ok);
+      background: var(--ok-bg);
+      border-color: oklch(0.820 0.140 82 / 0.45);
+    }
+
     .answer-chip[data-state="covered"] {
       color: var(--best);
     }
@@ -2163,6 +2193,13 @@ function buildHtml() {
       .on-table .answer,
       .statusbar {
         display: none;
+      }
+
+      /* The answer band sits in the shell grid; keep every row at its content height. */
+      .app {
+        grid-template-rows: none;
+        grid-auto-rows: auto;
+        align-content: start;
       }
 
       .workspace {
@@ -2228,6 +2265,16 @@ function buildHtml() {
 
       .workspace {
         grid-template-columns: 290px minmax(0, 1fr);
+      }
+
+      .verdict {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .verdict-lead {
+        grid-column: 1 / -1;
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
       }
 
       .rail {
@@ -2546,9 +2593,9 @@ function buildHtml() {
       <p class="answer-line"><span data-i18n="countingLineAt">Counting line at</span> <span class="answer-distance"><b id="answerDistance"></b><small>m</small></span></p>
       <p class="answer-sub" id="answerSub"></p>
       <div class="answer-chips">
-        <span class="answer-chip face"><i></i><span data-i18n="faceLine">Face line</span> <b id="answerFace"></b></span>
+        <span class="answer-chip face" id="answerFaceChip" data-state="visible"><i></i><span data-i18n="faceLine">Face line</span> <b id="answerFace"></b> <span id="answerFaceState"></span></span>
         <span class="answer-chip entry" id="answerEntry" data-state="covered"><i></i><span data-i18n="entranceShort">Entrance</span> <b id="answerEntryWidth"></b> <span id="answerEntryState"></span></span>
-        <span class="answer-chip"><i></i><b id="answerPpm"></b> px/m</span>
+        <span class="answer-chip" id="answerPpmChip" data-state="ok"><i></i><b id="answerPpm"></b> px/m</span>
       </div>
     </section>
     <div class="mobile-answer" id="mobileAnswer" data-state="best" aria-hidden="true">
@@ -2720,6 +2767,7 @@ function buildHtml() {
                 <h1 id="verdictHeadline">Placement is best</h1>
                 <p class="verdict-sub" id="verdictSub"></p>
                 <p class="warn-line" id="heightWarn" hidden></p>
+                <p class="warn-line" id="densityWarn" hidden></p>
                 <p class="entrance-line" id="entranceLine" data-state="covered" hidden></p>
                 <div class="verdict-actions">
                   <button type="button" class="button" id="copyReadings">
@@ -2910,13 +2958,7 @@ ${engineSource}
     const RULES = ${rulesJson};
     const CAMERA_CATALOG = ${camerasJson};
 
-    const SENSOR_SIZES = [
-      { id: "1/4", label: "1/4\\" format - 3.6 mm width", widthMm: 3.6 },
-      { id: "1/2.7", label: "1/2.7\\" format - 4.8 mm width", widthMm: 4.8 },
-      { id: "1/2.3", label: "1/2.3\\" format - 5.37 mm width", widthMm: 5.37 },
-      { id: "1/2", label: "1/2\\" format - 6.4 mm width", widthMm: 6.4 },
-      { id: "1/1.2", label: "1/1.2\\" format - 8.8 mm width", widthMm: 8.8 }
-    ];
+    const SENSOR_SIZES = ${JSON.stringify(SENSOR_SIZES)};
 
     const CUSTOM_PRESET = {
       caption: "Custom configuration. Sensor format, focal length and resolution are adjustable.",
@@ -2957,6 +2999,10 @@ ${engineSource}
 
     const I18N = {
       en: {
+        mountAt: "Mount the camera at {height} m ({exact} m before rounding).",
+        densityWarn: "Only {ppm} px/m at the counting line, below the {min} px/m floor: people may be missed. Mount lower, or use a higher-resolution camera or a longer lens.",
+        tooSmall: "Too small",
+        faceTooSmall: "In frame, but only {ppm} px/m at the face (floor {min} px/m): too few pixels for demographics. Never fails the placement.",
         subtitle: "Geometry console", countingLineAt: "Counting line at", entranceShort: "Entrance", entryCovered: "in view",
         entryTight: "edges at frame rim", entryTooWide: "too wide", allControls: "All controls", lower: "Lower", raise: "Raise", viewTabs: "View", visualizer: "Visualizer", ruleTable: "Rule table", language: "Language",
         placementControls: "Placement controls", scene: "Scene", rulesVersion: "rules {version}",
@@ -3031,6 +3077,10 @@ ${engineSource}
         sceneDesc_corridor: "People can only move in one direction through the view, e.g. a mall entrance or an escalator."
       },
       th: {
+        mountAt: "ติดตั้งกล้องที่ความสูง {height} m (ค่าก่อนปัดเศษ {exact} m)",
+        densityWarn: "ที่เส้นนับมีเพียง {ppm} px/m ต่ำกว่าเกณฑ์ {min} px/m อาจนับคนได้ไม่ครบ ติดตั้งให้ต่ำลง หรือใช้กล้องความละเอียดสูงขึ้นหรือเลนส์ยาวขึ้น",
+        tooSmall: "เล็กเกินไป",
+        faceTooSmall: "อยู่ในภาพ แต่ที่ใบหน้ามีเพียง {ppm} px/m (เกณฑ์ {min} px/m) พิกเซลน้อยเกินไปสำหรับข้อมูลเพศ/อายุ ไม่ทำให้ตำแหน่งไม่ผ่าน",
         subtitle: "เครื่องมือคำนวณตำแหน่งกล้อง", countingLineAt: "เส้นนับที่", entranceShort: "ทางเข้า", entryCovered: "อยู่ในภาพ",
         entryTight: "ขอบอยู่ริมภาพ", entryTooWide: "กว้างเกินภาพ", allControls: "ตั้งค่าทั้งหมด", lower: "ลด", raise: "เพิ่ม", viewTabs: "มุมมอง", visualizer: "แผนภาพ", ruleTable: "ตารางกฎ", language: "ภาษา",
         placementControls: "ตั้งค่าตำแหน่ง", scene: "ลักษณะพื้นที่", rulesVersion: "กฎ {version}",
@@ -3198,7 +3248,8 @@ ${engineSource}
       resolutionSelect: byId("resolutionSelect"),
       verdict: byId("verdict"), verdictHeadline: byId("verdictHeadline"), verdictSub: byId("verdictSub"), heightWarn: byId("heightWarn"),
       copyReadings: byId("copyReadings"), copyStatus: byId("copyStatus"), placementAnnouncement: byId("placementAnnouncement"),
-      recommendedDistance: byId("recommendedDistance"), snapButton: byId("snapButton"),
+      recommendedDistance: byId("recommendedDistance"), snapButton: byId("snapButton"), densityWarn: byId("densityWarn"),
+      answerFaceChip: byId("answerFaceChip"), answerFaceState: byId("answerFaceState"), answerPpmChip: byId("answerPpmChip"),
       feetStatus: byId("feetStatus"), feetAngle: byId("feetAngle"), feetBands: byId("feetBands"), countNote: byId("countNote"),
       faceStatus: byId("faceStatus"), faceLineDistance: byId("faceLineDistance"), faceAngle: byId("faceAngle"), faceNote: byId("faceNote"),
       priorityInfo: byId("priorityInfo"), priorityTip: byId("priorityTip"),
@@ -3373,6 +3424,7 @@ ${engineSource}
           note: lo <= hi ? t("faceOutsideTilt", { lo: fmt(lo, 1), hi: fmt(hi, 1) }) : t("faceOutsideNoTilt")
         };
       }
+      if (fl.tooSmall) return { visible: true, tooSmall: true, label: t("tooSmall"), note: t("faceTooSmall", { ppm: fmt(fl.pixelsPerMetre, 0), min: p.profile.minPixelsPerMetre.face }) };
       if (fl.coincides) return { visible: true, label: t("visible"), note: t("faceSame") };
       const gap = fl.distanceM - p.distanceM;
       return { visible: true, label: t("visible"), note: t(gap > 0 ? "faceBeyond" : "faceInFront", { gap: fmt(Math.abs(gap), 2) }) };
@@ -3381,6 +3433,8 @@ ${engineSource}
     function verdictCopy(p) {
       const r = p.result;
       if (!r.countingLine.framed) return t("cutOff");
+      // In Height mode the measured line stays put; the answer is the mount height, shown before rounding too.
+      if (state.solveMode === "height") return t("mountAt", { height: fmt(p.heightM, 1), exact: fmt(heightForDistance(p.profile, p.distanceM), 2) });
       const delta = r.countingLine.recommendedDistanceM - p.distanceM;
       if (Math.abs(delta) < 0.01) return t("onTarget", { scene: sceneName(p.profile) });
       return t("moveLine", { delta: fmt(Math.abs(delta), 2), direction: t(delta > 0 ? "farther" : "closer"), target: fmt(r.countingLine.recommendedDistanceM, 2) });
@@ -4243,7 +4297,7 @@ ${engineSource}
 
       const face = faceLineCopy(p);
       const verdictLabel = STATUS_LABEL[r.verdict];
-      const visibleClass = face.visible ? "visible" : "not-visible";
+      const visibleClass = face.tooSmall ? "too-small" : face.visible ? "visible" : "not-visible";
       const resolution = p.resolution;
       const verticalSpanM = Math.max(0.001, 2 * Math.hypot(heightM, distanceM) * Math.tan(toRad(r.optics.verticalFovDeg / 2)));
       const verticalPpm = fisheye ? r.optics.pixelsPerMetre : resolution.h / verticalSpanM;
@@ -4252,6 +4306,9 @@ ${engineSource}
       els.verdictHeadline.textContent = t("headline", { status: lang === "en" ? verdictLabel.toLowerCase() : verdictLabel });
       els.verdictSub.textContent = verdictCopy(p);
       const outside = r.warnings.indexOf("height_outside_range") >= 0;
+      const lowDensity = r.warnings.includes("low_pixel_density");
+      els.densityWarn.hidden = !lowDensity;
+      els.densityWarn.textContent = lowDensity ? t("densityWarn", { ppm: fmt(r.optics.pixelsPerMetre, 0), min: profile.minPixelsPerMetre.counting }) : "";
       els.heightWarn.hidden = !outside;
       els.heightWarn.textContent = outside ? t("heightWarn", { height: fmt(heightM, 1), scene: sceneName(profile), min: fmt(profile.heightRangeM.min, 1), max: fmt(profile.heightRangeM.max, 1) }) : "";
       els.entranceLine.hidden = r.entrance === null;
@@ -4260,7 +4317,7 @@ ${engineSource}
         els.entranceLine.textContent = entranceCopy(r.entrance, r.optics.coverageWidthM);
       }
       els.recommendedDistance.textContent = fmt(r.countingLine.recommendedDistanceM, 2, " m");
-      els.snapButton.disabled = Math.abs(r.countingLine.recommendedDistanceM - distanceM) < 0.01 || state.solveMode === "distance";
+      els.snapButton.disabled = Math.abs(r.countingLine.recommendedDistanceM - distanceM) < 0.01 || state.solveMode !== "manual";
 
       updateStatusElement(els.feetStatus, r.feet.status, STATUS_LABEL[r.feet.status]);
       els.feetAngle.innerHTML = fmt(r.feet.angleDeg, 2) + "<small>deg</small>";
@@ -4335,6 +4392,10 @@ ${engineSource}
         els.answerEntryState.textContent = t(ENTRY_STATE[r.entrance.status]);
       }
       els.answerPpm.textContent = fmt(r.optics.pixelsPerMetre, 0);
+      els.answerPpmChip.dataset.state = r.warnings.includes("low_pixel_density") ? "low" : "ok";
+      const faceState = !r.faceLine.visible ? "not_visible" : r.faceLine.tooSmall ? "too_small" : "visible";
+      els.answerFaceChip.dataset.state = faceState;
+      els.answerFaceState.textContent = faceState === "visible" ? "" : t(faceState === "too_small" ? "tooSmall" : "notVisible");
       els.sheetScene.textContent = sceneName(p.profile);
       els.sheetCamera.textContent = els.presetSelect.selectedOptions[0] ? els.presetSelect.selectedOptions[0].textContent : "";
       if (document.activeElement !== els.quickHeight) els.quickHeight.value = fmt(p.heightM, 1);
@@ -4587,6 +4648,9 @@ ${simSource}
       document.getElementById("simFallback").hidden = false;
       document.getElementById("simPlay").disabled = true;
       document.getElementById("simReset").disabled = true;
+      // Without the 3D view the default panel would stay blank, so show the Top view instead.
+      const simButton = document.querySelector('[data-topview="sim"]');
+      if (simButton && simButton.getAttribute("aria-pressed") === "true") document.querySelector('[data-topview="top"]').click();
       console.error("Walk simulation could not load", error);
     }
   </script>

@@ -5,7 +5,8 @@
  *   heightRangeM: { min: number, max: number, step: number },
  *   facePointM: number, humanHeightM: number,
  *   feetAngleDeg: { target: number, best: Band, acceptable: Band },
- *   faceAngleDeg: { best: Band, acceptableMax: number }
+ *   faceAngleDeg: { best: Band, acceptableMax: number },
+ *   minPixelsPerMetre: { counting: number, face: number }
  * }} SceneProfile
  * @typedef {{ sensorWidthMm?: number, focalLengthMm?: number, resolution: { w: number, h: number },
  *            lens?: "rectilinear" | "fisheye", fovDeg?: number }} CameraOptics
@@ -165,17 +166,19 @@ function effectiveWidth(camera, heightM, distanceM) {
 const inFrame = (angleDeg, tiltDeg, vFovDeg) =>
   angleDeg >= tiltDeg - vFovDeg / 2 && angleDeg <= tiltDeg + vFovDeg / 2;
 
-function judgeFaceLine({ profile, heightM, distanceM, tiltDeg, vFovDeg }) {
+function judgeFaceLine({ profile, camera, heightM, distanceM, tiltDeg, vFovDeg }) {
   const distance = faceLineDistance(heightM, distanceM, profile);
   if (distance === null) {
-    return { distanceM: null, angleDeg: null, coincides: false, visible: false, reason: "camera_below_face_point" };
+    return { distanceM: null, angleDeg: null, coincides: false, pixelsPerMetre: null, visible: false, tooSmall: false, reason: "camera_below_face_point" };
   }
   const angleDeg = faceAngle(heightM, distance, profile.facePointM);
-  const base = { distanceM: distance, angleDeg, coincides: distance === round2(distanceM) };
+  const pixelsPerMetre = pixelDensity(camera, Math.hypot(heightM - profile.facePointM, distance), 90 - angleDeg);
+  const base = { distanceM: distance, angleDeg, coincides: distance === round2(distanceM), pixelsPerMetre };
   if (!inFrame(angleDeg, tiltDeg, vFovDeg)) {
-    return { ...base, visible: false, reason: "outside_frame" };
+    return { ...base, visible: false, tooSmall: false, reason: "outside_frame" };
   }
-  return { ...base, visible: true, reason: null };
+  // In frame but too few pixels across a face for demographics; still never fails the placement.
+  return { ...base, visible: true, tooSmall: pixelsPerMetre < profile.minPixelsPerMetre.face, reason: null };
 }
 
 /**
@@ -208,8 +211,10 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
   const tilt = fisheye ? 90 : tiltDeg ?? recommended;
   const vFovDeg = verticalFov(camera);
   const hFovDeg = horizontalFov(camera);
+  // A fisheye's last few degrees are squeezed against the image circle, so people count as framed only within the usable cone.
+  const frameFovDeg = fisheye ? 2 * FISHEYE_MAX_OFF_AXIS_DEG : vFovDeg;
   const headAngleDeg = downwardAngle(heightM, profile.humanHeightM, distanceM);
-  const framed = inFrame(feetAngleDeg, tilt, vFovDeg) && inFrame(headAngleDeg, tilt, vFovDeg);
+  const framed = inFrame(feetAngleDeg, tilt, frameFovDeg) && inFrame(headAngleDeg, tilt, frameFovDeg);
   const coverageWidthM = coverageWidth(camera, heightM, distanceM);
   const effectiveWidthM = effectiveWidth(camera, heightM, distanceM);
   const pixelsPerMetre = pixelDensity(camera, Math.hypot(heightM, distanceM), 90 - feetAngleDeg);
@@ -219,12 +224,16 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
     feet: { angleDeg: feetAngleDeg, status: feetStatus },
     face: { angleDeg: faceAngleDeg, status: judgeFace(faceAngleDeg, profile) },
     countingLine: { distanceM, recommendedDistanceM: recommendedDistance(heightM, profile), framed, headAngleDeg },
-    faceLine: judgeFaceLine({ profile, heightM, distanceM, tiltDeg: tilt, vFovDeg }),
+    faceLine: judgeFaceLine({ profile, camera, heightM, distanceM, tiltDeg: tilt, vFovDeg: frameFovDeg }),
     tilt: { value: tilt, recommended },
     optics: { lens: fisheye ? "fisheye" : "rectilinear", verticalFovDeg: vFovDeg, horizontalFovDeg: hFovDeg, coverageWidthM, effectiveWidthM, pixelsPerMetre },
     entrance: entranceWidthM == null ? null : entranceCoverage(entranceWidthM, coverageWidthM, effectiveWidthM),
     verdict: framed ? feetStatus : "out_of_range",
-    warnings: heightM < min || heightM > max ? ["height_outside_range"] : [],
+    // Low density warns instead of failing: the verdict stays a judgement of the feet angle (ADR 0004).
+    warnings: [
+      (heightM < min || heightM > max) && "height_outside_range",
+      pixelsPerMetre < profile.minPixelsPerMetre.counting && "low_pixel_density",
+    ].filter(Boolean),
   };
 }
 
@@ -260,6 +269,7 @@ export function validateProfile(profile) {
     !(face.best.min < face.best.max && face.best.max <= face.acceptableMax) && `face best band ${face.best.min}-${face.best.max} must sit below the acceptable max ${face.acceptableMax}`,
     !(range.min < range.max && range.step > 0) && `height range ${range.min}-${range.max} m step ${range.step} is invalid`,
     !(profile.facePointM > 0 && profile.facePointM < profile.humanHeightM) && `face point ${profile.facePointM} m must be above ground and below human height ${profile.humanHeightM} m`,
+    !(profile.minPixelsPerMetre?.counting > 0 && profile.minPixelsPerMetre?.face > 0) && "minimum pixels per metre for counting and face must both be positive",
   ].filter(Boolean);
   if (problems.length > 0) {
     throw new Error(`Scene profile ${profile.id}: ${problems.join("; ")}`);
