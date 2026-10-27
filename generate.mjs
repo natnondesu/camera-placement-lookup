@@ -2217,7 +2217,7 @@ function buildHtml() {
       border-color: oklch(0.680 0.205 24 / 0.5);
     }
 
-    @media (max-width: 1080px) {
+    @media (max-width: 1200px) {
       .answer {
         position: sticky;
         top: var(--topbar-h, 64px);
@@ -2259,13 +2259,13 @@ function buildHtml() {
       }
     }
 
-    @media (max-width: 1080px) and (max-height: 520px) {
+    @media (max-width: 1200px) and (max-height: 520px) {
       .answer {
         position: static;
       }
     }
 
-    @media (min-width: 761px) and (max-width: 1080px) {
+    @media (min-width: 761px) and (max-width: 1200px) {
       .answer {
         display: flex;
         flex-wrap: wrap;
@@ -2303,6 +2303,12 @@ function buildHtml() {
 
       .workspace {
         grid-template-columns: 290px minmax(0, 1fr);
+      }
+
+      /* Next to the rail there is room for one diagram at a useful size, not two squeezed side by side. */
+      .dual,
+      .dual.sim-mode {
+        grid-template-columns: minmax(0, 1fr);
       }
 
       .verdict {
@@ -2615,7 +2621,7 @@ function buildHtml() {
       }
     }
 
-    @media (max-width: 1080px), (pointer: coarse) {
+    @media (max-width: 1200px), (pointer: coarse) {
       .solve-seg button,
       .scene-seg button,
       .stage-head .view-seg button,
@@ -3934,7 +3940,8 @@ ${engineSource}
       ctx.fillStyle = feetColor;
       haloText(ctx, t("canvasFeetAngle", { angle: fmt(r.feet.angleDeg, 1) }), subX - 12, groundY - 6);
 
-      drawPerson(ctx, subX, groundY, yFor, personColor, profile, !crowded);
+      // When the face line is the counting line, its face angle label already sits at the face point.
+      drawPerson(ctx, subX, groundY, yFor, personColor, profile, !crowded && !(fl.distanceM !== null && fl.coincides));
 
       const aimHeightM = heightM - Math.tan(aimDown) * distanceM;
       if (aimHeightM >= 0 && aimHeightM <= maxY) {
