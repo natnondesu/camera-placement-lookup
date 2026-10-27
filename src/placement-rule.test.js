@@ -15,6 +15,8 @@ import {
   validateProfile,
   toCsv,
   entranceCoverage,
+  pixelDensity,
+  fisheyeProjection,
 } from "./placement-rule.js";
 
 const rules = JSON.parse(readFileSync(new URL("../rules/scene-profiles.json", import.meta.url), "utf8"));
@@ -25,6 +27,9 @@ const wideCamera = { sensorWidthMm: 4.8, focalLengthMm: 2.7, resolution: { w: 25
 // vertical FOV about 19 deg: frames the person at the counting line but not a far face line
 const narrowCamera = { sensorWidthMm: 4.8, focalLengthMm: 8, resolution: { w: 1920, h: 1080 } };
 const telephotoCamera = { sensorWidthMm: 4.8, focalLengthMm: 100, resolution: { w: 1920, h: 1080 } };
+// Ceiling fisheye looking straight down; 2992 px image circle over 180 deg
+const fisheyeCamera = { lens: "fisheye", fovDeg: 180, resolution: { w: 2992, h: 2992 } };
+const fisheyePxPerRad = 1496 / (Math.PI / 2);
 
 const close = (actual, expected, tolerance = 0.01) =>
   assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} is not within ${tolerance} of ${expected}`);
@@ -139,10 +144,106 @@ test("face line outside the frame is not visible, verdict unchanged", () => {
   assert.equal(result.verdict, "best");
 });
 
-test("face line beyond the available depth is not visible", () => {
-  const result = evaluatePlacement({ profile: openDoor, heightM: 6, distanceM: 6.9, camera: wideCamera, availableDepthM: 8 });
-  assert.equal(result.faceLine.visible, false);
-  assert.equal(result.faceLine.reason, "beyond_available_depth");
+test("a ceiling fisheye looks straight down with its full field of view", () => {
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: fisheyeCamera });
+  assert.equal(result.tilt.value, 90);
+  assert.equal(result.tilt.recommended, 90);
+  assert.equal(result.optics.verticalFovDeg, 180);
+  assert.equal(result.optics.horizontalFovDeg, 180);
+  assert.equal(result.optics.lens, "fisheye");
+  assert.equal(result.countingLine.framed, true);
+  assert.equal(result.verdict, "best");
+});
+
+test("a tilt override does not move a ceiling fisheye", () => {
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: fisheyeCamera, tiltDeg: 30 });
+  assert.equal(result.tilt.value, 90);
+});
+
+test("fisheye pixel density on the axis is pixels per radian over distance", () => {
+  close(pixelDensity(fisheyeCamera, 4, 0), fisheyePxPerRad / 4, 1e-9);
+});
+
+test("fisheye pixel density off the axis follows the equidistant lens", () => {
+  const theta = (49 * Math.PI) / 180;
+  close(pixelDensity(fisheyeCamera, 6.1, 49), (fisheyePxPerRad * theta) / (6.1 * Math.sin(theta)), 1e-9);
+});
+
+test("rectilinear pixel density is the image width over the width covered at that distance", () => {
+  // 90 deg horizontal view at 5 m covers 10 m, so 1920 px over 10 m
+  const camera = { sensorWidthMm: 4, focalLengthMm: 2, resolution: { w: 1920, h: 1080 } };
+  close(pixelDensity(camera, 5, 0), 192, 1e-9);
+});
+
+test("counting line pixel density uses the lens model of the camera", () => {
+  const heightM = 4;
+  const distanceM = 4.6;
+  const slant = Math.hypot(heightM, distanceM);
+  const rectilinear = evaluatePlacement({ profile: openDoor, heightM, distanceM, camera: wideCamera });
+  close(rectilinear.optics.pixelsPerMetre, pixelDensity(wideCamera, slant, 0), 1e-9);
+  const fisheye = evaluatePlacement({ profile: openDoor, heightM, distanceM, camera: fisheyeCamera });
+  close(fisheye.optics.pixelsPerMetre, pixelDensity(fisheyeCamera, slant, 90 - fisheye.feet.angleDeg), 1e-9);
+});
+
+test("fisheye coverage at the counting line is the floor within 80 deg of straight down", () => {
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: fisheyeCamera });
+  const reach = 4 * Math.tan((80 * Math.PI) / 180);
+  close(result.optics.coverageWidthM, 2 * Math.sqrt(reach * reach - 4.6 * 4.6), 1e-9);
+});
+
+test("rectilinear effective width is the middle 80% of the covered width", () => {
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: wideCamera });
+  close(result.optics.effectiveWidthM, result.optics.coverageWidthM * 0.8, 1e-9);
+});
+
+test("fisheye effective width is the floor inside 80% of the image radius", () => {
+  // 80% of a 180 deg image radius is 72 deg off the axis
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: fisheyeCamera });
+  const reach = 4 * Math.tan((72 * Math.PI) / 180);
+  close(result.optics.effectiveWidthM, 2 * Math.sqrt(reach * reach - 4.6 * 4.6), 1e-9);
+});
+
+test("an entrance is judged against the effective width when one is given", () => {
+  assert.equal(entranceCoverage(15, 40, 20).status, "covered");
+  assert.equal(entranceCoverage(25, 40, 20).status, "tight");
+  assert.equal(entranceCoverage(45, 40, 20).status, "too_wide");
+});
+
+test("a fisheye entrance check uses the fisheye's effective width", () => {
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: fisheyeCamera, entranceWidthM: 30 });
+  assert.deepEqual(result.entrance, entranceCoverage(30, result.optics.coverageWidthM, result.optics.effectiveWidthM));
+  assert.equal(result.entrance.status, "tight");
+});
+
+test("straight below a ceiling fisheye is the centre of the image", () => {
+  const p = fisheyeProjection({ x: 0, y: -4, z: 0 }, 180);
+  close(p.u, 0, 1e-9);
+  close(p.v, 0, 1e-9);
+  close(p.offAxisDeg, 0, 1e-9);
+  assert.equal(p.inside, true);
+});
+
+test("the horizon ahead lands on the top edge of a 180 degree image circle", () => {
+  const p = fisheyeProjection({ x: 0, y: 0, z: 5 }, 180);
+  close(p.u, 0, 1e-9);
+  close(p.v, 1, 1e-9);
+  assert.equal(p.inside, true);
+});
+
+test("an equidistant lens puts 45 degrees halfway out", () => {
+  const p = fisheyeProjection({ x: 0, y: -1, z: 1 }, 180);
+  close(p.v, 0.5, 1e-9);
+  close(p.offAxisDeg, 45, 1e-9);
+});
+
+test("the camera's right lands on the image's left, as seen looking down", () => {
+  const p = fisheyeProjection({ x: 1, y: -1, z: 0 }, 180);
+  close(p.u, -0.5, 1e-9);
+  close(p.v, 0, 1e-9);
+});
+
+test("above the horizon is outside the image circle", () => {
+  assert.equal(fisheyeProjection({ x: 0, y: 1, z: 1 }, 180).inside, false);
 });
 
 test("a tilt override replaces the recommended tilt", () => {

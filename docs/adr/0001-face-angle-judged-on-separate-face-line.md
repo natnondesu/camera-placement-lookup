@@ -1,6 +1,6 @@
 # Face angle is judged on a separate face line, not the counting line
 
-The application supports several lines per camera, so demographic capture does not have to happen where people are counted. We place the counting line by the feet angle alone and put a separate face line at the distance closest to the counting line where the face angle is Best (checked to be inside the camera's frame and the site's available depth). The verdict depends only on the counting line: its feet status, or Out of range if the whole person there is not in frame. The face line never fails a placement.
+The application supports several lines per camera, so demographic capture does not have to happen where people are counted. We place the counting line by the feet angle alone and put a separate face line at the distance closest to the counting line where the face angle is Best (checked to be inside the camera's frame). The verdict depends only on the counting line: its feet status, or Out of range if the whole person there is not in frame. The face line never fails a placement.
 
 ## Considered Options
 

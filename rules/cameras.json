@@ -40,6 +40,16 @@
       "resolutions": [{ "label": "4 MP", "w": 2560, "h": 1440 }]
     },
     {
+      "id": "generic_fisheye_12mp",
+      "name": "Fisheye 12 MP, 180° (generic)",
+      "description": "Ceiling mount looking straight down. 180° equidistant lens, 2992 × 2992 image circle.",
+      "lens": "fisheye",
+      "fovDeg": 180,
+      "sensorWidthMm": 5.6,
+      "focalLengthMm": { "min": 1.2, "max": 1.2 },
+      "resolutions": [{ "label": "12 MP", "w": 2992, "h": 2992 }]
+    },
+    {
       "id": "generic_box_12mp",
       "name": "Box 12 MP (generic)",
       "description": "8 mm lens, 1/1.2\" class sensor.",

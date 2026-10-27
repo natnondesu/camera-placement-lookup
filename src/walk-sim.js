@@ -1,5 +1,5 @@
-// Walk simulation seen through the placement camera. Three.js is passed in so this module
-// loads without it; crossingDirection and pixelsPerMetre are the pure parts and are unit-tested.
+// Walk simulation seen through the placement camera. Three.js and the lens maths (pixel density,
+// fisheye projection) are passed in, so this module loads without them; crossingDirection is unit-tested.
 
 /**
  * @param {number} previousZ distance from the camera on the last frame (m)
@@ -13,24 +13,39 @@ export function crossingDirection(previousZ, z, lineZ) {
   return null;
 }
 
-/**
- * Horizontal pixel density at a straight-line distance from the camera.
- * @param {number} resolutionWidthPx
- * @param {number} horizontalFovDeg
- * @param {number} distanceM straight-line distance from the camera (m)
- * @returns {number} pixels per metre
- */
-export function pixelsPerMetre(resolutionWidthPx, horizontalFovDeg, distanceM) {
-  return resolutionWidthPx / (2 * distanceM * Math.tan((horizontalFovDeg * Math.PI) / 360));
-}
-
 const MODEL_HEIGHT_M = 1.7;
-// Matches the engine's 80% effective coverage: the outer 10% on each side is shaded.
-const EFFECTIVE_EDGE = 0.1;
+// Matches the engine's 80% effective coverage: the outer 10% each side, or 20% of a fisheye's radius.
+const EFFECTIVE_SHARE = 0.8;
 const SKIN = ["#f1c7a5", "#d9a47c", "#b97b52", "#8d5a3b", "#5f3b26"];
 const TOPS = ["#3d6fb6", "#7a8796", "#b5443c", "#2f7d5b", "#c9a227", "#e6e1d6", "#5a4a8c", "#26313d"];
 const BOTTOMS = ["#2b3440", "#3c4f6b", "#5b5148", "#1f2329", "#6b6f75"];
 const HAIR = ["#1b1612", "#3b2a1e", "#6b4a2b", "#8a8a8a"];
+
+const FISHEYE_VERTEX = `
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = vec4(position.xy, 0.0, 1.0);
+}`;
+
+// Equidistant fisheye: image radius is proportional to the angle from the downward axis.
+const FISHEYE_FRAGMENT = `
+uniform samplerCube tCube;
+uniform float halfFov;
+varying vec2 vUv;
+void main() {
+  vec2 p = vUv * 2.0 - 1.0;
+  float r = length(p);
+  if (r > 1.0) {
+    gl_FragColor = vec4(0.02, 0.025, 0.03, 1.0);
+    return;
+  }
+  float theta = r * halfFov;
+  float phi = atan(p.y, p.x);
+  vec3 dir = vec3(-sin(theta) * cos(phi), -cos(theta), sin(theta) * sin(phi));
+  gl_FragColor = textureCube(tCube, dir);
+  #include <colorspace_fragment>
+}`;
 
 /**
  * @param {typeof import("three")} THREE
@@ -60,6 +75,20 @@ export function createWalkSim(THREE, ui) {
   const camera = new THREE.PerspectiveCamera(50, 4 / 3, 0.05, 120);
   camera.rotation.order = "YXZ";
 
+  // Fisheye: capture every direction from the camera, then reproject through the lens model.
+  const cubeTarget = new THREE.WebGLCubeRenderTarget(768);
+  const cubeCamera = new THREE.CubeCamera(0.05, 120, cubeTarget);
+  const fisheyeMaterial = new THREE.ShaderMaterial({
+    uniforms: { tCube: { value: cubeTarget.texture }, halfFov: { value: Math.PI / 2 } },
+    vertexShader: FISHEYE_VERTEX,
+    fragmentShader: FISHEYE_FRAGMENT,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const fisheyeScene = new THREE.Scene();
+  fisheyeScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fisheyeMaterial));
+  const screenCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
   let props = new THREE.Group();
   scene.add(props);
   let countingStrip = null;
@@ -68,7 +97,7 @@ export function createWalkSim(THREE, ui) {
   let agents = [];
   let active = false;
   let playing = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let crossTraffic = false;
+  let crossTraffic = true;
   let lastTime = 0;
   let seed = 7;
   // Seeded so a reset replays a believable crowd rather than a new random one each time.
@@ -78,6 +107,7 @@ export function createWalkSim(THREE, ui) {
   };
   const pick = (list) => list[Math.floor(random() * list.length)];
   const counts = { in: 0, out: 0, faces: 0, passers: 0 };
+  const isFisheye = () => input !== null && input.lens === "fisheye";
 
   const material = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.85 });
 
@@ -129,8 +159,7 @@ export function createWalkSim(THREE, ui) {
   // Where people may walk, from the scene and the lines on the floor.
   function layout(p) {
     const doorZ = p.scene === "open_door" ? p.distanceM + 0.35 : null;
-    const farZ = Math.max(p.distanceM, p.faceLineDistanceM || 0) + 5;
-    const endZ = p.depthM ? Math.max(p.distanceM + 1, Math.min(farZ, p.depthM - 0.4)) : farZ;
+    const endZ = Math.max(p.distanceM, p.faceLineDistanceM || 0) + 5;
     // The doorway or corridor is as wide as the entered entrance; typical sizes otherwise.
     const doorHalf = p.entranceWidthM ? p.entranceWidthM / 2 : 1.1;
     const corridorHalf = p.entranceWidthM ? p.entranceWidthM / 2 : 1.5;
@@ -145,7 +174,7 @@ export function createWalkSim(THREE, ui) {
     });
     props = new THREE.Group();
     const lay = layout(p);
-    const stripWidth = Math.max(8, p.coverageWidthM * 1.4);
+    const stripWidth = Math.max(8, Math.min(p.coverageWidthM, 40) * 1.4);
     countingStrip = lineStrip(p.distanceM, stripWidth, p.colors.count, 0.85);
     props.add(countingStrip);
     if (p.faceLineDistanceM !== null && Math.abs(p.faceLineDistanceM - p.distanceM) > 0.02) {
@@ -161,7 +190,6 @@ export function createWalkSim(THREE, ui) {
       props.add(wallBox(0.18, 2.6, -lay.corridorHalf - 0.1, 1.3, length / 2, length));
       props.add(wallBox(0.18, 2.6, lay.corridorHalf + 0.1, 1.3, length / 2, length));
     }
-    if (p.depthM) props.add(wallBox(40, 3.5, 0, 1.75, p.depthM, 0.2));
     scene.add(props);
   }
 
@@ -206,7 +234,7 @@ export function createWalkSim(THREE, ui) {
       phase: random() * Math.PI * 2,
       lastZ: null,
       flash: 0,
-      flashText: "",
+      flashDirection: null,
       faceFlash: 0,
     });
     agent.body.group.scale.setScalar((p.humanHeightM / MODEL_HEIGHT_M) * (0.94 + random() * 0.1));
@@ -263,7 +291,7 @@ export function createWalkSim(THREE, ui) {
         if (crossed) {
           counts[crossed] += 1;
           agent.flash = 0.9;
-          agent.flashText = crossed === "in" ? "IN" : "OUT";
+          agent.flashDirection = crossed;
           if (countingStrip) countingStrip.material.opacity = 1;
         }
         const faceLine = input.faceLineDistanceM;
@@ -279,20 +307,63 @@ export function createWalkSim(THREE, ui) {
   }
 
   const projected = new THREE.Vector3();
+  const axis = new THREE.Vector3();
+  const toPoint = new THREE.Vector3();
   function toScreen(x, y, z, w, h) {
+    if (isFisheye()) {
+      const f = input.fisheyeProjection({ x, y: y - input.heightM, z });
+      return { x: ((f.u + 1) / 2) * w, y: ((1 - f.v) / 2) * h, behind: !f.inside };
+    }
     projected.set(x, y, z).project(camera);
     return { x: ((projected.x + 1) / 2) * w, y: ((1 - projected.y) / 2) * h, behind: projected.z > 1 };
   }
 
-  // The middle 80% of the frame width, the part the console treats as reliable coverage.
+  // Pixel density at a point, from the console's lens model.
+  function densityAt(x, y, z) {
+    const offset = { x, y: y - input.heightM, z };
+    const distance = Math.hypot(offset.x, offset.y, offset.z);
+    let offAxisDeg;
+    if (isFisheye()) {
+      offAxisDeg = input.fisheyeProjection(offset).offAxisDeg;
+    } else {
+      camera.getWorldDirection(axis);
+      toPoint.set(offset.x, offset.y, offset.z).normalize();
+      offAxisDeg = (Math.acos(Math.max(-1, Math.min(1, axis.dot(toPoint)))) * 180) / Math.PI;
+    }
+    return input.pixelDensity(distance, offAxisDeg);
+  }
+
+  // The part of the image the console treats as reliable coverage.
   function drawEffectiveCoverage(ctx, w, h) {
-    const edge = w * EFFECTIVE_EDGE;
-    ctx.fillStyle = "rgba(8, 10, 14, 0.38)";
-    ctx.fillRect(0, 0, edge, h);
-    ctx.fillRect(w - edge, 0, edge, h);
-    ctx.strokeStyle = "rgba(120, 220, 160, 0.75)";
+    const shade = "rgba(8, 10, 14, 0.38)";
+    const edgeColor = "rgba(120, 220, 160, 0.75)";
+    ctx.strokeStyle = edgeColor;
     ctx.lineWidth = 1.25;
     ctx.setLineDash([6, 5]);
+    ctx.font = "600 10px Inter, sans-serif";
+    ctx.textBaseline = "bottom";
+    ctx.textAlign = "left";
+    if (isFisheye()) {
+      const cx = w / 2;
+      const cy = h / 2;
+      const radius = (Math.min(w, h) / 2) * EFFECTIVE_SHARE;
+      ctx.fillStyle = shade;
+      ctx.beginPath();
+      ctx.rect(0, 0, w, h);
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2, true);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "rgba(120, 220, 160, 0.9)";
+      ctx.fillText(input.text.effective, cx - radius * 0.7, cy + radius * 0.75);
+      return;
+    }
+    const edge = w * ((1 - EFFECTIVE_SHARE) / 2);
+    ctx.fillStyle = shade;
+    ctx.fillRect(0, 0, edge, h);
+    ctx.fillRect(w - edge, 0, edge, h);
     ctx.beginPath();
     ctx.moveTo(edge, 0);
     ctx.lineTo(edge, h);
@@ -300,11 +371,21 @@ export function createWalkSim(THREE, ui) {
     ctx.lineTo(w - edge, h);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.font = "600 10px Inter, sans-serif";
-    ctx.textBaseline = "bottom";
-    ctx.textAlign = "left";
     ctx.fillStyle = "rgba(120, 220, 160, 0.9)";
-    ctx.fillText("effective 80%", edge + 5, h - 6);
+    ctx.fillText(input.text.effective, edge + 5, h - 6);
+  }
+
+  function personBox(g, tall, w, h) {
+    const { x, z } = g.position;
+    const points = [
+      [x, 0, z], [x, tall, z], [x - 0.3, tall / 2, z], [x + 0.3, tall / 2, z], [x, tall / 2, z - 0.3], [x, tall / 2, z + 0.3],
+    ].map(([px, py, pz]) => toScreen(px, py, pz, w, h));
+    if (points.some((p) => p.behind)) return null;
+    const xs = points.map((p) => p.x);
+    const ys = points.map((p) => p.y);
+    const box = { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+    if (box.x > w || box.x + box.w < 0 || box.y > h || box.y + box.h < 0) return null;
+    return box;
   }
 
   // Detection boxes and line labels, drawn the way a counting camera's overlay shows them.
@@ -314,8 +395,9 @@ export function createWalkSim(THREE, ui) {
     const h = parseFloat(ui.overlay.style.height) || 0;
     ctx.clearRect(0, 0, w, h);
     drawEffectiveCoverage(ctx, w, h);
-    ctx.font = "600 11px Inter, sans-serif";
+    ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
     ctx.textBaseline = "bottom";
+    ctx.textAlign = "left";
     const lay = layout(input);
     const label = (z, text, color) => {
       const left = toScreen(-1.4, 0, z, w, h);
@@ -324,84 +406,81 @@ export function createWalkSim(THREE, ui) {
       ctx.fillText(text, 8, Math.min(h - 4, left.y - 4));
       return true;
     };
-    const countingVisible = label(input.distanceM, "counting line " + input.distanceM.toFixed(2) + " m", input.colors.count);
+    const countingVisible = label(input.distanceM, input.text.countingLine + " " + input.distanceM.toFixed(2) + " m", input.colors.count);
     if (input.faceLineDistanceM !== null && Math.abs(input.faceLineDistanceM - input.distanceM) > 0.02) {
-      label(input.faceLineDistanceM, "face line " + input.faceLineDistanceM.toFixed(2) + " m", input.colors.face);
+      label(input.faceLineDistanceM, input.text.faceLine + " " + input.faceLineDistanceM.toFixed(2) + " m", input.colors.face);
     }
     for (const agent of agents) {
       const g = agent.body.group;
       const behindWall = lay.doorZ !== null && g.position.z > lay.doorZ + 0.1 && Math.abs(g.position.x) > lay.doorHalf - 0.1;
       if (behindWall) continue;
       const tall = MODEL_HEIGHT_M * g.scale.x;
-      const feet = toScreen(g.position.x, 0, g.position.z, w, h);
-      const top = toScreen(g.position.x, tall, g.position.z, w, h);
-      if (feet.behind || top.behind) continue;
-      const half = Math.abs(toScreen(g.position.x + 0.3, tall / 2, g.position.z, w, h).x - feet.x);
-      const box = { x: feet.x - half, y: top.y, w: half * 2, h: feet.y - top.y };
-      if (box.x > w || box.x + box.w < 0 || box.y > h || box.y + box.h < 0) continue;
+      const box = personBox(g, tall, w, h);
+      if (!box) continue;
       const counted = agent.flash > 0;
-      ctx.strokeStyle = counted ? input.colors.count : "rgba(230, 236, 245, 0.55)";
+      const countColor = agent.flashDirection === "out" ? input.colors.out : input.colors.count;
+      ctx.strokeStyle = counted ? countColor : "rgba(230, 236, 245, 0.55)";
       ctx.lineWidth = counted ? 2 : 1;
       ctx.strokeRect(box.x, box.y, box.w, box.h);
+      const centreX = box.x + box.w / 2;
       // Density at this person's face, the figure demographics depend on.
       if (box.h >= 28) {
         const faceY = tall * (input.facePointM / input.humanHeightM);
-        const faceDistance = Math.hypot(g.position.x, input.heightM - faceY, g.position.z);
-        const ppm = pixelsPerMetre(input.resolutionW, input.hFovDeg, faceDistance);
         ctx.font = "600 10px JetBrains Mono, monospace";
         ctx.textAlign = "center";
         ctx.fillStyle = "rgba(230, 236, 245, 0.85)";
-        ctx.fillText(Math.round(ppm) + " px/m", feet.x, box.y - 3);
+        ctx.fillText(Math.round(densityAt(g.position.x, faceY, g.position.z)) + " px/m", centreX, box.y - 3);
         ctx.textAlign = "left";
-        ctx.font = "600 11px Inter, sans-serif";
+        ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
       }
       if (counted) {
-        const tagWidth = ctx.measureText(agent.flashText).width + 8;
-        ctx.fillStyle = input.colors.count;
+        const tag = agent.flashDirection === "out" ? input.text.out : input.text.in;
+        const tagWidth = ctx.measureText(tag).width + 8;
+        ctx.fillStyle = countColor;
         ctx.fillRect(box.x, box.y, tagWidth, 15);
         ctx.fillStyle = "#0f1217";
-        ctx.fillText(agent.flashText, box.x + 4, box.y + 13);
+        ctx.fillText(tag, box.x + 4, box.y + 13);
       }
       if (agent.faceFlash > 0) {
-        const head = box.h * 0.16;
+        const head = Math.max(8, Math.min(box.w, box.h) * 0.3);
         ctx.strokeStyle = input.colors.face;
         ctx.lineWidth = 1.5;
-        ctx.strokeRect(feet.x - head * 0.6, box.y, head * 1.2, head * 1.1);
+        ctx.strokeRect(centreX - head / 2, box.y, head, head);
         ctx.fillStyle = input.colors.face;
-        ctx.fillText("face", feet.x + head * 0.7, box.y + head);
+        ctx.fillText(input.text.face, centreX + head / 2 + 3, box.y + head);
       }
     }
     if (!countingVisible) {
       ctx.fillStyle = input.colors.bad;
-      ctx.fillText("Counting line is outside the frame", 8, h - 8);
+      ctx.fillText(input.text.outsideFrame, 8, h - 8);
     }
     drawDensityReadout(ctx, w);
   }
 
   // Top-right readout: pixel density where each line meets the floor (counting) or the face point (face).
   function drawDensityReadout(ctx, w) {
-    const rows = [["Counting line", input.colors.count, Math.hypot(input.heightM, input.distanceM)]];
+    const rows = [[input.text.countingLine, input.colors.count, densityAt(0, 0, input.distanceM)]];
     if (input.faceLineDistanceM !== null) {
-      rows.push(["Face line", input.colors.face, Math.hypot(input.heightM - input.facePointM, input.faceLineDistanceM)]);
+      rows.push([input.text.faceLine, input.colors.face, densityAt(0, input.facePointM, input.faceLineDistanceM)]);
     }
     const lineHeight = 17;
-    const boxW = 168;
+    const boxW = 176;
     const boxH = 10 + rows.length * lineHeight;
     const x = w - boxW - 8;
     const y = 8;
     ctx.fillStyle = "rgba(12, 15, 20, 0.72)";
     ctx.fillRect(x, y, boxW, boxH);
-    rows.forEach(([name, color, distance], i) => {
+    rows.forEach(([name, color, density], i) => {
       const rowY = y + 5 + (i + 1) * lineHeight - 4;
       ctx.fillStyle = color;
       ctx.fillRect(x + 8, rowY - 8, 8, 3);
-      ctx.font = "600 11px Inter, sans-serif";
+      ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
       ctx.textAlign = "left";
       ctx.fillStyle = "rgba(230, 236, 245, 0.9)";
       ctx.fillText(name, x + 22, rowY);
       ctx.font = "600 11px JetBrains Mono, monospace";
       ctx.textAlign = "right";
-      ctx.fillText(Math.round(pixelsPerMetre(input.resolutionW, input.hFovDeg, distance)) + " px/m", x + boxW - 8, rowY);
+      ctx.fillText(Math.round(density) + " px/m", x + boxW - 8, rowY);
     });
     ctx.textAlign = "left";
   }
@@ -409,7 +488,13 @@ export function createWalkSim(THREE, ui) {
   function render() {
     if (!input) return;
     if (countingStrip) countingStrip.material.opacity = Math.max(0.85, countingStrip.material.opacity - 0.02);
-    renderer.render(scene, camera);
+    if (isFisheye()) {
+      cubeCamera.position.set(0, input.heightM, 0);
+      cubeCamera.update(renderer, scene);
+      renderer.render(fisheyeScene, screenCamera);
+    } else {
+      renderer.render(scene, camera);
+    }
     drawOverlay();
     ui.counts.in.textContent = String(counts.in);
     ui.counts.out.textContent = String(counts.out);
@@ -433,7 +518,8 @@ export function createWalkSim(THREE, ui) {
   }
 
   function syncPlayButton() {
-    ui.playButton.textContent = playing ? "Pause" : "Play";
+    const text = input ? input.text : { pause: "Pause", play: "Play" };
+    ui.playButton.textContent = playing ? text.pause : text.play;
     ui.playButton.setAttribute("aria-pressed", String(playing));
   }
 
@@ -441,7 +527,7 @@ export function createWalkSim(THREE, ui) {
     if (input) ui.passersRow.hidden = input.scene !== "open_door" && !crossTraffic;
   }
 
-  ui.crossButton.setAttribute("aria-pressed", "false");
+  ui.crossButton.setAttribute("aria-pressed", String(crossTraffic));
   ui.crossButton.addEventListener("click", () => {
     crossTraffic = !crossTraffic;
     ui.crossButton.setAttribute("aria-pressed", String(crossTraffic));
@@ -474,14 +560,16 @@ export function createWalkSim(THREE, ui) {
     setPlacement(placement) {
       const first = input === null;
       input = placement;
-      camera.fov = placement.vFovDeg;
+      camera.fov = Math.min(placement.vFovDeg, 170);
       camera.aspect = placement.aspect;
       camera.position.set(0, placement.heightM, 0);
       camera.rotation.set((-placement.tiltDeg * Math.PI) / 180, Math.PI, 0);
       camera.updateProjectionMatrix();
+      if (placement.lens === "fisheye") fisheyeMaterial.uniforms.halfFov.value = (placement.fovDeg * Math.PI) / 360;
       rebuildProps(placement);
       syncPassersRow();
-      const key = [placement.scene, placement.distanceM.toFixed(1), placement.depthM || 0, placement.entranceWidthM || 0, (placement.faceLineDistanceM || 0).toFixed(1)].join("|");
+      syncPlayButton();
+      const key = [placement.scene, placement.lens, placement.distanceM.toFixed(1), placement.entranceWidthM || 0, (placement.faceLineDistanceM || 0).toFixed(1)].join("|");
       if (first || key !== layoutKey) respawnAll(placement);
       layoutKey = key;
       if (active) {

@@ -43,7 +43,7 @@ function buildHtml() {
   <title>Camera Placement Lookup</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: oklch(0.165 0.013 256);
@@ -73,7 +73,7 @@ function buildHtml() {
       --radius-lg: 16px;
       --ease: cubic-bezier(0.22, 1, 0.36, 1);
       color-scheme: dark;
-      font-family: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: "Inter", "Noto Sans Thai", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       font-size: 16px;
     }
 
@@ -1426,7 +1426,7 @@ function buildHtml() {
       border: 1px solid;
       border-radius: 999px;
       padding: 3px 8px;
-      font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+      font-family: "Inter", "Noto Sans Thai", ui-sans-serif, system-ui, sans-serif;
       font-size: 11px;
       font-weight: 800;
     }
@@ -1980,6 +1980,10 @@ function buildHtml() {
       }
     }
 
+    .lang-seg {
+      margin-left: auto;
+    }
+
     .warn-line {
       display: flex;
       gap: 8px;
@@ -2007,66 +2011,70 @@ function buildHtml() {
         </div>
         <div class="wordmark">
           <b>Camera Placement Lookup</b>
-          <span>Geometry console</span>
+          <span data-i18n="subtitle">Geometry console</span>
         </div>
       </div>
-      <div class="tabs" role="tablist" aria-label="View" id="viewTabs">
-        <button type="button" role="tab" aria-selected="true" aria-controls="visualizerView" id="visualizerTab" tabindex="0" data-tab="visualizer">Visualizer</button>
-        <button type="button" role="tab" aria-selected="false" aria-controls="tableView" id="tableTab" tabindex="-1" data-tab="table">Rule table</button>
+      <div class="tabs" role="tablist" aria-label="View" data-i18n-attr="aria-label:viewTabs" id="viewTabs">
+        <button type="button" role="tab" aria-selected="true" aria-controls="visualizerView" id="visualizerTab" tabindex="0" data-tab="visualizer" data-i18n="visualizer">Visualizer</button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="tableView" id="tableTab" tabindex="-1" data-tab="table" data-i18n="ruleTable">Rule table</button>
+      </div>
+      <div class="solve-seg lang-seg" role="group" aria-label="Language" data-i18n-attr="aria-label:language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="th" aria-pressed="false">ไทย</button>
       </div>
     </header>
     <div class="mobile-answer" id="mobileAnswer" data-state="best" aria-hidden="true">
       <span class="sb-dot"></span>
       <span class="mobile-answer-main" id="mobileAnswerOverall">Best</span>
       <span class="mobile-answer-pairs">
-        <span>Feet <b id="mobileAnswerFeet" class="best">Best</b></span>
-        <span>Face line <b id="mobileAnswerFace" class="visible">Visible</b></span>
+        <span><span data-i18n="feet">Feet</span> <b id="mobileAnswerFeet" class="best">Best</b></span>
+        <span><span data-i18n="faceLine">Face line</span> <b id="mobileAnswerFace" class="visible">Visible</b></span>
       </span>
       <span class="mobile-answer-distance" id="mobileAnswerDistance"></span>
     </div>
     <div class="workspace">
-      <aside class="rail" aria-label="Placement controls">
+      <aside class="rail" aria-label="Placement controls" data-i18n-attr="aria-label:placementControls">
         <section class="panel">
           <div class="panel-head">
-            <h2>Scene</h2>
+            <h2 data-i18n="scene">Scene</h2>
             <span id="sceneVersion">rules</span>
           </div>
           <div class="panel-body">
-            <div class="solve-seg scene-seg" role="group" aria-label="Scene profile" id="sceneSeg"></div>
+            <div class="solve-seg scene-seg" role="group" aria-label="Scene profile" data-i18n-attr="aria-label:scene" id="sceneSeg"></div>
             <p class="preset-caption" id="sceneCaption"></p>
           </div>
         </section>
         <section class="panel">
           <div class="panel-head">
-            <h2>Camera preset</h2>
-            <span>optics</span>
+            <h2 data-i18n="cameraPreset">Camera preset</h2>
+            <span data-i18n="optics">optics</span>
           </div>
           <div class="panel-body">
             <div class="select-wrap">
-              <select id="presetSelect" aria-label="Camera preset"></select>
+              <select id="presetSelect" aria-label="Camera preset" data-i18n-attr="aria-label:cameraPreset"></select>
             </div>
             <p class="preset-caption" id="presetCaption"></p>
           </div>
         </section>
         <section class="panel">
           <div class="panel-head">
-            <h2>Geometry</h2>
-            <span>drag or type</span>
+            <h2 data-i18n="geometry">Geometry</h2>
+            <span data-i18n="dragOrType">drag or type</span>
           </div>
           <div class="panel-body">
             <div class="solve">
-              <span class="solve-label">Solve for</span>
-              <div class="solve-seg" role="group" aria-label="Solve mode">
-                <button type="button" data-solve="manual" aria-pressed="false">Manual</button>
-                <button type="button" data-solve="distance" aria-pressed="true">Distance</button>
-                <button type="button" data-solve="height" aria-pressed="false">Height</button>
+              <span class="solve-label" data-i18n="solveFor">Solve for</span>
+              <div class="solve-seg" role="group" aria-label="Solve mode" data-i18n-attr="aria-label:solveFor">
+                <button type="button" data-solve="manual" aria-pressed="false" data-i18n="manual">Manual</button>
+                <button type="button" data-solve="distance" aria-pressed="true" data-i18n="distance">Distance</button>
+                <button type="button" data-solve="height" aria-pressed="false" data-i18n="height">Height</button>
               </div>
             </div>
             <div class="field" id="heightField">
               <div class="field-top">
-                <label class="field-label" for="heightRange">Mounting height <span class="driven-badge">solved</span></label>
+                <label class="field-label" for="heightRange"><span data-i18n="mountingHeight">Mounting height</span> <span class="driven-badge" data-i18n="solved">solved</span></label>
                 <span class="value-edit">
-                  <input id="heightInput" type="number" min="${RULE.minCameraHeightM}" max="${RULE.maxCameraHeightM}" step="${RULE.cameraHeightStepM}" value="${RULE.defaultCameraHeightM.toFixed(1)}" aria-label="Mounting height in meters">
+                  <input id="heightInput" type="number" min="${RULE.minCameraHeightM}" max="${RULE.maxCameraHeightM}" step="${RULE.cameraHeightStepM}" value="${RULE.defaultCameraHeightM.toFixed(1)}" aria-label="Mounting height in meters" data-i18n-attr="aria-label:mountingHeight">
                   <span class="unit">m</span>
                 </span>
               </div>
@@ -2075,9 +2083,9 @@ function buildHtml() {
             </div>
             <div class="field" id="distanceField">
               <div class="field-top">
-                <label class="field-label" for="distanceRange">Counting line distance <span class="driven-badge">solved</span></label>
+                <label class="field-label" for="distanceRange"><span data-i18n="countingDistance">Counting line distance</span> <span class="driven-badge" data-i18n="solved">solved</span></label>
                 <span class="value-edit">
-                  <input id="distanceInput" type="number" min="${RULE.minDistanceM}" max="${RULE.maxDistanceM}" step="0.01" value="4.60" aria-label="Counting line distance in meters">
+                  <input id="distanceInput" type="number" min="${RULE.minDistanceM}" max="${RULE.maxDistanceM}" step="0.01" value="4.60" aria-label="Counting line distance in meters" data-i18n-attr="aria-label:countingDistance">
                   <span class="unit">m</span>
                 </span>
               </div>
@@ -2085,52 +2093,43 @@ function buildHtml() {
               <div class="ticks"><span id="distanceMinTick">${RULE.minDistanceM.toFixed(2)}</span><span id="distanceMaxTick">${RULE.maxDistanceM.toFixed(2)}</span></div>
             </div>
             <div class="rec-row" aria-label="Recommended placement action">
-              <span class="rec-pill"><small>recommended distance</small><b id="recommendedDistance" class="mono"></b></span>
+              <span class="rec-pill"><small data-i18n="recommendedDistance">recommended distance</small><b id="recommendedDistance" class="mono"></b></span>
               <button class="use-button" type="button" id="snapButton">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M20 6 9 17l-5-5"></path>
                 </svg>
-                Use recommended distance
+                <span data-i18n="useRecommended">Use recommended distance</span>
               </button>
-            </div>
-            <div class="field" id="depthField">
-              <div class="field-top">
-                <label class="field-label" for="depthInput">Floor depth in view</label>
-                <span class="value-edit">
-                  <input id="depthInput" type="number" min="0" max="80" step="0.1" placeholder="none" aria-describedby="depthHint" aria-label="Floor depth in view in meters">
-                  <span class="unit">m</span>
-                </span>
-              </div>
-              <p class="field-hint" id="depthHint">Optional. From below the camera to the farthest floor where people can stand.</p>
             </div>
             <div class="field" id="entranceField">
               <div class="field-top">
-                <label class="field-label" for="entranceInput">Entrance width</label>
+                <label class="field-label" for="entranceInput" data-i18n="entranceWidth">Entrance width</label>
                 <span class="value-edit">
-                  <input id="entranceInput" type="number" min="0" max="60" step="0.1" placeholder="none" aria-describedby="entranceHint" aria-label="Entrance width in meters">
+                  <input id="entranceInput" type="number" min="0" max="60" step="0.1" value="5" placeholder="none" aria-describedby="entranceHint" aria-label="Entrance width in meters" data-i18n-attr="placeholder:none;aria-label:entranceWidth">
                   <span class="unit">m</span>
                 </span>
               </div>
-              <p class="field-hint" id="entranceHint">Optional. Width of the door or entrance people pass through, checked against what the camera covers at the counting line.</p>
+              <p class="field-hint" id="entranceHint" data-i18n="entranceHint">Optional. Width of the door or entrance people pass through, checked against what the camera covers at the counting line.</p>
             </div>
             <details class="advanced" id="advancedPanel">
-              <summary>Advanced optics <span aria-hidden="true">v</span></summary>
+              <summary><span data-i18n="advancedOptics">Advanced optics</span> <span aria-hidden="true">v</span></summary>
               <div class="advanced-body">
                 <div class="field" id="tiltField">
                   <div class="field-top">
-                    <label class="field-label" for="tiltRange">Tilt angle</label>
-                    <button type="button" class="tilt-auto" id="tiltAuto" aria-pressed="true">Recommended</button>
+                    <label class="field-label" for="tiltRange" data-i18n="tiltAngle">Tilt angle</label>
+                    <button type="button" class="tilt-auto" id="tiltAuto" aria-pressed="true" data-i18n="recommended">Recommended</button>
                     <span class="value-edit">
-                      <input id="tiltInput" type="number" min="${RULE.minTiltAngleDeg}" max="${RULE.maxTiltAngleDeg}" step="${RULE.tiltAngleStepDeg}" value="30" aria-label="Tilt angle in degrees">
+                      <input id="tiltInput" type="number" min="${RULE.minTiltAngleDeg}" max="${RULE.maxTiltAngleDeg}" step="${RULE.tiltAngleStepDeg}" value="30" aria-label="Tilt angle in degrees" data-i18n-attr="aria-label:tiltAngle">
                       <span class="unit">deg</span>
                     </span>
                   </div>
                   <input id="tiltRange" type="range" min="${RULE.minTiltAngleDeg}" max="${RULE.maxTiltAngleDeg}" step="${RULE.tiltAngleStepDeg}" value="30">
-                  <div class="ticks"><span>level</span><span>down</span></div>
+                  <div class="ticks"><span data-i18n="level">level</span><span data-i18n="down">down</span></div>
+                  <p class="field-hint" id="tiltHint" data-i18n="tiltHint" hidden>Ceiling fisheye: always 90 deg, straight down.</p>
                 </div>
                 <div class="field" id="sensorField">
                   <div class="field-top">
-                    <label class="field-label" for="sensorSelect">Sensor format <span class="driven-badge">preset</span></label>
+                    <label class="field-label" for="sensorSelect"><span data-i18n="sensorFormat">Sensor format</span> <span class="driven-badge" data-i18n="presetBadge">preset</span></label>
                   </div>
                   <div class="select-wrap">
                     <select id="sensorSelect" aria-label="Sensor format"></select>
@@ -2138,7 +2137,7 @@ function buildHtml() {
                 </div>
                 <div class="field" id="focalField">
                   <div class="field-top">
-                    <label class="field-label" for="focalRange">Focal length</label>
+                    <label class="field-label" for="focalRange" data-i18n="focalLength">Focal length</label>
                     <span class="value-edit">
                       <input id="focalInput" type="number" min="${RULE.minFocalLengthMm}" max="${RULE.maxFocalLengthMm}" step="${RULE.focalLengthStepMm}" value="${RULE.defaultFocalLengthMm.toFixed(1)}" aria-label="Focal length in millimeters">
                       <span class="unit">mm</span>
@@ -2149,7 +2148,7 @@ function buildHtml() {
                 </div>
                 <div class="field">
                   <div class="field-top">
-                    <label class="field-label" for="resolutionSelect">Resolution</label>
+                    <label class="field-label" for="resolutionSelect" data-i18n="resolution">Resolution</label>
                   </div>
                   <div class="select-wrap">
                     <select id="resolutionSelect" aria-label="Camera resolution"></select>
@@ -2165,7 +2164,7 @@ function buildHtml() {
           <div class="main">
             <section class="verdict" id="verdict" data-state="best">
               <div class="verdict-lead">
-                <div class="verdict-kicker"><span class="dot"></span><span id="overallLabel">Placement verdict</span></div>
+                <div class="verdict-kicker"><span class="dot"></span><span id="overallLabel" data-i18n="placementVerdict">Placement verdict</span></div>
                 <h1 id="verdictHeadline">Placement is best</h1>
                 <p class="verdict-sub" id="verdictSub"></p>
                 <p class="warn-line" id="heightWarn" hidden></p>
@@ -2173,7 +2172,7 @@ function buildHtml() {
                 <div class="verdict-actions">
                   <button type="button" class="button" id="copyReadings">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"></path></svg>
-                    Copy readings
+                    <span data-i18n="copyReadings">Copy readings</span>
                   </button>
                   <span class="copy-status" id="copyStatus" aria-live="polite"></span>
                 </div>
@@ -2181,9 +2180,9 @@ function buildHtml() {
               </div>
               <div class="pillar">
                 <div class="pillar-head">
-                  <span class="pillar-name">Counting line</span>
+                  <span class="pillar-name" data-i18n="countingLine">Counting line</span>
                   <button class="tag-info" type="button" id="priorityInfo" aria-expanded="false" aria-describedby="priorityTip">
-                    verdict
+                    <span data-i18n="verdictTag">verdict</span>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="10"></circle>
                       <path d="M12 16v-4"></path>
@@ -2193,20 +2192,20 @@ function buildHtml() {
                 </div>
                 <span class="status-chip best" id="feetStatus">Best</span>
                 <div class="pillar-meta">
-                  <span class="meta"><span>feet angle</span><b id="feetAngle"></b></span>
-                  <span class="meta"><span>bands</span><b id="feetBands"></b></span>
+                  <span class="meta"><span data-i18n="feetAngle">feet angle</span><b id="feetAngle"></b></span>
+                  <span class="meta"><span data-i18n="bands">bands</span><b id="feetBands"></b></span>
                 </div>
                 <p class="pillar-note" id="countNote"></p>
               </div>
               <div class="pillar">
                 <div class="pillar-head">
-                  <span class="pillar-name">Face line</span>
-                  <span class="tag">demographics</span>
+                  <span class="pillar-name" data-i18n="faceLine">Face line</span>
+                  <span class="tag" data-i18n="demographics">demographics</span>
                 </div>
                 <span class="status-chip visible" id="faceStatus">Visible</span>
                 <div class="pillar-meta">
-                  <span class="meta"><span>distance</span><b id="faceLineDistance"></b></span>
-                  <span class="meta"><span>face angle</span><b id="faceAngle"></b></span>
+                  <span class="meta"><span data-i18n="distanceMeta">distance</span><b id="faceLineDistance"></b></span>
+                  <span class="meta"><span data-i18n="faceAngle">face angle</span><b id="faceAngle"></b></span>
                 </div>
                 <p class="pillar-note" id="faceNote"></p>
               </div>
@@ -2214,7 +2213,7 @@ function buildHtml() {
             <div class="dual sim-mode">
               <section class="stage" aria-label="Side-view placement and distance range">
                 <div class="stage-head">
-                  <div class="stage-title"><h2>Side view</h2><span class="stage-badge" id="stageBadge"></span></div>
+                  <div class="stage-title"><h2 data-i18n="sideView">Side view</h2><span class="stage-badge" id="stageBadge"></span></div>
                   <div class="stage-readings" aria-label="Current side-view readings">
                     <span class="reading-chip best" id="sideFeetReading"></span>
                     <span class="reading-chip face" id="sideFaceReading"></span>
@@ -2226,10 +2225,10 @@ function buildHtml() {
                 </div>
                 <div class="rangebar" aria-label="Distance range">
                   <div class="rangebar-head">
-                    <b>Feet distance window</b>
+                    <b data-i18n="feetWindow">Feet distance window</b>
                     <div class="legend">
-                      <span><i style="background: var(--ok-bg); border: 1px solid var(--ok);"></i>ok feet</span>
-                      <span><i style="background: var(--best-bg); border: 1px solid var(--best);"></i>best feet</span>
+                      <span><i style="background: var(--ok-bg); border: 1px solid var(--ok);"></i><span data-i18n="okFeet">ok feet</span></span>
+                      <span><i style="background: var(--best-bg); border: 1px solid var(--best);"></i><span data-i18n="bestFeet">best feet</span></span>
                     </div>
                   </div>
                   <div class="range-track">
@@ -2247,9 +2246,9 @@ function buildHtml() {
                   <div class="stage-title">
                     <h2 id="topTitle">Simulation</h2>
                     <div class="solve-seg view-seg" role="group" aria-label="Second diagram">
-                      <button type="button" data-topview="top" aria-pressed="false">Top</button>
-                      <button type="button" data-topview="camera" aria-pressed="false">Camera</button>
-                      <button type="button" data-topview="sim" aria-pressed="true">Simulate</button>
+                      <button type="button" data-topview="top" aria-pressed="false" data-i18n="viewTop">Top</button>
+                      <button type="button" data-topview="camera" aria-pressed="false" data-i18n="viewCamera">Camera</button>
+                      <button type="button" data-topview="sim" aria-pressed="true" data-i18n="viewSim">Simulate</button>
                     </div>
                   </div>
                 </div>
@@ -2261,49 +2260,49 @@ function buildHtml() {
                       <canvas id="simOverlay" class="sim-overlay" aria-hidden="true"></canvas>
                     </div>
                     <div class="sim-hud" aria-live="off">
-                      <span>In <b id="simIn">0</b></span>
-                      <span>Out <b id="simOut">0</b></span>
-                      <span>Faces <b id="simFaces">0</b></span>
-                      <span id="simPassersRow">Passers-by, not counted <b id="simPassers">0</b></span>
+                      <span><span data-i18n="in">In</span> <b id="simIn">0</b></span>
+                      <span><span data-i18n="out">Out</span> <b id="simOut">0</b></span>
+                      <span><span data-i18n="faces">Faces</span> <b id="simFaces">0</b></span>
+                      <span id="simPassersRow"><span data-i18n="passers">Passers-by, not counted</span> <b id="simPassers">0</b></span>
                       <span class="sim-actions">
-                        <button type="button" class="button sim-toggle" id="simCross" aria-pressed="false" title="People also walk left to right across the view, without crossing the counting line">Cross traffic</button>
+                        <button type="button" class="button sim-toggle" id="simCross" aria-pressed="true" title="People also walk left to right across the view, without crossing the counting line" data-i18n-attr="title:crossTitle" data-i18n="crossTraffic">Cross traffic</button>
                         <button type="button" class="button" id="simPlay" aria-pressed="true">Pause</button>
-                        <button type="button" class="button" id="simReset">Reset</button>
+                        <button type="button" class="button" id="simReset" data-i18n="reset">Reset</button>
                       </span>
                     </div>
-                    <p class="field-hint sim-note">Simulated people through this camera. Counts come from the simulation, not real traffic.</p>
-                    <p class="warn-line" id="simFallback" hidden>The 3D simulation could not load. It needs an internet connection; Top and Camera still work.</p>
+                    <p class="field-hint sim-note" data-i18n="simNote">Simulated people through this camera. Counts come from the simulation, not real traffic.</p>
+                    <p class="warn-line" id="simFallback" data-i18n="simFallback" hidden>The 3D simulation could not load. It needs an internet connection; Top and Camera still work.</p>
                   </div>
                 </div>
               </section>
             </div>
             <section class="clusters" aria-label="Placement metrics">
               <div class="cluster">
-                <h3>Lines on the floor</h3>
+                <h3 data-i18n="linesOnFloor">Lines on the floor</h3>
                 <div class="metrics">
-                  <div class="metric"><span class="value" id="countingMetric"></span><span class="label">counting line</span></div>
-                  <div class="metric"><span class="value" id="faceLineMetric"></span><span class="label">face line</span></div>
+                  <div class="metric"><span class="value" id="countingMetric"></span><span class="label" data-i18n="countingLineLower">counting line</span></div>
+                  <div class="metric"><span class="value" id="faceLineMetric"></span><span class="label" data-i18n="faceLineLower">face line</span></div>
                 </div>
               </div>
               <div class="cluster">
-                <h3>Optics - field of view</h3>
+                <h3 data-i18n="opticsFov">Optics - field of view</h3>
                 <div class="metrics">
-                  <div class="metric"><span class="value" id="horizontalFovMetric"></span><span class="label">horizontal FOV</span></div>
-                  <div class="metric"><span class="value" id="verticalFovMetric"></span><span class="label">vertical FOV</span></div>
+                  <div class="metric"><span class="value" id="horizontalFovMetric"></span><span class="label" data-i18n="horizontalFov">horizontal FOV</span></div>
+                  <div class="metric"><span class="value" id="verticalFovMetric"></span><span class="label" data-i18n="verticalFov">vertical FOV</span></div>
                 </div>
               </div>
               <div class="cluster">
-                <h3>Coverage at counting line</h3>
+                <h3 data-i18n="coverageAtLine">Coverage at counting line</h3>
                 <div class="metrics">
-                  <div class="metric"><span class="value" id="fullWidthMetric"></span><span class="label">full width</span></div>
-                  <div class="metric"><span class="value" id="effectiveWidthMetric"></span><span class="label">effective 80%</span></div>
+                  <div class="metric"><span class="value" id="fullWidthMetric"></span><span class="label" data-i18n="fullWidth">full width</span></div>
+                  <div class="metric"><span class="value" id="effectiveWidthMetric"></span><span class="label" data-i18n="effective80">effective 80%</span></div>
                 </div>
               </div>
               <div class="cluster">
-                <h3>Resolution density</h3>
+                <h3 data-i18n="resolutionDensity">Resolution density</h3>
                 <div class="metrics">
-                  <div class="metric"><span class="value" id="horizontalPpmMetric"></span><span class="label">horizontal PPM</span></div>
-                  <div class="metric"><span class="value" id="verticalPpmMetric"></span><span class="label">vertical PPM</span></div>
+                  <div class="metric"><span class="value" id="horizontalPpmMetric"></span><span class="label" data-i18n="horizontalPpm">horizontal PPM</span></div>
+                  <div class="metric"><span class="value" id="verticalPpmMetric"></span><span class="label" data-i18n="verticalPpm">vertical PPM</span></div>
                 </div>
               </div>
             </section>
@@ -2312,21 +2311,21 @@ function buildHtml() {
         <section id="tableView" role="tabpanel" aria-labelledby="tableTab" hidden>
           <div class="table-card">
             <div class="table-head">
-              <h2>Lookup table</h2>
+              <h2 data-i18n="lookupTable">Lookup table</h2>
               <div class="table-meta" id="tableMeta"></div>
-              <button type="button" class="button" id="copyCsv">Copy CSV</button>
+              <button type="button" class="button" id="copyCsv" data-i18n="copyCsv">Copy CSV</button>
             </div>
             <div class="table-scroll">
               <table>
                 <thead>
                   <tr>
-                    <th>Height</th>
-                    <th>Counting line</th>
-                    <th>Feet angle</th>
-                    <th>Feet</th>
-                    <th>Face there</th>
-                    <th>Face</th>
-                    <th>Face line</th>
+                    <th data-i18n="thHeight">Height</th>
+                    <th data-i18n="countingLine">Counting line</th>
+                    <th data-i18n="thFeetAngle">Feet angle</th>
+                    <th data-i18n="feet">Feet</th>
+                    <th data-i18n="thFaceThere">Face there</th>
+                    <th data-i18n="thFace">Face</th>
+                    <th data-i18n="faceLine">Face line</th>
                   </tr>
                 </thead>
                 <tbody id="lookupBody"></tbody>
@@ -2337,16 +2336,16 @@ function buildHtml() {
       </main>
     </div>
     <div class="tip" id="priorityTip" role="tooltip">
-      <b>Why the counting line decides</b>
-      The feet angle at the counting line drives reliable people counting, so it alone decides the verdict. Demographics use a separate face line where the face angle is best; it never fails a placement.
+      <b data-i18n="tipTitle">Why the counting line decides</b>
+      <span data-i18n="tipBody">The feet angle at the counting line drives reliable people counting, so it alone decides the verdict. Demographics use a separate face line where the face angle is best; it never fails a placement.</span>
     </div>
     <div class="statusbar" id="statusbar" data-state="best">
       <button type="button" id="jumpToDiagram" aria-label="Current placement status. Jump to placement diagram">
         <span class="sb-dot"></span>
         <span class="sb-overall" id="sbOverall">Best</span>
         <span class="sb-pairs">
-          <span>Feet <b id="sbFeet" class="best">Best</b></span>
-          <span>Face line <b id="sbFace" class="visible">Visible</b></span>
+          <span><span data-i18n="feet">Feet</span> <b id="sbFeet" class="best">Best</b></span>
+          <span><span data-i18n="faceLine">Face line</span> <b id="sbFace" class="visible">Visible</b></span>
         </span>
         <span class="sb-spacer"></span>
         <span class="sb-distance" id="sbDistance"></span>
@@ -2396,12 +2395,220 @@ ${engineSource}
         focalMaxMm: camera.focalLengthMm.max,
         // Start at the widest end of the lens: the most coverage for the entrance.
         focalDefaultMm: camera.focalLengthMm.min,
+        lens: camera.lens || "rectilinear",
+        fovDeg: camera.fovDeg || null,
         resolutions: camera.resolutions.map((r) => ({ label: r.label + " - " + r.w + " x " + r.h, w: r.w, h: r.h })),
         defaultResolution: first.w + "x" + first.h
       };
     }
 
-    const STATUS_LABEL = { best: "Best", acceptable: "Acceptable", out_of_range: "Out of range" };
+
+    const I18N = {
+      en: {
+        subtitle: "Geometry console", viewTabs: "View", visualizer: "Visualizer", ruleTable: "Rule table", language: "Language",
+        placementControls: "Placement controls", scene: "Scene", rulesVersion: "rules {version}",
+        cameraPreset: "Camera preset", optics: "optics", geometry: "Geometry", dragOrType: "drag or type",
+        solveFor: "Solve for", manual: "Manual", distance: "Distance", height: "Height",
+        mountingHeight: "Mounting height", solved: "solved", countingDistance: "Counting line distance",
+        recommendedDistance: "recommended distance", useRecommended: "Use recommended distance",
+        entranceWidth: "Entrance width", none: "none",
+        entranceHint: "Optional. Width of the door or entrance people pass through, checked against what the camera covers at the counting line.",
+        advancedOptics: "Advanced optics", tiltAngle: "Tilt angle", recommended: "Recommended", level: "level", down: "down",
+        tiltHint: "Ceiling fisheye: always 90 deg, straight down.", sensorFormat: "Sensor format", presetBadge: "preset",
+        focalLength: "Focal length", resolution: "Resolution",
+        placementVerdict: "Placement verdict", copyReadings: "Copy readings", countingLine: "Counting line", verdictTag: "verdict",
+        feetAngle: "feet angle", bands: "bands", bandBest: "best", bandOk: "ok", faceLine: "Face line", demographics: "demographics",
+        distanceMeta: "distance", faceAngle: "face angle", sideView: "Side view", feetWindow: "Feet distance window",
+        okFeet: "ok feet", bestFeet: "best feet", viewTop: "Top", viewCamera: "Camera", viewSim: "Simulate",
+        titleTop: "Top view", titleCamera: "Camera view", titleSim: "Simulation",
+        in: "In", out: "Out", faces: "Faces", passers: "Passers-by, not counted", crossTraffic: "Cross traffic",
+        crossTitle: "People also walk left to right across the view, without crossing the counting line",
+        pause: "Pause", play: "Play", reset: "Reset",
+        simNote: "Simulated people through this camera. Counts come from the simulation, not real traffic.",
+        simFallback: "The 3D simulation could not load. It needs an internet connection; Top and Camera still work.",
+        linesOnFloor: "Lines on the floor", countingLineLower: "counting line", faceLineLower: "face line",
+        opticsFov: "Optics - field of view", horizontalFov: "horizontal FOV", verticalFov: "vertical FOV",
+        coverageAtLine: "Coverage at counting line", fullWidth: "full width", effective80: "effective 80%",
+        resolutionDensity: "Resolution density", horizontalPpm: "horizontal PPM", verticalPpm: "vertical PPM",
+        lookupTable: "Lookup table", copyCsv: "Copy CSV", thHeight: "Height", thFeetAngle: "Feet angle", feet: "Feet",
+        thFaceThere: "Face there", thFace: "Face",
+        tipTitle: "Why the counting line decides",
+        tipBody: "The feet angle at the counting line drives reliable people counting, so it alone decides the verdict. Demographics use a separate face line where the face angle is best; it never fails a placement.",
+        status_best: "Best", status_acceptable: "Acceptable", status_out_of_range: "Out of range",
+        visible: "Visible", notVisible: "Not visible",
+        headline: "Placement is {status}",
+        cutOff: "The person at the counting line is cut off in the frame. Adjust tilt or use a shorter focal length.",
+        onTarget: "On the recommended distance for {scene}.",
+        moveLine: "Move the counting line {delta} m {direction}, to {target} m.", farther: "farther", closer: "closer",
+        heightWarn: "{height} m is outside the {scene} height range ({min}-{max} m). Judged anyway.",
+        countFramed: "Whole person in frame. Target {target} deg.", countCut: "The person here is cut off in the frame.",
+        faceBelow: "The camera is not above the {face} m face point.",
+        faceOutsideTilt: "Outside the frame. A tilt between {lo} and {hi} deg shows both lines.",
+        faceOutsideNoTilt: "Outside the frame, and no single tilt shows both lines. Use a shorter focal length.",
+        faceOutsideFisheye: "Outside the fisheye's view.",
+        faceSame: "Face is already best at the counting line, so both lines are the same.",
+        faceBeyond: "{gap} m beyond the counting line. Demographics only; never fails the placement.",
+        faceInFront: "{gap} m in front of the counting line. Demographics only; never fails the placement.",
+        entranceTooWide: "Entrance {width} m is wider than the {covered} m the camera covers at the counting line; {miss} m is out of view. Mount higher, use a shorter focal length, or add a camera.",
+        entranceTight: "Entrance {width} m fits the {covered} m view, but its edges fall in the outer 20% of the frame where detection is weaker.",
+        entranceCovered: "Entrance {width} m is fully in view: the camera covers {covered} m at the counting line.",
+        sideFeet: "Feet: {status}, {angle} deg", sideFace: "Face line: {distance}, {state}",
+        sideTilt: "Tilt: {tilt} deg {mode} / FOV {fov} deg", tiltManual: "manual", tiltRecommended: "recommended", tiltFisheye: "ceiling fisheye",
+        canvasCamera: "Camera", canvasHead: "head", canvasFace: "face", canvasFeetAngle: "feet {angle} deg", canvasFaceAngle: "face {angle} deg",
+        canvasAim: "{height} m aim", cameraBelow: "camera", entranceLabel: "entrance", effectiveShort: "effective",
+        effectiveCircle: "effective 80% circle",
+        faceAbove: "Face line is above the frame", framedNote: "Whole person in frame at the counting line",
+        cutOffNote: "Person cut off at the counting line", fisheyeNote: "Ceiling fisheye, looking straight down",
+        simCountingLine: "counting line", simFaceLine: "face line", simFace: "face", simIn: "IN", simOut: "OUT",
+        simOutsideFrame: "Counting line is outside the frame", simEffective: "effective 80%",
+        tableMeta: "{scene}, {min}-{max} m in {step} m steps, rules {version}",
+        copiedReadings: "Readings copied.", copiedCsv: "CSV copied.",
+        copyBlocked: "Copy was blocked by the browser.", copyUnavailable: "Copy is not available in this browser.",
+        readingsHead: "{scene}, mount height {height} m, {camera} at {focal} mm",
+        readingsVerdict: "Verdict: {status} (feet angle {angle} deg)",
+        readingsCounting: "Counting line: {distance} m from below the camera",
+        readingsFace: "Face line: {distance} ({state})", readingsTilt: "Tilt: {tilt} deg down",
+        readingsEntrance: "Entrance: {text}", readingsRules: "Rules {version}",
+        sideAria: "Side elevation. Camera height {height} meters, counting line at {distance} meters, feet angle {angle} degrees, {status}.",
+        topAria: "Top-down coverage. Width {width} meters at the counting line.", cameraAria: "Camera view at {tilt} degrees tilt.",
+        announce: "Placement is {status}. Feet {feet}. Face line {face}. Counting line {distance} meters.",
+        noPresetCustom: "No preset - custom",
+        scene_open_door: "Open door", scene_corridor: "Corridor",
+        sceneDesc_open_door: "People can also walk across the front of the counted doorway, e.g. a store entrance.",
+        sceneDesc_corridor: "People can only move in one direction through the view, e.g. a mall entrance or an escalator."
+      },
+      th: {
+        subtitle: "เครื่องมือคำนวณตำแหน่งกล้อง", viewTabs: "มุมมอง", visualizer: "แผนภาพ", ruleTable: "ตารางกฎ", language: "ภาษา",
+        placementControls: "ตั้งค่าตำแหน่ง", scene: "ลักษณะพื้นที่", rulesVersion: "กฎ {version}",
+        cameraPreset: "รุ่นกล้อง", optics: "เลนส์", geometry: "ความสูงและระยะ", dragOrType: "ลากหรือพิมพ์",
+        solveFor: "คำนวณ", manual: "กำหนดเอง", distance: "ระยะ", height: "ความสูง",
+        mountingHeight: "ความสูงติดตั้ง", solved: "คำนวณให้", countingDistance: "ระยะเส้นนับ",
+        recommendedDistance: "ระยะที่แนะนำ", useRecommended: "ใช้ระยะที่แนะนำ",
+        entranceWidth: "ความกว้างทางเข้า", none: "ไม่มี",
+        entranceHint: "ไม่บังคับ ความกว้างของประตูหรือทางเข้าที่คนเดินผ่าน ใช้ตรวจว่ากล้องมองเห็นครบที่เส้นนับหรือไม่",
+        advancedOptics: "ตั้งค่าเลนส์ขั้นสูง", tiltAngle: "มุมก้ม", recommended: "ค่าแนะนำ", level: "ระดับ", down: "ก้มลง",
+        tiltHint: "ฟิชอายติดเพดาน: ก้ม 90 deg ตรงลงเสมอ", sensorFormat: "ขนาดเซนเซอร์", presetBadge: "ตามรุ่น",
+        focalLength: "ความยาวโฟกัส", resolution: "ความละเอียด",
+        placementVerdict: "ผลการประเมิน", copyReadings: "คัดลอกค่า", countingLine: "เส้นนับ", verdictTag: "ตัดสินผล",
+        feetAngle: "มุมเท้า", bands: "ช่วงมุม", bandBest: "ดีสุด", bandOk: "พอใช้", faceLine: "เส้นจับใบหน้า", demographics: "ข้อมูลเพศ/อายุ",
+        distanceMeta: "ระยะ", faceAngle: "มุมใบหน้า", sideView: "มุมมองด้านข้าง", feetWindow: "ช่วงระยะตามมุมเท้า",
+        okFeet: "พอใช้", bestFeet: "ดีที่สุด", viewTop: "บน", viewCamera: "กล้อง", viewSim: "จำลอง",
+        titleTop: "มุมมองจากด้านบน", titleCamera: "ภาพจากกล้อง", titleSim: "การจำลอง",
+        in: "เข้า", out: "ออก", faces: "ใบหน้า", passers: "คนเดินผ่าน (ไม่นับ)", crossTraffic: "คนเดินตัดผ่าน",
+        crossTitle: "ให้มีคนเดินซ้ายไปขวาผ่านภาพด้วย โดยไม่ข้ามเส้นนับ",
+        pause: "หยุด", play: "เล่น", reset: "เริ่มใหม่",
+        simNote: "คนจำลองที่มองผ่านกล้องนี้ ตัวเลขมาจากการจำลอง ไม่ใช่การนับจริง",
+        simFallback: "โหลดการจำลอง 3 มิติไม่ได้ ต้องใช้อินเทอร์เน็ต มุมมองด้านบนและภาพจากกล้องยังใช้ได้",
+        linesOnFloor: "เส้นบนพื้น", countingLineLower: "เส้นนับ", faceLineLower: "เส้นจับใบหน้า",
+        opticsFov: "เลนส์ - มุมรับภาพ", horizontalFov: "มุมรับภาพแนวนอน", verticalFov: "มุมรับภาพแนวตั้ง",
+        coverageAtLine: "ความกว้างที่เส้นนับ", fullWidth: "กว้างทั้งหมด", effective80: "ใช้งานได้ 80%",
+        resolutionDensity: "ความละเอียดต่อเมตร", horizontalPpm: "PPM แนวนอน", verticalPpm: "PPM แนวตั้ง",
+        lookupTable: "ตารางค้นหา", copyCsv: "คัดลอก CSV", thHeight: "ความสูง", thFeetAngle: "มุมเท้า", feet: "เท้า",
+        thFaceThere: "มุมใบหน้าที่เส้นนับ", thFace: "ใบหน้า",
+        tipTitle: "ทำไมเส้นนับเป็นตัวตัดสินผล",
+        tipBody: "มุมเท้าที่เส้นนับคือสิ่งที่ทำให้นับคนได้แม่นยำ จึงใช้ตัดสินผลเพียงอย่างเดียว ข้อมูลเพศ/อายุใช้เส้นจับใบหน้าแยกต่างหาก ณ จุดที่มุมใบหน้าดีที่สุด และไม่ทำให้ตำแหน่งไม่ผ่าน",
+        status_best: "ดีที่สุด", status_acceptable: "พอใช้", status_out_of_range: "เกินเกณฑ์",
+        visible: "มองเห็น", notVisible: "มองไม่เห็น",
+        headline: "ตำแหน่งนี้: {status}",
+        cutOff: "คนที่เส้นนับอยู่ไม่ครบในภาพ ปรับมุมก้มหรือใช้ความยาวโฟกัสสั้นลง",
+        onTarget: "อยู่ที่ระยะแนะนำของ{scene}แล้ว",
+        moveLine: "ขยับเส้นนับ{direction} {delta} m ไปที่ {target} m", farther: "ออกไป", closer: "เข้ามา",
+        heightWarn: "{height} m อยู่นอกช่วงความสูงของ{scene} ({min}-{max} m) แต่ยังประเมินให้",
+        countFramed: "เห็นคนทั้งตัวในภาพ มุมเป้าหมาย {target} deg", countCut: "คนที่ตำแหน่งนี้อยู่ไม่ครบในภาพ",
+        faceBelow: "กล้องไม่ได้อยู่สูงกว่าระดับใบหน้า {face} m",
+        faceOutsideTilt: "อยู่นอกภาพ ตั้งมุมก้มระหว่าง {lo} ถึง {hi} deg จะเห็นทั้งสองเส้น",
+        faceOutsideNoTilt: "อยู่นอกภาพ และไม่มีมุมก้มใดที่เห็นทั้งสองเส้น ใช้ความยาวโฟกัสสั้นลง",
+        faceOutsideFisheye: "อยู่นอกมุมรับภาพของฟิชอาย",
+        faceSame: "มุมใบหน้าที่เส้นนับดีที่สุดอยู่แล้ว ทั้งสองเส้นจึงเป็นเส้นเดียวกัน",
+        faceBeyond: "อยู่ถัดจากเส้นนับออกไป {gap} m ใช้เก็บข้อมูลเพศ/อายุเท่านั้น ไม่ทำให้ตำแหน่งไม่ผ่าน",
+        faceInFront: "อยู่ก่อนถึงเส้นนับ {gap} m ใช้เก็บข้อมูลเพศ/อายุเท่านั้น ไม่ทำให้ตำแหน่งไม่ผ่าน",
+        entranceTooWide: "ทางเข้า {width} m กว้างกว่าที่กล้องมองเห็นที่เส้นนับ ({covered} m) ขาดไป {miss} m ติดตั้งให้สูงขึ้น ใช้ความยาวโฟกัสสั้นลง หรือเพิ่มกล้อง",
+        entranceTight: "ทางเข้า {width} m อยู่ในภาพ ({covered} m) แต่ขอบทางเข้าอยู่ในช่วง 20% ริมภาพซึ่งตรวจจับได้ไม่ดี",
+        entranceCovered: "ทางเข้า {width} m อยู่ในภาพครบ กล้องมองเห็นกว้าง {covered} m ที่เส้นนับ",
+        sideFeet: "เท้า: {status}, {angle} deg", sideFace: "เส้นจับใบหน้า: {distance}, {state}",
+        sideTilt: "มุมก้ม: {tilt} deg {mode} / FOV {fov} deg", tiltManual: "กำหนดเอง", tiltRecommended: "ค่าแนะนำ", tiltFisheye: "ฟิชอายติดเพดาน",
+        canvasCamera: "กล้อง", canvasHead: "ศีรษะ", canvasFace: "ใบหน้า", canvasFeetAngle: "เท้า {angle} deg", canvasFaceAngle: "ใบหน้า {angle} deg",
+        canvasAim: "จุดเล็ง {height} m", cameraBelow: "กล้อง", entranceLabel: "ทางเข้า", effectiveShort: "ใช้งานได้",
+        effectiveCircle: "วงใช้งานได้ 80%",
+        faceAbove: "เส้นจับใบหน้าอยู่เหนือภาพ", framedNote: "เห็นคนทั้งตัวที่เส้นนับ",
+        cutOffNote: "คนที่เส้นนับอยู่ไม่ครบในภาพ", fisheyeNote: "ฟิชอายติดเพดาน มองตรงลง",
+        simCountingLine: "เส้นนับ", simFaceLine: "เส้นจับใบหน้า", simFace: "ใบหน้า", simIn: "เข้า", simOut: "ออก",
+        simOutsideFrame: "เส้นนับอยู่นอกภาพ", simEffective: "ใช้งานได้ 80%",
+        tableMeta: "{scene} ความสูง {min}-{max} m ทีละ {step} m กฎ {version}",
+        copiedReadings: "คัดลอกค่าแล้ว", copiedCsv: "คัดลอก CSV แล้ว",
+        copyBlocked: "เบราว์เซอร์ไม่อนุญาตให้คัดลอก", copyUnavailable: "เบราว์เซอร์นี้คัดลอกไม่ได้",
+        readingsHead: "{scene} ความสูงติดตั้ง {height} m กล้อง {camera} {focal} mm",
+        readingsVerdict: "ผล: {status} (มุมเท้า {angle} deg)",
+        readingsCounting: "เส้นนับ: {distance} m จากจุดใต้กล้อง",
+        readingsFace: "เส้นจับใบหน้า: {distance} ({state})", readingsTilt: "มุมก้ม: {tilt} deg",
+        readingsEntrance: "ทางเข้า: {text}", readingsRules: "กฎ {version}",
+        sideAria: "ภาพด้านข้าง กล้องสูง {height} เมตร เส้นนับห่าง {distance} เมตร มุมเท้า {angle} องศา {status}",
+        topAria: "มุมมองจากด้านบน กว้าง {width} เมตรที่เส้นนับ", cameraAria: "ภาพจากกล้องที่มุมก้ม {tilt} องศา",
+        announce: "ผล {status} เท้า {feet} เส้นจับใบหน้า {face} เส้นนับ {distance} เมตร",
+        noPresetCustom: "ไม่ใช้รุ่น - กำหนดเอง",
+        scene_open_door: "ประตูเปิด", scene_corridor: "ทางเดิน",
+        sceneDesc_open_door: "มีคนเดินตัดผ่านหน้าประตูที่นับได้ด้วย เช่น ทางเข้าร้านค้า",
+        sceneDesc_corridor: "คนเดินผ่านภาพได้ทางเดียว ไม่มีคนเดินตัดผ่าน เช่น ทางเข้าห้าง หรือบันไดเลื่อน",
+        camDesc_custom: "กำหนดเอง ปรับขนาดเซนเซอร์ ความยาวโฟกัส และความละเอียดได้",
+        camDesc_dahua_hdbw2531r_zs_s2: "โดม 5 MP เซนเซอร์ 1/2.7 นิ้ว เลนส์ซูมมอเตอร์ 2.7-13.5 mm",
+        camDesc_generic_bullet_2mp: "เลนส์ตายตัว 2.8 mm เซนเซอร์ระดับ 1/2.8 นิ้ว",
+        camDesc_generic_dome_4mp: "เลนส์ตายตัว 2.8 mm",
+        camDesc_generic_varifocal_4mp: "เลนส์ปรับระยะได้ เซนเซอร์ระดับ 1/2 นิ้ว",
+        camDesc_generic_fisheye_12mp: "ติดเพดาน มองตรงลง เลนส์ฟิชอาย 180° ภาพวงกลม 2992 × 2992",
+        camDesc_generic_box_12mp: "เลนส์ 8 mm เซนเซอร์ระดับ 1/1.2 นิ้ว"
+      }
+    };
+
+    // Saved choice first, then the browser's language, then English.
+    let lang = (() => {
+      try {
+        const saved = window.localStorage.getItem("cpl-lang");
+        if (saved === "en" || saved === "th") return saved;
+      } catch (error) {
+        // Storage can be blocked; the browser language still decides.
+      }
+      return (navigator.language || "").toLowerCase().startsWith("th") ? "th" : "en";
+    })();
+
+    function t(key, vars) {
+      const table = I18N[lang] || I18N.en;
+      let text = key in table ? table[key] : key in I18N.en ? I18N.en[key] : key;
+      if (vars) Object.keys(vars).forEach((name) => { text = text.split("{" + name + "}").join(String(vars[name])); });
+      return text;
+    }
+
+    // Existing STATUS_LABEL[status] call sites read the current language.
+    const STATUS_LABEL = {
+      get best() { return t("status_best"); },
+      get acceptable() { return t("status_acceptable"); },
+      get out_of_range() { return t("status_out_of_range"); }
+    };
+
+    function sceneName(profile) {
+      return I18N.en["scene_" + profile.id] ? t("scene_" + profile.id) : profile.name;
+    }
+
+    function sceneDesc(profile) {
+      return I18N.en["sceneDesc_" + profile.id] ? t("sceneDesc_" + profile.id) : profile.description;
+    }
+
+    function cameraCaption(id, preset) {
+      const key = "camDesc_" + id;
+      return lang !== "en" && I18N[lang][key] ? I18N[lang][key] : preset.caption;
+    }
+
+    function applyStaticText() {
+      document.documentElement.lang = lang;
+      document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
+      document.querySelectorAll("[data-i18n-attr]").forEach((el) => {
+        el.dataset.i18nAttr.split(";").forEach((pair) => {
+          const parts = pair.split(":");
+          el.setAttribute(parts[0], t(parts[1]));
+        });
+      });
+      document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+    }
+
 
     function themeColor(name) {
       return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -2430,8 +2637,8 @@ ${engineSource}
       heightField: byId("heightField"), heightRange: byId("heightRange"), heightInput: byId("heightInput"),
       distanceField: byId("distanceField"), distanceRange: byId("distanceRange"), distanceInput: byId("distanceInput"),
       distanceMaxTick: byId("distanceMaxTick"),
-      depthInput: byId("depthInput"), entranceInput: byId("entranceInput"), entranceLine: byId("entranceLine"),
-      tiltRange: byId("tiltRange"), tiltInput: byId("tiltInput"), tiltAuto: byId("tiltAuto"),
+      entranceInput: byId("entranceInput"), entranceLine: byId("entranceLine"),
+      tiltRange: byId("tiltRange"), tiltHint: byId("tiltHint"), tiltInput: byId("tiltInput"), tiltAuto: byId("tiltAuto"),
       sensorField: byId("sensorField"), sensorSelect: byId("sensorSelect"),
       focalRange: byId("focalRange"), focalInput: byId("focalInput"), focalMinTick: byId("focalMinTick"), focalMaxTick: byId("focalMaxTick"),
       resolutionSelect: byId("resolutionSelect"),
@@ -2471,6 +2678,7 @@ ${engineSource}
       acceptable: toRgb(themeColor("--ok")),
       out_of_range: toRgb(themeColor("--bad")),
       face: toRgb(themeColor("--face")),
+      out: toRgb(themeColor("--accent")),
       bad: toRgb(themeColor("--bad"))
     };
 
@@ -2485,22 +2693,28 @@ ${engineSource}
         aspect: p.resolution.w / p.resolution.h,
         faceLineDistanceM: r.faceLine.distanceM,
         faceLineVisible: r.faceLine.visible,
-        depthM: state.depthM,
         entranceWidthM: state.entranceM,
         coverageWidthM: r.optics.coverageWidthM,
         humanHeightM: p.profile.humanHeightM,
         facePointM: p.profile.facePointM,
-        resolutionW: p.resolution.w,
-        hFovDeg: r.optics.horizontalFovDeg,
-        colors: { count: SIM_COLORS[r.feet.status], face: SIM_COLORS.face, bad: SIM_COLORS.bad }
+        lens: r.optics.lens,
+        fovDeg: r.optics.horizontalFovDeg,
+        pixelDensity: (distance, offAxisDeg) => pixelDensity(p.camera, distance, offAxisDeg),
+        fisheyeProjection: (offset) => fisheyeProjection(offset, r.optics.horizontalFovDeg),
+        colors: { count: SIM_COLORS[r.feet.status], out: SIM_COLORS.out, face: SIM_COLORS.face, bad: SIM_COLORS.bad },
+        text: {
+          countingLine: t("simCountingLine"), faceLine: t("simFaceLine"), face: t("simFace"),
+          in: t("simIn"), out: t("simOut"), outsideFrame: t("simOutsideFrame"), effective: t("simEffective"),
+          pause: t("pause"), play: t("play")
+        }
       };
     }
 
     const state = {
       profileId: RULES.defaultProfile,
       solveMode: "distance",
-      depthM: null,
-      entranceM: null,
+      entranceM: 5,
+      presetId: CAMERA_CATALOG.defaultCamera,
       topView: "sim",
       tiltUserAdjusted: false,
       tableProfileId: null,
@@ -2515,7 +2729,7 @@ ${engineSource}
     }
 
     function fmt(value, decimals, suffix) {
-      if (value === null || value === undefined || Number.isNaN(value)) return "none";
+      if (value === null || value === undefined || Number.isNaN(value)) return t("none");
       return Number(value).toFixed(decimals) + (suffix || "");
     }
 
@@ -2571,14 +2785,16 @@ ${engineSource}
       const distanceM = Number(els.distanceInput.value);
       const sensor = selectedSensor();
       const resolution = selectedResolution();
-      const camera = { sensorWidthMm: sensor.widthMm, focalLengthMm: Number(els.focalInput.value), resolution: resolution };
+      const preset = presetFor(state.presetId);
+      const camera = preset.lens === "fisheye"
+        ? { lens: "fisheye", fovDeg: preset.fovDeg, resolution: resolution }
+        : { sensorWidthMm: sensor.widthMm, focalLengthMm: Number(els.focalInput.value), resolution: resolution };
       const result = evaluatePlacement({
         profile: profile,
         heightM: heightM,
         distanceM: distanceM,
         camera: camera,
         tiltDeg: state.tiltUserAdjusted ? Number(els.tiltInput.value) : undefined,
-        availableDepthM: state.depthM === null ? undefined : state.depthM,
         entranceWidthM: state.entranceM === null ? undefined : state.entranceM
       });
       return { profile: profile, heightM: heightM, distanceM: distanceM, camera: camera, resolution: resolution, result: result };
@@ -2587,41 +2803,39 @@ ${engineSource}
     function faceLineCopy(p) {
       const fl = p.result.faceLine;
       const vFov = p.result.optics.verticalFovDeg;
-      if (fl.reason === "camera_below_face_point") return { visible: false, label: "Not visible", note: "The camera is not above the " + fmt(p.profile.facePointM, 2) + " m face point." };
-      if (fl.reason === "beyond_available_depth") return { visible: false, label: "Not visible", note: "Needs " + fmt(fl.distanceM, 2) + " m of floor; the site has " + fmt(state.depthM, 2) + " m. Mount lower to bring it closer." };
+      if (fl.reason === "camera_below_face_point") return { visible: false, label: t("notVisible"), note: t("faceBelow", { face: fmt(p.profile.facePointM, 2) }) };
       if (fl.reason === "outside_frame") {
+        if (p.result.optics.lens === "fisheye") return { visible: false, label: t("notVisible"), note: t("faceOutsideFisheye") };
         const lo = Math.max(0, p.result.feet.angleDeg - vFov / 2);
         const hi = Math.min(fl.angleDeg + vFov / 2, p.result.countingLine.headAngleDeg + vFov / 2);
         return {
           visible: false,
-          label: "Not visible",
-          note: lo <= hi
-            ? "Outside the frame. A tilt between " + fmt(lo, 1) + " and " + fmt(hi, 1) + " deg shows both lines."
-            : "Outside the frame, and no single tilt shows both lines. Use a shorter focal length."
+          label: t("notVisible"),
+          note: lo <= hi ? t("faceOutsideTilt", { lo: fmt(lo, 1), hi: fmt(hi, 1) }) : t("faceOutsideNoTilt")
         };
       }
-      if (fl.coincides) return { visible: true, label: "Visible", note: "Face is already best at the counting line, so both lines are the same." };
+      if (fl.coincides) return { visible: true, label: t("visible"), note: t("faceSame") };
       const gap = fl.distanceM - p.distanceM;
-      return { visible: true, label: "Visible", note: fmt(Math.abs(gap), 2) + " m " + (gap > 0 ? "beyond" : "in front of") + " the counting line. Demographics only; never fails the placement." };
+      return { visible: true, label: t("visible"), note: t(gap > 0 ? "faceBeyond" : "faceInFront", { gap: fmt(Math.abs(gap), 2) }) };
     }
 
     function verdictCopy(p) {
       const r = p.result;
-      if (!r.countingLine.framed) return "The person at the counting line is cut off in the frame. Adjust tilt or use a shorter focal length.";
+      if (!r.countingLine.framed) return t("cutOff");
       const delta = r.countingLine.recommendedDistanceM - p.distanceM;
-      if (Math.abs(delta) < 0.01) return "On the recommended distance for " + p.profile.name + ".";
-      return "Move the counting line " + fmt(Math.abs(delta), 2) + " m " + (delta > 0 ? "farther" : "closer") + ", to " + fmt(r.countingLine.recommendedDistanceM, 2) + " m.";
+      if (Math.abs(delta) < 0.01) return t("onTarget", { scene: sceneName(p.profile) });
+      return t("moveLine", { delta: fmt(Math.abs(delta), 2), direction: t(delta > 0 ? "farther" : "closer"), target: fmt(r.countingLine.recommendedDistanceM, 2) });
     }
 
     // ---------- Controls ----------
     function populateScenes() {
-      els.sceneSeg.innerHTML = RULES.profiles.map((p) => '<button type="button" data-scene="' + p.id + '" aria-pressed="false">' + p.name + '</button>').join("");
-      els.sceneVersion.textContent = "rules " + RULES.version;
+      els.sceneSeg.innerHTML = RULES.profiles.map((p) => '<button type="button" data-scene="' + p.id + '" aria-pressed="false">' + sceneName(p) + '</button>').join("");
+      els.sceneVersion.textContent = t("rulesVersion", { version: RULES.version });
     }
 
     function populatePresets() {
       els.presetSelect.innerHTML = CAMERA_CATALOG.cameras.map((c) => '<option value="' + c.id + '">' + c.name + '</option>').join("") +
-        '<option value="custom">No preset - custom</option>';
+        '<option value="custom">' + t("noPresetCustom") + '</option>';
       els.sensorSelect.innerHTML = SENSOR_SIZES.map((s) => '<option value="' + s.id + '">' + s.label + '</option>').join("");
     }
 
@@ -2633,8 +2847,9 @@ ${engineSource}
     }
 
     function applyPreset(key) {
+      state.presetId = key;
       const preset = presetFor(key);
-      els.presetCaption.textContent = preset.caption;
+      els.presetCaption.textContent = cameraCaption(key, preset);
       els.sensorField.classList.toggle("locked", preset.sensorLocked);
       els.sensorSelect.disabled = preset.sensorLocked;
       [els.focalInput, els.focalRange].forEach((el) => { el.min = preset.focalMinMm; el.max = preset.focalMaxMm; });
@@ -2689,12 +2904,6 @@ ${engineSource}
       update();
     }
 
-    function setDepth(value) {
-      const depth = parseFloat(value);
-      state.depthM = value === "" || Number.isNaN(depth) || depth <= 0 ? null : depth;
-      update();
-    }
-
     function setEntrance(value) {
       const width = parseFloat(value);
       state.entranceM = value === "" || Number.isNaN(width) || width <= 0 ? null : width;
@@ -2702,14 +2911,10 @@ ${engineSource}
     }
 
     function entranceCopy(entrance, coverageWidthM) {
-      const covered = fmt(coverageWidthM, 1) + " m";
-      if (entrance.status === "too_wide") {
-        return "Entrance " + fmt(entrance.widthM, 2) + " m is wider than the " + covered + " the camera covers at the counting line; " + fmt(entrance.uncoveredM, 2) + " m is out of view. Mount higher, use a shorter focal length, or add a camera.";
-      }
-      if (entrance.status === "tight") {
-        return "Entrance " + fmt(entrance.widthM, 2) + " m fits the " + covered + " view, but its edges fall in the outer 20% of the frame where detection is weaker.";
-      }
-      return "Entrance " + fmt(entrance.widthM, 2) + " m is fully in view: the camera covers " + covered + " at the counting line.";
+      const vars = { width: fmt(entrance.widthM, 2), covered: fmt(coverageWidthM, 1), miss: fmt(entrance.uncoveredM, 2) };
+      if (entrance.status === "too_wide") return t("entranceTooWide", vars);
+      if (entrance.status === "tight") return t("entranceTight", vars);
+      return t("entranceCovered", vars);
     }
 
     function syncDistanceBounds(p) {
@@ -2752,11 +2957,11 @@ ${engineSource}
       const o = p.result.optics;
       const fl = p.result.faceLine;
       els.countingMetric.innerHTML = fmt(p.distanceM, 2) + "<small>m</small>";
-      els.faceLineMetric.innerHTML = fl.distanceM === null ? "none" : fmt(fl.distanceM, 2) + "<small>m</small>";
+      els.faceLineMetric.innerHTML = fl.distanceM === null ? t("none") : fmt(fl.distanceM, 2) + "<small>m</small>";
       els.horizontalFovMetric.innerHTML = fmt(o.horizontalFovDeg, 2) + "<small>deg</small>";
       els.verticalFovMetric.innerHTML = fmt(o.verticalFovDeg, 2) + "<small>deg</small>";
       els.fullWidthMetric.innerHTML = fmt(o.coverageWidthM, 1) + "<small>m</small>";
-      els.effectiveWidthMetric.innerHTML = fmt(o.coverageWidthM * 0.8, 1) + "<small>m</small>";
+      els.effectiveWidthMetric.innerHTML = fmt(o.effectiveWidthM, 1) + "<small>m</small>";
       els.horizontalPpmMetric.innerHTML = fmt(o.pixelsPerMetre, 0) + "<small>px/m</small>";
       els.verticalPpmMetric.innerHTML = fmt(verticalPpm, 0) + "<small>px/m</small>";
     }
@@ -2815,8 +3020,8 @@ ${engineSource}
       ctx.font = "10px JetBrains Mono, monospace";
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      ctx.fillText(fmt(profile.humanHeightM, 1) + " head", x + 12, headY - 6);
-      ctx.fillText(fmt(profile.facePointM, 1) + " face", x + 12, faceY);
+      ctx.fillText(fmt(profile.humanHeightM, 1) + " " + t("canvasHead"), x + 12, headY - 6);
+      ctx.fillText(fmt(profile.facePointM, 1) + " " + t("canvasFace"), x + 12, faceY);
     }
 
     function drawSide(p) {
@@ -2829,7 +3034,7 @@ ${engineSource}
       const padL = 60, padR = 70, padB = 58, padT = 40;
       const groundY = h - padB;
       const win = feetDistanceWindow(profile, heightM);
-      const maxX = Math.max(distanceM * 1.25, win.acceptableMax * 1.15, (fl.distanceM || 0) * 1.12, (state.depthM || 0) * 1.08, 6);
+      const maxX = Math.max(distanceM * 1.25, win.acceptableMax * 1.15, (fl.distanceM || 0) * 1.12, 6);
       const maxY = Math.max(heightM * 1.25, profile.humanHeightM, 4);
       const sx = (w - padL - padR) / maxX;
       const sy = (groundY - padT) / maxY;
@@ -2855,23 +3060,6 @@ ${engineSource}
         ctx.stroke();
         ctx.globalAlpha = 1;
         if (gx > 0) ctx.fillText(gx + "m", xFor(gx), groundY + 8);
-      }
-
-      if (state.depthM !== null) {
-        const wallX = xFor(state.depthM);
-        ctx.fillStyle = colorWithAlpha(COL.muted, "0.10");
-        ctx.fillRect(wallX, padT - 10, Math.max(0, w - padR + 10 - wallX), groundY - padT + 10);
-        ctx.strokeStyle = COL.muted;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(wallX, padT - 10);
-        ctx.lineTo(wallX, groundY);
-        ctx.stroke();
-        ctx.fillStyle = COL.ink;
-        ctx.font = "600 11px Inter, sans-serif";
-        ctx.textAlign = "right";
-        ctx.textBaseline = "top";
-        ctx.fillText("floor ends " + fmt(state.depthM, 2, " m"), wallX - 6, padT - 6);
       }
 
       ctx.strokeStyle = COL.muted;
@@ -2946,8 +3134,10 @@ ${engineSource}
       ctx.beginPath();
       ctx.moveTo(camX, camY);
       ctx.lineTo(upper.x, upper.y);
-      ctx.moveTo(camX, camY);
-      ctx.lineTo(lower.x, lower.y);
+      if (r.optics.lens !== "fisheye") {
+        ctx.moveTo(camX, camY);
+        ctx.lineTo(lower.x, lower.y);
+      }
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.strokeStyle = colorWithAlpha(COL.accent, "0.55");
@@ -3000,20 +3190,20 @@ ${engineSource}
           drawPerson(ctx, faceX, groundY, yFor, COL.face, profile, false);
           ctx.globalAlpha = 1;
           ctx.fillStyle = COL.face;
-          ctx.font = "700 12px Inter, sans-serif";
+          ctx.font = "700 12px Inter, 'Noto Sans Thai', sans-serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "bottom";
-          ctx.fillText("Face line", faceX, Math.max(22, yFor(profile.humanHeightM) - (crowded ? 30 : 14)));
+          ctx.fillText(t("faceLine"), faceX, Math.max(22, yFor(profile.humanHeightM) - (crowded ? 30 : 14)));
           ctx.font = "600 11px JetBrains Mono, monospace";
           ctx.textBaseline = "top";
           ctx.fillText(fmt(fl.distanceM, 2, " m"), faceX, groundY + 22);
         }
         ctx.globalAlpha = 1;
         ctx.fillStyle = COL.face;
-        ctx.font = "700 12px Inter, sans-serif";
+        ctx.font = "700 12px Inter, 'Noto Sans Thai', sans-serif";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.fillText("face " + fmt(fl.angleDeg, 1, " deg"), faceX + 12, faceY);
+        ctx.fillText(t("canvasFaceAngle", { angle: fmt(fl.angleDeg, 1) }), faceX + 12, faceY);
       }
 
       ctx.strokeStyle = feetColor;
@@ -3024,11 +3214,11 @@ ${engineSource}
       ctx.lineTo(subX, groundY);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.font = "700 12px Inter, sans-serif";
+      ctx.font = "700 12px Inter, 'Noto Sans Thai', sans-serif";
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
       ctx.fillStyle = feetColor;
-      ctx.fillText("feet " + fmt(r.feet.angleDeg, 1, " deg"), subX - 12, groundY - 6);
+      ctx.fillText(t("canvasFeetAngle", { angle: fmt(r.feet.angleDeg, 1) }), subX - 12, groundY - 6);
 
       drawPerson(ctx, subX, groundY, yFor, personColor, profile, !crowded);
 
@@ -3039,9 +3229,9 @@ ${engineSource}
         ctx.beginPath();
         ctx.arc(subX, aimY, 4.2, 0, Math.PI * 2);
         ctx.fill();
-        ctx.font = "600 12px Inter, sans-serif";
+        ctx.font = "600 12px Inter, 'Noto Sans Thai', sans-serif";
         ctx.textAlign = "left";
-        ctx.fillText(fmt(aimHeightM, 2, " m aim"), subX + 10, aimY - 8);
+        ctx.fillText(t("canvasAim", { height: fmt(aimHeightM, 2) }), subX + 10, aimY - 8);
       }
 
       ctx.fillStyle = COL.accent;
@@ -3066,14 +3256,15 @@ ${engineSource}
       ctx.textBaseline = "top";
       ctx.fillText(fmt(distanceM, 2, " m"), (camX + subX) / 2, groundY + 34);
 
-      ctx.font = "700 13px Inter, sans-serif";
+      ctx.font = "700 13px Inter, 'Noto Sans Thai', sans-serif";
       ctx.textBaseline = "bottom";
-      ctx.fillText("Camera", camX, Math.max(22, camY - 14));
+      ctx.fillText(t("canvasCamera"), camX, Math.max(22, camY - 14));
       ctx.fillStyle = personColor;
-      ctx.fillText("Counting line", subX, Math.max(22, yFor(profile.humanHeightM) - 14));
+      ctx.fillText(t("countingLine"), subX, Math.max(22, yFor(profile.humanHeightM) - 14));
     }
 
     function drawTop(p) {
+      if (p.result.optics.lens === "fisheye") { drawTopFisheye(p); return; }
       const fit = fitCanvas(els.topCanvas);
       if (!fit) return;
       const ctx = fit.ctx, w = fit.w, h = fit.h;
@@ -3168,10 +3359,10 @@ ${engineSource}
         ctx.lineTo(camX + entranceHalfPx, entranceY + 7);
         ctx.stroke();
         ctx.fillStyle = statusColor;
-        ctx.font = "600 11px Inter, sans-serif";
+        ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "bottom";
-        ctx.fillText("entrance " + fmt(r.entrance.widthM, 1, " m"), camX, entranceY - 8);
+        ctx.fillText(t("entranceLabel") + " " + fmt(r.entrance.widthM, 1, " m"), camX, entranceY - 8);
       }
       ctx.fillStyle = COL.ink;
       ctx.beginPath();
@@ -3184,20 +3375,21 @@ ${engineSource}
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
       ctx.font = "10px JetBrains Mono, monospace";
-      ctx.fillText("camera", camX, camY - 12);
+      ctx.fillText(t("cameraBelow"), camX, camY - 12);
       ctx.fillStyle = COL.ink;
       ctx.font = "700 12px JetBrains Mono, monospace";
       ctx.textBaseline = "top";
       ctx.fillText(fmt(o.coverageWidthM, 1, " m"), camX, subjectY + 8);
       ctx.fillStyle = COL.best;
-      ctx.fillText(fmt(o.coverageWidthM * 0.8, 1, " m") + " (80%)", camX, subjectY + 25);
+      ctx.fillText(fmt(o.effectiveWidthM, 1, " m") + " (80%)", camX, subjectY + 25);
       ctx.fillStyle = COL.muted;
-      ctx.font = "600 11px Inter, sans-serif";
-      ctx.fillText("counting line", camX, Math.min(bottomY - 18, subjectY + 47));
+      ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
+      ctx.fillText(t("countingLineLower"), camX, Math.min(bottomY - 18, subjectY + 47));
     }
 
     // What the camera sees: the frame at the current tilt, with both lines and a person on each.
     function drawCameraView(p) {
+      if (p.result.optics.lens === "fisheye") { drawCameraFisheye(p); return; }
       const fit = fitCanvas(els.topCanvas);
       if (!fit) return;
       const ctx = fit.ctx, w = fit.w, h = fit.h;
@@ -3260,11 +3452,159 @@ ${engineSource}
       roundRect(ctx, fx, fy, fw, fh, 10);
       ctx.stroke();
       ctx.fillStyle = COL.muted;
-      ctx.font = "600 11px Inter, sans-serif";
+      ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      const note = r.faceLine.reason === "outside_frame" ? "Face line is above the frame" : r.countingLine.framed ? "Whole person in frame at the counting line" : "Person cut off at the counting line";
+      const note = r.faceLine.reason === "outside_frame" ? t("faceAbove") : r.countingLine.framed ? t("framedNote") : t("cutOffNote");
       ctx.fillText(note, w / 2, fy + fh + 12);
+    }
+
+    // Plan of a ceiling fisheye: the camera in the middle, its effective circle, the lines and the entrance.
+    function drawTopFisheye(p) {
+      const fit = fitCanvas(els.topCanvas);
+      if (!fit) return;
+      const ctx = fit.ctx, w = fit.w, h = fit.h;
+      ctx.clearRect(0, 0, w, h);
+      const r = p.result, o = r.optics, heightM = p.heightM;
+      const effectiveRadiusM = heightM * Math.tan(toRad((o.horizontalFovDeg / 2) * 0.8));
+      const cx = w / 2, cy = h / 2 + 20;
+      const s = (Math.min(w, h - 60) / 2 - 16) / effectiveRadiusM;
+      const feetColor = r.feet.status === "best" ? COL.best : r.feet.status === "acceptable" ? COL.ok : COL.bad;
+      ctx.fillStyle = colorWithAlpha(COL.accent, "0.10");
+      ctx.beginPath();
+      ctx.arc(cx, cy, effectiveRadiusM * s, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = COL.best;
+      ctx.setLineDash([6, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const chord = (distance, widthM, color, lineWidth) => {
+        const y = cy - distance * s;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
+        ctx.moveTo(cx - (widthM / 2) * s, y);
+        ctx.lineTo(cx + (widthM / 2) * s, y);
+        ctx.stroke();
+        return y;
+      };
+      const countY = chord(p.distanceM, o.effectiveWidthM, feetColor, 3);
+      if (r.faceLine.distanceM !== null && !r.faceLine.coincides) {
+        const fl = r.faceLine.distanceM;
+        chord(fl, 2 * Math.sqrt(Math.max(0, effectiveRadiusM * effectiveRadiusM - fl * fl)), COL.face, 2);
+      }
+      if (r.entrance !== null) {
+        const statusColor = r.entrance.status === "covered" ? COL.best : r.entrance.status === "tight" ? COL.ok : COL.bad;
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = statusColor;
+        ctx.beginPath();
+        ctx.moveTo(cx - (r.entrance.widthM / 2) * s, countY - 12);
+        ctx.lineTo(cx + (r.entrance.widthM / 2) * s, countY - 12);
+        ctx.stroke();
+        ctx.fillStyle = statusColor;
+        ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(t("entranceLabel") + " " + fmt(r.entrance.widthM, 1, " m"), cx, countY - 18);
+      }
+      ctx.fillStyle = COL.accent;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = COL.muted;
+      ctx.font = "10px JetBrains Mono, monospace";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.fillText(t("cameraBelow"), cx, cy + 10);
+      ctx.fillStyle = COL.ink;
+      ctx.font = "700 12px JetBrains Mono, monospace";
+      ctx.textBaseline = "top";
+      ctx.fillText(fmt(o.effectiveWidthM, 1, " m") + " " + t("effectiveShort"), cx, 10);
+      ctx.fillStyle = COL.best;
+      ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
+      ctx.fillText(t("effectiveCircle"), cx, 28);
+    }
+
+    // A ceiling fisheye image: floor lines curve, people stand out from the centre.
+    function drawCameraFisheye(p) {
+      const fit = fitCanvas(els.topCanvas);
+      if (!fit) return;
+      const ctx = fit.ctx, w = fit.w, h = fit.h;
+      ctx.clearRect(0, 0, w, h);
+      const r = p.result, profile = p.profile, heightM = p.heightM, fov = r.optics.horizontalFovDeg;
+      const radius = Math.min(w - 32, h - 70) / 2;
+      const cx = w / 2, cy = 30 + radius;
+      const toImage = (x, y, z) => {
+        const f = fisheyeProjection({ x: x, y: y - heightM, z: z }, fov);
+        return { x: cx + f.u * radius, y: cy - f.v * radius, inside: f.inside };
+      };
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fillStyle = COL.surface2;
+      ctx.fill();
+      ctx.clip();
+      const curve = (z, color, width) => {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        let started = false;
+        for (let x = -30; x <= 30; x += 0.25) {
+          const pt = toImage(x, 0, z);
+          if (!started) { ctx.moveTo(pt.x, pt.y); started = true; } else ctx.lineTo(pt.x, pt.y);
+        }
+        ctx.stroke();
+      };
+      const far = Math.ceil(Math.max(p.distanceM, r.faceLine.distanceM || 0) * 2.5);
+      ctx.font = "10px JetBrains Mono, monospace";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "bottom";
+      let lastLabelY = Infinity;
+      for (let m = 1; m <= far; m += 1) {
+        curve(m, colorWithAlpha(COL.muted, "0.22"), 1);
+        const label = toImage(0, 0, m);
+        // Far lines crowd toward the image edge; label only those with room.
+        if (lastLabelY - label.y < 12) continue;
+        lastLabelY = label.y;
+        ctx.fillStyle = COL.faint;
+        ctx.fillText(m + " m", label.x + 4, label.y - 2);
+      }
+      const figure = (distance, color, alpha, width) => {
+        ctx.globalAlpha = alpha;
+        curve(distance, color, width);
+        const feet = toImage(0, 0, distance);
+        const head = toImage(0, profile.humanHeightM, distance);
+        ctx.strokeStyle = colorWithAlpha(color, "0.8");
+        ctx.lineCap = "round";
+        ctx.lineWidth = 10;
+        ctx.beginPath();
+        ctx.moveTo(feet.x, feet.y);
+        ctx.lineTo(head.x, head.y);
+        ctx.stroke();
+        ctx.lineCap = "butt";
+        ctx.globalAlpha = 1;
+      };
+      if (r.faceLine.distanceM !== null && !r.faceLine.coincides) figure(r.faceLine.distanceM, COL.face, r.faceLine.visible ? 1 : 0.5, 2);
+      const feetColor = r.feet.status === "best" ? COL.best : r.feet.status === "acceptable" ? COL.ok : COL.bad;
+      figure(p.distanceM, r.countingLine.framed ? feetColor : COL.bad, 1, 3);
+      ctx.restore();
+      ctx.strokeStyle = COL.best;
+      ctx.setLineDash([6, 4]);
+      ctx.lineWidth = 1.25;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius * 0.8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = COL.grid;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = COL.muted;
+      ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.fillText(r.countingLine.framed ? t("fisheyeNote") : t("cutOffNote"), w / 2, cy + radius + 12);
     }
 
     // ---------- Lookup table ----------
@@ -3275,7 +3615,7 @@ ${engineSource}
     function renderTable(p) {
       if (state.tableProfileId !== p.profile.id) {
         const rows = lookupRows(p.profile);
-        els.tableMeta.textContent = p.profile.name + ", " + fmt(p.profile.heightRangeM.min, 1) + "-" + fmt(p.profile.heightRangeM.max, 1) + " m in " + fmt(p.profile.heightRangeM.step, 1) + " m steps, rules " + RULES.version;
+        els.tableMeta.textContent = t("tableMeta", { scene: sceneName(p.profile), min: fmt(p.profile.heightRangeM.min, 1), max: fmt(p.profile.heightRangeM.max, 1), step: fmt(p.profile.heightRangeM.step, 1), version: RULES.version });
         els.lookupBody.innerHTML = rows.map((row) => {
           return '<tr data-height="' + row.heightM.toFixed(1) + '">' +
             "<td>" + fmt(row.heightM, 1, " m") + "</td>" +
@@ -3284,7 +3624,7 @@ ${engineSource}
             '<td><span class="table-pill ' + row.feetStatus + '">' + STATUS_LABEL[row.feetStatus] + "</span></td>" +
             "<td>" + fmt(row.faceAngleDeg, 2, " deg") + "</td>" +
             '<td><span class="table-pill ' + row.faceStatus + '">' + STATUS_LABEL[row.faceStatus] + "</span></td>" +
-            "<td>" + (row.faceLineDistanceM === null ? "none" : fmt(row.faceLineDistanceM, 2, " m")) + "</td>" +
+            "<td>" + (row.faceLineDistanceM === null ? t("none") : fmt(row.faceLineDistanceM, 2, " m")) + "</td>" +
             "</tr>";
         }).join("");
         state.tableProfileId = p.profile.id;
@@ -3305,8 +3645,8 @@ ${engineSource}
         els.copyStatus.textContent = message;
         window.setTimeout(() => { if (els.copyStatus.textContent === message) els.copyStatus.textContent = ""; }, 2400);
       };
-      if (!navigator.clipboard) { done("Copy is not available in this browser."); return; }
-      navigator.clipboard.writeText(text).then(() => done(okMessage)).catch(() => done("Copy was blocked by the browser."));
+      if (!navigator.clipboard) { done(t("copyUnavailable")); return; }
+      navigator.clipboard.writeText(text).then(() => done(okMessage)).catch(() => done(t("copyBlocked")));
     }
 
     function readingsText(p) {
@@ -3314,12 +3654,12 @@ ${engineSource}
       const face = faceLineCopy(p);
       const camera = els.presetSelect.options[els.presetSelect.selectedIndex].text;
       return [
-        p.profile.name + ", mount height " + fmt(p.heightM, 1) + " m, " + camera + " at " + fmt(Number(els.focalInput.value), 1) + " mm",
-        "Verdict: " + STATUS_LABEL[r.verdict] + " (feet angle " + fmt(r.feet.angleDeg, 1) + " deg)",
-        "Counting line: " + fmt(p.distanceM, 2) + " m from below the camera",
-        "Face line: " + (r.faceLine.distanceM === null ? "none" : fmt(r.faceLine.distanceM, 2) + " m") + " (" + face.label.toLowerCase() + ")",
-        "Tilt: " + fmt(r.tilt.value, 1) + " deg down"
-      ].concat(r.entrance === null ? [] : ["Entrance: " + entranceCopy(r.entrance, r.optics.coverageWidthM)], ["Rules " + RULES.version]).join("\\n");
+        t("readingsHead", { scene: sceneName(p.profile), height: fmt(p.heightM, 1), camera: camera, focal: fmt(Number(els.focalInput.value), 1) }),
+        t("readingsVerdict", { status: STATUS_LABEL[r.verdict], angle: fmt(r.feet.angleDeg, 1) }),
+        t("readingsCounting", { distance: fmt(p.distanceM, 2) }),
+        t("readingsFace", { distance: r.faceLine.distanceM === null ? t("none") : fmt(r.faceLine.distanceM, 2) + " m", state: face.label }),
+        t("readingsTilt", { tilt: fmt(r.tilt.value, 1) })
+      ].concat(r.entrance === null ? [] : [t("readingsEntrance", { text: entranceCopy(r.entrance, r.optics.coverageWidthM) })], [t("readingsRules", { version: RULES.version })]).join("\\n");
     }
 
     // ---------- Update ----------
@@ -3331,26 +3671,30 @@ ${engineSource}
       const r = p.result;
       const profile = p.profile;
 
-      if (!state.tiltUserAdjusted) setFieldValue(els.tiltInput, els.tiltRange, r.tilt.recommended, 1);
-      els.tiltAuto.setAttribute("aria-pressed", String(!state.tiltUserAdjusted));
+      const fisheye = r.optics.lens === "fisheye";
+      // A ceiling fisheye always looks straight down, so its tilt cannot be changed.
+      els.tiltInput.disabled = els.tiltRange.disabled = els.tiltAuto.disabled = fisheye;
+      els.tiltHint.hidden = !fisheye;
+      if (fisheye || !state.tiltUserAdjusted) setFieldValue(els.tiltInput, els.tiltRange, r.tilt.value, 1);
+      els.tiltAuto.setAttribute("aria-pressed", String(fisheye || !state.tiltUserAdjusted));
       syncDistanceBounds(p);
       [els.heightRange, els.distanceRange, els.tiltRange, els.focalRange].forEach(setRangeFill);
       document.querySelectorAll("[data-scene]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.scene === profile.id)));
-      els.sceneCaption.textContent = profile.description;
+      els.sceneCaption.textContent = sceneDesc(profile);
 
       const face = faceLineCopy(p);
       const verdictLabel = STATUS_LABEL[r.verdict];
       const visibleClass = face.visible ? "visible" : "not-visible";
       const resolution = p.resolution;
       const verticalSpanM = Math.max(0.001, 2 * Math.hypot(heightM, distanceM) * Math.tan(toRad(r.optics.verticalFovDeg / 2)));
-      const verticalPpm = resolution.h / verticalSpanM;
+      const verticalPpm = fisheye ? r.optics.pixelsPerMetre : resolution.h / verticalSpanM;
 
       els.verdict.dataset.state = r.verdict;
-      els.verdictHeadline.textContent = "Placement is " + verdictLabel.toLowerCase();
+      els.verdictHeadline.textContent = t("headline", { status: lang === "en" ? verdictLabel.toLowerCase() : verdictLabel });
       els.verdictSub.textContent = verdictCopy(p);
       const outside = r.warnings.indexOf("height_outside_range") >= 0;
       els.heightWarn.hidden = !outside;
-      els.heightWarn.textContent = outside ? fmt(heightM, 1) + " m is outside the " + profile.name + " height range (" + fmt(profile.heightRangeM.min, 1) + "-" + fmt(profile.heightRangeM.max, 1) + " m). Judged anyway." : "";
+      els.heightWarn.textContent = outside ? t("heightWarn", { height: fmt(heightM, 1), scene: sceneName(profile), min: fmt(profile.heightRangeM.min, 1), max: fmt(profile.heightRangeM.max, 1) }) : "";
       els.entranceLine.hidden = r.entrance === null;
       if (r.entrance !== null) {
         els.entranceLine.dataset.state = r.entrance.status;
@@ -3361,25 +3705,25 @@ ${engineSource}
 
       updateStatusElement(els.feetStatus, r.feet.status, STATUS_LABEL[r.feet.status]);
       els.feetAngle.innerHTML = fmt(r.feet.angleDeg, 2) + "<small>deg</small>";
-      els.feetBands.innerHTML = profile.feetAngleDeg.best.min + "-" + profile.feetAngleDeg.best.max + " <small>best</small> / " + profile.feetAngleDeg.acceptable.min + "-" + profile.feetAngleDeg.acceptable.max + " <small>ok</small>";
-      els.countNote.textContent = r.countingLine.framed ? "Whole person in frame. Target " + profile.feetAngleDeg.target + " deg." : "The person here is cut off in the frame.";
+      els.feetBands.innerHTML = profile.feetAngleDeg.best.min + "-" + profile.feetAngleDeg.best.max + " <small>" + t("bandBest") + "</small> / " + profile.feetAngleDeg.acceptable.min + "-" + profile.feetAngleDeg.acceptable.max + " <small>" + t("bandOk") + "</small>";
+      els.countNote.textContent = r.countingLine.framed ? t("countFramed", { target: profile.feetAngleDeg.target }) : t("countCut");
       updateStatusElement(els.faceStatus, visibleClass, face.label);
-      els.faceLineDistance.innerHTML = r.faceLine.distanceM === null ? "none" : fmt(r.faceLine.distanceM, 2) + "<small>m</small>";
-      els.faceAngle.innerHTML = r.faceLine.angleDeg === null ? "none" : fmt(r.faceLine.angleDeg, 1) + "<small>deg</small>";
+      els.faceLineDistance.innerHTML = r.faceLine.distanceM === null ? t("none") : fmt(r.faceLine.distanceM, 2) + "<small>m</small>";
+      els.faceAngle.innerHTML = r.faceLine.angleDeg === null ? t("none") : fmt(r.faceLine.angleDeg, 1) + "<small>deg</small>";
       els.faceNote.textContent = face.note;
 
-      els.stageBadge.textContent = profile.name;
-      els.sideFeetReading.textContent = "Feet: " + STATUS_LABEL[r.feet.status] + ", " + fmt(r.feet.angleDeg, 1, " deg");
+      els.stageBadge.textContent = sceneName(profile);
+      els.sideFeetReading.textContent = t("sideFeet", { status: STATUS_LABEL[r.feet.status], angle: fmt(r.feet.angleDeg, 1) });
       els.sideFeetReading.className = "reading-chip " + r.feet.status;
-      els.sideFaceReading.textContent = "Face line: " + (r.faceLine.distanceM === null ? "none" : fmt(r.faceLine.distanceM, 2, " m")) + ", " + face.label.toLowerCase();
+      els.sideFaceReading.textContent = t("sideFace", { distance: r.faceLine.distanceM === null ? t("none") : fmt(r.faceLine.distanceM, 2, " m"), state: face.label });
       els.sideFaceReading.className = "reading-chip " + (face.visible ? "face" : "not-visible");
-      els.sideTiltReading.textContent = "Tilt: " + fmt(r.tilt.value, 1, " deg") + (state.tiltUserAdjusted ? " manual" : " recommended") + " / FOV " + fmt(r.optics.verticalFovDeg, 1, " deg");
-      els.topTitle.textContent = { top: "Top view", camera: "Camera view", sim: "Simulation" }[state.topView];
+      els.sideTiltReading.textContent = t("sideTilt", { tilt: fmt(r.tilt.value, 1), mode: t(fisheye ? "tiltFisheye" : state.tiltUserAdjusted ? "tiltManual" : "tiltRecommended"), fov: fmt(r.optics.verticalFovDeg, 1) });
+      els.topTitle.textContent = t({ top: "titleTop", camera: "titleCamera", sim: "titleSim" }[state.topView]);
 
       updateRangeBar(p);
       updateMetrics(p, verticalPpm);
-      els.sideCanvas.setAttribute("aria-label", "Side elevation. Camera height " + fmt(heightM, 1, " meters") + ", counting line at " + fmt(distanceM, 2, " meters") + ", feet angle " + fmt(r.feet.angleDeg, 1, " degrees") + ", " + STATUS_LABEL[r.feet.status] + ". Face line " + (r.faceLine.distanceM === null ? "none" : "at " + fmt(r.faceLine.distanceM, 2, " meters") + ", " + face.label) + ".");
-      els.topCanvas.setAttribute("aria-label", state.topView === "top" ? "Top-down coverage. Width " + fmt(r.optics.coverageWidthM, 1, " meters") + " at the counting line." : "Camera view at " + fmt(r.tilt.value, 1, " degrees") + " tilt.");
+      els.sideCanvas.setAttribute("aria-label", t("sideAria", { height: fmt(heightM, 1), distance: fmt(distanceM, 2), angle: fmt(r.feet.angleDeg, 1), status: STATUS_LABEL[r.feet.status] }));
+      els.topCanvas.setAttribute("aria-label", state.topView === "top" ? t("topAria", { width: fmt(r.optics.coverageWidthM, 1) }) : t("cameraAria", { tilt: fmt(r.tilt.value, 1) }));
       drawSide(p);
       const simOn = state.topView === "sim";
       els.topCanvas.hidden = simOn;
@@ -3408,7 +3752,7 @@ ${engineSource}
       els.sbFace.className = visibleClass;
       els.sbDistance.textContent = fmt(distanceM, 2, " m");
 
-      const announcement = "Placement is " + verdictLabel.toLowerCase() + ". Feet " + STATUS_LABEL[r.feet.status] + ". Face line " + face.label + ". Counting line " + fmt(distanceM, 2, " meters") + ".";
+      const announcement = t("announce", { status: verdictLabel, feet: STATUS_LABEL[r.feet.status], face: face.label, distance: fmt(distanceM, 2) });
       window.clearTimeout(state.announceTimer);
       state.announceTimer = window.setTimeout(() => { els.placementAnnouncement.textContent = announcement; }, 240);
     }
@@ -3482,7 +3826,6 @@ ${engineSource}
     els.distanceRange.addEventListener("input", (event) => setDistance(event.target.value));
     els.distanceInput.addEventListener("input", (event) => setDistance(event.target.value));
     els.distanceInput.addEventListener("change", (event) => setDistance(event.target.value));
-    els.depthInput.addEventListener("input", (event) => setDepth(event.target.value));
     els.entranceInput.addEventListener("input", (event) => setEntrance(event.target.value));
     els.tiltRange.addEventListener("input", (event) => setTilt(event.target.value));
     els.tiltInput.addEventListener("input", (event) => setTilt(event.target.value));
@@ -3493,8 +3836,8 @@ ${engineSource}
     els.focalInput.addEventListener("input", (event) => { setFieldValue(els.focalInput, els.focalRange, event.target.value, 1); update(); });
     els.resolutionSelect.addEventListener("change", update);
     els.snapButton.addEventListener("click", () => setDistance(recommendedDistance(Number(els.heightInput.value), currentProfile())));
-    els.copyReadings.addEventListener("click", () => copyText(readingsText(currentPlacement()), "Readings copied."));
-    els.copyCsv.addEventListener("click", () => copyText(toCsv(lookupRows(currentProfile())), "CSV copied."));
+    els.copyReadings.addEventListener("click", () => copyText(readingsText(currentPlacement()), t("copiedReadings")));
+    els.copyCsv.addEventListener("click", () => copyText(toCsv(lookupRows(currentProfile())), t("copiedCsv")));
     els.lookupBody.addEventListener("click", (event) => {
       const row = event.target.closest("tr[data-height]");
       if (!row) return;
@@ -3551,12 +3894,34 @@ ${engineSource}
     els.sideCanvas.addEventListener("pointerup", endDrag);
     els.sideCanvas.addEventListener("pointercancel", endDrag);
 
+    // Switching language re-labels everything in place; inputs and the simulation keep their state.
+    function setLanguage(next) {
+      lang = next;
+      try {
+        window.localStorage.setItem("cpl-lang", next);
+      } catch (error) {
+        // The choice still applies for this visit.
+      }
+      applyStaticText();
+      populateScenes();
+      const presetValue = els.presetSelect.value;
+      const sensorValue = els.sensorSelect.value;
+      populatePresets();
+      els.presetSelect.value = presetValue;
+      els.sensorSelect.value = sensorValue;
+      els.presetCaption.textContent = cameraCaption(state.presetId, presetFor(state.presetId));
+      state.tableProfileId = null;
+      update();
+    }
+    document.querySelectorAll("[data-lang]").forEach((button) => button.addEventListener("click", () => setLanguage(button.dataset.lang)));
+
     // ---------- Start ----------
+    applyStaticText();
     populateScenes();
     populatePresets();
-    els.presetSelect.value = CAMERA_CATALOG.defaultCamera;
-    const startPreset = presetFor(CAMERA_CATALOG.defaultCamera);
-    els.presetCaption.textContent = startPreset.caption;
+    els.presetSelect.value = state.presetId;
+    const startPreset = presetFor(state.presetId);
+    els.presetCaption.textContent = cameraCaption(state.presetId, startPreset);
     els.sensorSelect.value = startPreset.sensorId;
     els.sensorSelect.disabled = startPreset.sensorLocked;
     els.sensorField.classList.toggle("locked", startPreset.sensorLocked);

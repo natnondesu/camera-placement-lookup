@@ -1,10 +1,10 @@
 # Camera Placement Rule Handoff
 
-How the placement rule works, for business stakeholders and engineers. Terms in **bold** are defined in [GLOSSARY.md](GLOSSARY.md); the two big decisions are recorded in [docs/adr](docs/adr).
+How the placement rule works, for business stakeholders and engineers. Terms in **bold** are defined in [GLOSSARY.md](GLOSSARY.md); the big decisions are recorded in [docs/adr](docs/adr).
 
 ## The rule in one paragraph
 
-A camera can watch more than one line. The **counting line** is where people are counted; it sits at the **recommended distance**, where the **feet angle** equals the scene's **target feet angle**. The **face line** is a separate line for demographics; it sits at the distance closest to the counting line where the **face angle** is Best. The **verdict** comes from the counting line only: its feet status, or Out of range if a whole person standing there is not in frame. The face line never fails a placement; it is either visible or **Not visible** (outside the frame, or beyond the measured **available depth**).
+A camera can watch more than one line. The **counting line** is where people are counted; it sits at the **recommended distance**, where the **feet angle** equals the scene's **target feet angle**. The **face line** is a separate line for demographics; it sits at the distance closest to the counting line where the **face angle** is Best. The **verdict** comes from the counting line only: its feet status, or Out of range if a whole person standing there is not in frame. The face line never fails a placement; it is either visible or **Not visible** (outside the frame). The **entrance width** (5 m unless entered) is checked against the width the camera covers at the counting line, without changing the verdict.
 
 ## Scene profiles
 
@@ -36,6 +36,8 @@ recommended tilt      = atan((H - human height / 2) / D)    aims at the middle o
 ```
 
 `H` is the camera height and `D` the horizontal distance from the point below the camera. Heights outside the profile's range are still judged, with a warning. The framing check uses the camera's vertical field of view (sensor width, focal length, resolution aspect) around the tilt.
+
+A **ceiling fisheye** looks straight down (tilt fixed at 90 deg) through an equidistant lens: the image radius grows in step with the angle from straight down. The same rule places its counting line; coverage at the line is the floor seen within 80 deg of straight down, effective coverage the floor inside 80% of the image radius, and pixel density follows the lens model.
 
 ## Where it lives
 

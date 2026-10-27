@@ -7,9 +7,11 @@
  *   feetAngleDeg: { target: number, best: Band, acceptable: Band },
  *   faceAngleDeg: { best: Band, acceptableMax: number }
  * }} SceneProfile
- * @typedef {{ sensorWidthMm: number, focalLengthMm: number, resolution: { w: number, h: number } }} CameraOptics
+ * @typedef {{ sensorWidthMm?: number, focalLengthMm?: number, resolution: { w: number, h: number },
+ *            lens?: "rectilinear" | "fisheye", fovDeg?: number }} CameraOptics
+ *   A fisheye is ceiling-mounted looking straight down, with an equidistant lens of fovDeg.
  * @typedef {"best" | "acceptable" | "out_of_range"} Status
- * @typedef {"outside_frame" | "beyond_available_depth" | "camera_below_face_point"} NotVisibleReason
+ * @typedef {"outside_frame" | "camera_below_face_point"} NotVisibleReason
  */
 
 const DEG = 180 / Math.PI;
@@ -92,79 +94,135 @@ export function recommendedTilt(heightM, countingDistanceM, profile) {
   return downwardAngle(heightM, profile.humanHeightM / 2, countingDistanceM);
 }
 
+const isFisheye = (camera) => camera.lens === "fisheye";
+// Detection is unreliable in the outer edge of the image, so only the middle 80% counts as fully covered.
+const EFFECTIVE_COVERAGE = 0.8;
+// Floor seen more than this far off a fisheye's axis is squeezed against the image circle's edge.
+const FISHEYE_MAX_OFF_AXIS_DEG = 80;
+
 /** @param {CameraOptics} camera @returns {number} */
 export function verticalFov(camera) {
+  if (isFisheye(camera)) return camera.fovDeg;
   const sensorHeightMm = camera.sensorWidthMm * (camera.resolution.h / camera.resolution.w);
   return 2 * Math.atan(sensorHeightMm / (2 * camera.focalLengthMm)) * DEG;
 }
 
 /** @param {CameraOptics} camera @returns {number} */
 export function horizontalFov(camera) {
+  if (isFisheye(camera)) return camera.fovDeg;
   return 2 * Math.atan(camera.sensorWidthMm / (2 * camera.focalLengthMm)) * DEG;
+}
+
+/**
+ * Horizontal pixel density at a point.
+ * @param {CameraOptics} camera
+ * @param {number} slantDistanceM straight-line distance from the camera
+ * @param {number} offAxisDeg angle between the point and the camera's optical axis
+ * @returns {number} pixels per metre
+ */
+export function pixelDensity(camera, slantDistanceM, offAxisDeg) {
+  if (isFisheye(camera)) {
+    // Equidistant lens: image radius grows linearly with the off-axis angle.
+    const pxPerRad = Math.min(camera.resolution.w, camera.resolution.h) / 2 / toRad(camera.fovDeg / 2);
+    const theta = toRad(offAxisDeg);
+    const stretch = theta < 1e-6 ? 1 : theta / Math.sin(theta);
+    return (pxPerRad * stretch) / slantDistanceM;
+  }
+  return camera.resolution.w / (2 * slantDistanceM * Math.tan(toRad(horizontalFov(camera) / 2)));
+}
+
+/**
+ * Where a point lands in a ceiling fisheye image that looks straight down, with forward (+z) at the top.
+ * @param {{ x: number, y: number, z: number }} offset point minus camera position (m)
+ * @param {number} fovDeg the lens's full field of view
+ * @returns {{ u: number, v: number, offAxisDeg: number, inside: boolean }} u, v in -1..1 across the image circle
+ */
+export function fisheyeProjection(offset, fovDeg) {
+  const length = Math.hypot(offset.x, offset.y, offset.z) || 1e-9;
+  const theta = Math.acos(Math.max(-1, Math.min(1, -offset.y / length)));
+  const phi = Math.atan2(offset.z, -offset.x);
+  const r = theta / toRad(fovDeg / 2);
+  return { u: r * Math.cos(phi), v: r * Math.sin(phi), offAxisDeg: theta * DEG, inside: r <= 1 };
+}
+
+// The floor width at the counting line inside a fisheye's view, out to maxOffAxisDeg from straight down.
+function fisheyeChord(heightM, distanceM, maxOffAxisDeg) {
+  const reach = heightM * Math.tan(toRad(Math.min(maxOffAxisDeg, FISHEYE_MAX_OFF_AXIS_DEG)));
+  return reach > distanceM ? 2 * Math.sqrt(reach * reach - distanceM * distanceM) : 0;
+}
+
+function coverageWidth(camera, heightM, distanceM) {
+  if (isFisheye(camera)) return fisheyeChord(heightM, distanceM, camera.fovDeg / 2);
+  return 2 * Math.hypot(heightM, distanceM) * Math.tan(toRad(horizontalFov(camera) / 2));
+}
+
+// Detection is unreliable at the edge of the image: the middle 80% of the width, or of a fisheye's radius.
+function effectiveWidth(camera, heightM, distanceM) {
+  if (isFisheye(camera)) return fisheyeChord(heightM, distanceM, (camera.fovDeg / 2) * EFFECTIVE_COVERAGE);
+  return coverageWidth(camera, heightM, distanceM) * EFFECTIVE_COVERAGE;
 }
 
 const inFrame = (angleDeg, tiltDeg, vFovDeg) =>
   angleDeg >= tiltDeg - vFovDeg / 2 && angleDeg <= tiltDeg + vFovDeg / 2;
 
-function judgeFaceLine({ profile, heightM, distanceM, tiltDeg, vFovDeg, availableDepthM }) {
+function judgeFaceLine({ profile, heightM, distanceM, tiltDeg, vFovDeg }) {
   const distance = faceLineDistance(heightM, distanceM, profile);
   if (distance === null) {
     return { distanceM: null, angleDeg: null, coincides: false, visible: false, reason: "camera_below_face_point" };
   }
   const angleDeg = faceAngle(heightM, distance, profile.facePointM);
   const base = { distanceM: distance, angleDeg, coincides: distance === round2(distanceM) };
-  if (availableDepthM != null && distance > availableDepthM) {
-    return { ...base, visible: false, reason: "beyond_available_depth" };
-  }
   if (!inFrame(angleDeg, tiltDeg, vFovDeg)) {
     return { ...base, visible: false, reason: "outside_frame" };
   }
   return { ...base, visible: true, reason: null };
 }
 
-// Detection is unreliable in the outer edge of the frame, so only the middle 80% counts as fully covered.
-const EFFECTIVE_COVERAGE = 0.8;
-
 /**
  * Whether an entrance of a given width fits the width the camera covers at the counting line.
  * @param {number} entranceWidthM
  * @param {number} coverageWidthM
+ * @param {number} [effectiveWidthM] the reliably covered part; the middle 80% when omitted
  * @returns {{ widthM: number, status: "covered" | "tight" | "too_wide", uncoveredM: number }}
  */
-export function entranceCoverage(entranceWidthM, coverageWidthM) {
+export function entranceCoverage(entranceWidthM, coverageWidthM, effectiveWidthM = coverageWidthM * EFFECTIVE_COVERAGE) {
   if (entranceWidthM > coverageWidthM) {
     return { widthM: entranceWidthM, status: "too_wide", uncoveredM: entranceWidthM - coverageWidthM };
   }
-  const status = entranceWidthM <= coverageWidthM * EFFECTIVE_COVERAGE ? "covered" : "tight";
+  const status = entranceWidthM <= effectiveWidthM ? "covered" : "tight";
   return { widthM: entranceWidthM, status, uncoveredM: 0 };
 }
 
 /**
  * Judges one placement: a camera at heightM with its counting line distanceM away.
  * @param {{ profile: SceneProfile, heightM: number, distanceM: number, camera: CameraOptics,
- *           tiltDeg?: number, availableDepthM?: number, entranceWidthM?: number }} placement
+ *           tiltDeg?: number, entranceWidthM?: number }} placement
  */
-export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg, availableDepthM, entranceWidthM }) {
+export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg, entranceWidthM }) {
+  const fisheye = isFisheye(camera);
   const feetAngleDeg = feetAngle(heightM, distanceM);
   const faceAngleDeg = faceAngle(heightM, distanceM, profile.facePointM);
   const feetStatus = judgeFeet(feetAngleDeg, profile);
-  const recommended = recommendedTilt(heightM, distanceM, profile);
-  const tilt = tiltDeg ?? recommended;
+  // A ceiling fisheye always looks straight down, so its tilt is fixed.
+  const recommended = fisheye ? 90 : recommendedTilt(heightM, distanceM, profile);
+  const tilt = fisheye ? 90 : tiltDeg ?? recommended;
   const vFovDeg = verticalFov(camera);
   const hFovDeg = horizontalFov(camera);
   const headAngleDeg = downwardAngle(heightM, profile.humanHeightM, distanceM);
   const framed = inFrame(feetAngleDeg, tilt, vFovDeg) && inFrame(headAngleDeg, tilt, vFovDeg);
-  const coverageWidthM = 2 * Math.hypot(heightM, distanceM) * Math.tan(toRad(hFovDeg / 2));
+  const coverageWidthM = coverageWidth(camera, heightM, distanceM);
+  const effectiveWidthM = effectiveWidth(camera, heightM, distanceM);
+  const pixelsPerMetre = pixelDensity(camera, Math.hypot(heightM, distanceM), 90 - feetAngleDeg);
   const { min, max } = profile.heightRangeM;
 
   return {
     feet: { angleDeg: feetAngleDeg, status: feetStatus },
     face: { angleDeg: faceAngleDeg, status: judgeFace(faceAngleDeg, profile) },
     countingLine: { distanceM, recommendedDistanceM: recommendedDistance(heightM, profile), framed, headAngleDeg },
-    faceLine: judgeFaceLine({ profile, heightM, distanceM, tiltDeg: tilt, vFovDeg, availableDepthM }),
+    faceLine: judgeFaceLine({ profile, heightM, distanceM, tiltDeg: tilt, vFovDeg }),
     tilt: { value: tilt, recommended },
-    optics: { verticalFovDeg: vFovDeg, horizontalFovDeg: hFovDeg, coverageWidthM, pixelsPerMetre: camera.resolution.w / coverageWidthM },
-    entrance: entranceWidthM == null ? null : entranceCoverage(entranceWidthM, coverageWidthM),
+    optics: { lens: fisheye ? "fisheye" : "rectilinear", verticalFovDeg: vFovDeg, horizontalFovDeg: hFovDeg, coverageWidthM, effectiveWidthM, pixelsPerMetre },
+    entrance: entranceWidthM == null ? null : entranceCoverage(entranceWidthM, coverageWidthM, effectiveWidthM),
     verdict: framed ? feetStatus : "out_of_range",
     warnings: heightM < min || heightM > max ? ["height_outside_range"] : [],
   };

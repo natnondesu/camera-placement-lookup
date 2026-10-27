@@ -53,17 +53,21 @@ How far the camera itself is aimed downward. Not a property of a person's positi
 **Recommended tilt**:
 The tilt the tool suggests: aimed at half the human height of a person standing at the counting line. The face line is checked at that aim, not chased. The installer may override it.
 
-**Available depth**:
-The optional on-site distance to the farthest floor where people can stand in view. Entered per placement, not part of a scene profile.
-_Avoid_: Floor depth, room length
-
 **Entrance width**:
-The optional on-site width of the door or entrance people pass through, checked against the width the camera covers at the counting line. Fully covered within the middle 80% of the view, tight in the outer 20%, too wide beyond it. Never changes the verdict.
+The on-site width of the door or entrance people pass through, 5 m unless entered, checked against the width the camera covers at the counting line. Fully covered within the effective coverage, tight beyond it but still in view, too wide past the view. Never changes the verdict.
 _Avoid_: Door size, opening
+
+**Effective coverage**:
+The part of the image where detection is reliable: the middle 80% of a normal lens's width, or the inner 80% of a fisheye's image radius.
+_Avoid_: Usable area, safe zone
 
 **Camera model**:
 A specific camera's sensor, lens range and resolutions, used to work out what is in frame. Independent of any scene profile.
 _Avoid_: Preset
+
+**Ceiling fisheye**:
+A camera model with a fisheye lens mounted on the ceiling looking straight down, so its tilt is always 90 degrees. Judged by the same placement rule as other cameras: the counting line still sits at the recommended distance from the point below it.
+_Avoid_: 360 camera, panoramic camera
 
 ## Lines
 
@@ -83,8 +87,8 @@ _Avoid_: Demographic line, capture zone
 The distance closest to the counting line at which the face angle is Best.
 
 **Not visible**:
-The face line's state when demographic capture is impossible at the placement, either because the face point is outside the frame or because the face line lies beyond the available depth. Always shown with its reason.
-_Avoid_: Out of view, no floor
+The face line's state when demographic capture is impossible at the placement, because the face point is outside the frame or the camera is not above the face point. Always shown with its reason.
+_Avoid_: Out of view
 
 ## Judgement
 
