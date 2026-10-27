@@ -2099,7 +2099,7 @@
                   </div>
                 </div>
                 <div class="diagram-wrap">
-                  <canvas id="sideCanvas" width="980" height="560" role="img" aria-label="Side elevation diagram"></canvas>
+                  <canvas id="sideCanvas" width="980" height="560" role="img" aria-label="Side elevation diagram" style="touch-action: none"></canvas>
                 </div>
                 <div class="rangebar" aria-label="Distance range">
                   <div class="rangebar-head">
@@ -2543,7 +2543,9 @@ function toCsv(rows) {
       tiltUserAdjusted: false,
       tableProfileId: null,
       tableSelectedHeightKey: null,
-      announceTimer: null
+      announceTimer: null,
+      sideGeom: null,
+      dragging: false
     };
 
     function clamp(value, min, max) {
@@ -2854,6 +2856,7 @@ function toCsv(rows) {
       const xFor = (m) => padL + m * sx;
       const yFor = (m) => groundY - m * sy;
       const camX = xFor(0), camY = yFor(heightM), subX = xFor(distanceM);
+      state.sideGeom = { padL: padL, sx: sx, groundY: groundY, top: yFor(profile.humanHeightM) - 24, subX: subX };
       const feetColor = r.feet.status === "best" ? COL.best : r.feet.status === "acceptable" ? COL.ok : COL.bad;
       const personColor = r.countingLine.framed ? feetColor : COL.bad;
 
@@ -2931,27 +2934,44 @@ function toCsv(rows) {
         const end = candidates.sort((a, b) => a.x - b.x)[0] || { x: maxX, y: clamp(heightM - slope * maxX, 0, maxY) };
         return { x: xFor(end.x), y: yFor(end.y) };
       };
+      // The rule as wedges: feet that land inside the green sector are Best.
+      const wedge = (nearDeg, farDeg, fill, edge) => {
+        const near = xFor(clamp(heightM / Math.tan(toRad(nearDeg)), 0, maxX));
+        const far = xFor(clamp(heightM / Math.tan(toRad(farDeg)), 0, maxX));
+        ctx.fillStyle = fill;
+        ctx.beginPath();
+        ctx.moveTo(camX, camY);
+        ctx.lineTo(near, groundY);
+        ctx.lineTo(far, groundY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = edge;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(camX, camY);
+        ctx.lineTo(near, groundY);
+        ctx.moveTo(camX, camY);
+        ctx.lineTo(far, groundY);
+        ctx.stroke();
+      };
+      const feetBands = profile.feetAngleDeg;
+      if (feetBands.acceptable.max > feetBands.best.max) wedge(feetBands.acceptable.max, feetBands.best.max, colorWithAlpha(COL.ok, "0.10"), colorWithAlpha(COL.ok, "0.35"));
+      if (feetBands.best.min > feetBands.acceptable.min) wedge(feetBands.best.min, feetBands.acceptable.min, colorWithAlpha(COL.ok, "0.10"), colorWithAlpha(COL.ok, "0.35"));
+      wedge(feetBands.best.max, feetBands.best.min, colorWithAlpha(COL.best, "0.16"), colorWithAlpha(COL.best, "0.55"));
+
       const upper = ray(aimDown - half), center = ray(aimDown), lower = ray(aimDown + half);
-      const gradient = ctx.createLinearGradient(camX, camY, lower.x, lower.y);
-      gradient.addColorStop(0, colorWithAlpha(COL.accent, "0.22"));
-      gradient.addColorStop(1, colorWithAlpha(COL.accent, "0.02"));
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.moveTo(camX, camY);
-      ctx.lineTo(upper.x, upper.y);
-      ctx.lineTo(lower.x, lower.y);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = colorWithAlpha(COL.accent, "0.50");
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = colorWithAlpha(COL.accent, "0.70");
+      ctx.lineWidth = 1.25;
+      ctx.setLineDash([2, 4]);
       ctx.beginPath();
       ctx.moveTo(camX, camY);
       ctx.lineTo(upper.x, upper.y);
       ctx.moveTo(camX, camY);
       ctx.lineTo(lower.x, lower.y);
       ctx.stroke();
-      ctx.strokeStyle = colorWithAlpha(COL.accent, "0.88");
-      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.strokeStyle = colorWithAlpha(COL.accent, "0.55");
+      ctx.lineWidth = 1.5;
       ctx.lineCap = "round";
       ctx.beginPath();
       ctx.moveTo(camX, camY);
@@ -3009,13 +3029,11 @@ function toCsv(rows) {
           ctx.fillText(fmt(fl.distanceM, 2, " m"), faceX, groundY + 22);
         }
         ctx.globalAlpha = 1;
-        const faceLabelX = camX + (faceX - camX) * 0.30;
-        const faceLabelY = camY + (faceY - camY) * 0.30;
         ctx.fillStyle = COL.face;
-        ctx.font = "600 12px Inter, sans-serif";
+        ctx.font = "700 12px Inter, sans-serif";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.fillText(fmt(fl.angleDeg, 1, " deg face"), faceLabelX + 6, faceLabelY - 11);
+        ctx.fillText("face " + fmt(fl.angleDeg, 1, " deg"), faceX + 12, faceY);
       }
 
       ctx.strokeStyle = feetColor;
@@ -3026,11 +3044,11 @@ function toCsv(rows) {
       ctx.lineTo(subX, groundY);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.font = "600 12px Inter, sans-serif";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
+      ctx.font = "700 12px Inter, sans-serif";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "bottom";
       ctx.fillStyle = feetColor;
-      ctx.fillText(fmt(r.feet.angleDeg, 1, " deg feet"), camX + (subX - camX) * 0.34 + 6, camY + (groundY - camY) * 0.34 + 13);
+      ctx.fillText("feet " + fmt(r.feet.angleDeg, 1, " deg"), subX - 12, groundY - 6);
 
       drawPerson(ctx, subX, groundY, yFor, personColor, profile, !crowded);
 
@@ -3045,8 +3063,6 @@ function toCsv(rows) {
         ctx.textAlign = "left";
         ctx.fillText(fmt(aimHeightM, 2, " m aim"), subX + 10, aimY - 8);
       }
-      ctx.fillStyle = COL.accent;
-      ctx.fillText(fmt(tilt, 1, " deg tilt"), camX + (subX - camX) * 0.20 + 6, camY + (yFor(Math.max(0, aimHeightM)) - camY) * 0.20 - 12);
 
       ctx.fillStyle = COL.accent;
       roundRect(ctx, camX - 12, camY - 7, 24, 14, 4);
@@ -3461,6 +3477,39 @@ function toCsv(rows) {
     document.addEventListener("click", hidePriorityTip);
     document.addEventListener("keydown", (event) => { if (event.key === "Escape") hidePriorityTip(); });
     window.addEventListener("resize", () => requestAnimationFrame(update));
+
+    // Drag the counting line along the floor; the face line follows from the engine.
+    function sidePoint(event) {
+      const rect = els.sideCanvas.getBoundingClientRect();
+      return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    }
+    function nearCountingLine(pt) {
+      const g = state.sideGeom;
+      return g && state.solveMode !== "distance" && pt.y >= g.top && pt.y <= g.groundY + 14 && Math.abs(pt.x - g.subX) < 26;
+    }
+    function dragTo(pt) {
+      const g = state.sideGeom;
+      setDistance((pt.x - g.padL) / g.sx);
+    }
+    els.sideCanvas.addEventListener("pointerdown", (event) => {
+      const pt = sidePoint(event);
+      const g = state.sideGeom;
+      if (!g || state.solveMode === "distance") return;
+      const onFloor = pt.y >= g.groundY - 18 && pt.y <= g.groundY + 18;
+      if (!nearCountingLine(pt) && !onFloor) return;
+      state.dragging = true;
+      els.sideCanvas.setPointerCapture(event.pointerId);
+      dragTo(pt);
+      event.preventDefault();
+    });
+    els.sideCanvas.addEventListener("pointermove", (event) => {
+      const pt = sidePoint(event);
+      if (state.dragging) { dragTo(pt); return; }
+      els.sideCanvas.style.cursor = nearCountingLine(pt) ? "ew-resize" : "";
+    });
+    const endDrag = () => { state.dragging = false; };
+    els.sideCanvas.addEventListener("pointerup", endDrag);
+    els.sideCanvas.addEventListener("pointercancel", endDrag);
 
     // ---------- Start ----------
     populateScenes();
