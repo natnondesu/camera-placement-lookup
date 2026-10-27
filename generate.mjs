@@ -28,6 +28,7 @@ const cameras = await readJson("rules/cameras.json");
 rules.profiles.forEach(validateProfile);
 // The page runs the same engine the tests cover, inlined without its export keywords.
 const engineSource = (await fs.readFile(path.join(__dirname, "src/placement-rule.js"), "utf8")).replace(/^export /gm, "");
+const simSource = (await fs.readFile(path.join(__dirname, "src/walk-sim.js"), "utf8")).replace(/^export /gm, "");
 
 function buildHtml() {
   const ruleJson = JSON.stringify(RULE, null, 2);
@@ -1904,6 +1905,50 @@ function buildHtml() {
       margin-left: auto;
     }
 
+    .sim-stage {
+      position: relative;
+    }
+
+    .sim-overlay {
+      position: absolute;
+      left: 0;
+      top: 0;
+      pointer-events: none;
+    }
+
+    .sim-hud {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 14px;
+      padding: 10px 12px 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .sim-hud b {
+      color: var(--ink);
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 13px;
+    }
+
+    .sim-actions {
+      display: flex;
+      gap: 6px;
+      margin-left: auto;
+    }
+
+    .sim-note {
+      padding: 0 12px 12px;
+    }
+
+    @media (min-width: 921px) {
+      .dual.sim-mode {
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 44%);
+      }
+    }
+
     .warn-line {
       display: flex;
       gap: 8px;
@@ -2162,11 +2207,30 @@ function buildHtml() {
                     <div class="solve-seg view-seg" role="group" aria-label="Second diagram">
                       <button type="button" data-topview="top" aria-pressed="true">Top</button>
                       <button type="button" data-topview="camera" aria-pressed="false">Camera</button>
+                      <button type="button" data-topview="sim" aria-pressed="false">Simulate</button>
                     </div>
                   </div>
                 </div>
                 <div class="diagram-wrap">
                   <canvas id="topCanvas" width="600" height="560" role="img" aria-label="Top-down coverage diagram"></canvas>
+                  <div class="sim" id="simWrap" hidden>
+                    <div class="sim-stage">
+                      <canvas id="simCanvas" role="img" aria-label="Simulated camera view with people walking past"></canvas>
+                      <canvas id="simOverlay" class="sim-overlay" aria-hidden="true"></canvas>
+                    </div>
+                    <div class="sim-hud" aria-live="off">
+                      <span>In <b id="simIn">0</b></span>
+                      <span>Out <b id="simOut">0</b></span>
+                      <span>Faces <b id="simFaces">0</b></span>
+                      <span id="simPassersRow">Passers-by, not counted <b id="simPassers">0</b></span>
+                      <span class="sim-actions">
+                        <button type="button" class="button" id="simPlay" aria-pressed="true">Pause</button>
+                        <button type="button" class="button" id="simReset">Reset</button>
+                      </span>
+                    </div>
+                    <p class="field-hint sim-note">Simulated people through this camera. Counts come from the simulation, not real traffic.</p>
+                    <p class="warn-line" id="simFallback" hidden>The 3D simulation could not load. It needs an internet connection; Top and Camera still work.</p>
+                  </div>
                 </div>
               </section>
             </div>
@@ -2346,8 +2410,43 @@ ${engineSource}
       mobileAnswer: byId("mobileAnswer"), mobileAnswerOverall: byId("mobileAnswerOverall"), mobileAnswerFeet: byId("mobileAnswerFeet"),
       mobileAnswerFace: byId("mobileAnswerFace"), mobileAnswerDistance: byId("mobileAnswerDistance"),
       statusbar: byId("statusbar"), sbOverall: byId("sbOverall"), sbFeet: byId("sbFeet"), sbFace: byId("sbFace"), sbDistance: byId("sbDistance"),
-      jumpToDiagram: byId("jumpToDiagram")
+      jumpToDiagram: byId("jumpToDiagram"),
+      dual: document.querySelector(".dual"), simWrap: byId("simWrap")
     };
+
+    // Three.js and the 2D overlay need plain sRGB, not the theme's oklch().
+    function toRgb(color) {
+      const ctx = document.createElement("canvas").getContext("2d");
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, 1, 1);
+      const d = ctx.getImageData(0, 0, 1, 1).data;
+      return "rgb(" + d[0] + ", " + d[1] + ", " + d[2] + ")";
+    }
+    const SIM_COLORS = {
+      best: toRgb(themeColor("--best")),
+      acceptable: toRgb(themeColor("--ok")),
+      out_of_range: toRgb(themeColor("--bad")),
+      face: toRgb(themeColor("--face")),
+      bad: toRgb(themeColor("--bad"))
+    };
+
+    function simInput(p) {
+      const r = p.result;
+      return {
+        scene: p.profile.id,
+        heightM: p.heightM,
+        distanceM: p.distanceM,
+        tiltDeg: r.tilt.value,
+        vFovDeg: r.optics.verticalFovDeg,
+        aspect: p.resolution.w / p.resolution.h,
+        faceLineDistanceM: r.faceLine.distanceM,
+        faceLineVisible: r.faceLine.visible,
+        depthM: state.depthM,
+        coverageWidthM: r.optics.coverageWidthM,
+        humanHeightM: p.profile.humanHeightM,
+        colors: { count: SIM_COLORS[r.feet.status], face: SIM_COLORS.face, bad: SIM_COLORS.bad }
+      };
+    }
 
     const state = {
       profileId: RULES.defaultProfile,
@@ -3164,14 +3263,23 @@ ${engineSource}
       els.sideFaceReading.textContent = "Face line: " + (r.faceLine.distanceM === null ? "none" : fmt(r.faceLine.distanceM, 2, " m")) + ", " + face.label.toLowerCase();
       els.sideFaceReading.className = "reading-chip " + (face.visible ? "face" : "not-visible");
       els.sideTiltReading.textContent = "Tilt: " + fmt(r.tilt.value, 1, " deg") + (state.tiltUserAdjusted ? " manual" : " recommended") + " / FOV " + fmt(r.optics.verticalFovDeg, 1, " deg");
-      els.topTitle.textContent = state.topView === "top" ? "Top view" : "Camera view";
+      els.topTitle.textContent = { top: "Top view", camera: "Camera view", sim: "Simulation" }[state.topView];
 
       updateRangeBar(p);
       updateMetrics(p, verticalPpm);
       els.sideCanvas.setAttribute("aria-label", "Side elevation. Camera height " + fmt(heightM, 1, " meters") + ", counting line at " + fmt(distanceM, 2, " meters") + ", feet angle " + fmt(r.feet.angleDeg, 1, " degrees") + ", " + STATUS_LABEL[r.feet.status] + ". Face line " + (r.faceLine.distanceM === null ? "none" : "at " + fmt(r.faceLine.distanceM, 2, " meters") + ", " + face.label) + ".");
       els.topCanvas.setAttribute("aria-label", state.topView === "top" ? "Top-down coverage. Width " + fmt(r.optics.coverageWidthM, 1, " meters") + " at the counting line." : "Camera view at " + fmt(r.tilt.value, 1, " degrees") + " tilt.");
       drawSide(p);
-      if (state.topView === "top") drawTop(p); else drawCameraView(p);
+      const simOn = state.topView === "sim";
+      els.topCanvas.hidden = simOn;
+      els.simWrap.hidden = !simOn;
+      els.dual.classList.toggle("sim-mode", simOn);
+      if (state.topView === "top") drawTop(p);
+      if (state.topView === "camera") drawCameraView(p);
+      if (window.walkSim) {
+        window.walkSim.setPlacement(simInput(p));
+        window.walkSim.setActive(simOn && !els.visualizerView.hidden);
+      }
       if (!els.tableView.hidden) renderTable(p);
 
       els.mobileAnswer.dataset.state = r.verdict;
@@ -3203,7 +3311,12 @@ ${engineSource}
       els.tableTab.setAttribute("aria-selected", String(isTable));
       els.visualizerTab.tabIndex = isTable ? -1 : 0;
       els.tableTab.tabIndex = isTable ? 0 : -1;
-      if (isTable) renderTable(currentPlacement()); else requestAnimationFrame(update);
+      if (isTable) {
+        if (window.walkSim) window.walkSim.setActive(false);
+        renderTable(currentPlacement());
+      } else {
+        requestAnimationFrame(update);
+      }
     }
 
     function onTabKey(event) {
@@ -3343,6 +3456,31 @@ ${engineSource}
     setFieldValue(els.heightInput, els.heightRange, RULE.defaultCameraHeightM, 1);
     setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(RULE.defaultCameraHeightM, currentProfile()), 2);
     setSolveMode(state.solveMode);
+  </script>
+  <script type="module">
+${simSource}
+    try {
+      const THREE = await import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js");
+      window.walkSim = createWalkSim(THREE, {
+        canvas: document.getElementById("simCanvas"),
+        overlay: document.getElementById("simOverlay"),
+        playButton: document.getElementById("simPlay"),
+        resetButton: document.getElementById("simReset"),
+        passersRow: document.getElementById("simPassersRow"),
+        counts: {
+          in: document.getElementById("simIn"),
+          out: document.getElementById("simOut"),
+          faces: document.getElementById("simFaces"),
+          passers: document.getElementById("simPassers")
+        }
+      });
+      update();
+    } catch (error) {
+      document.getElementById("simFallback").hidden = false;
+      document.getElementById("simPlay").disabled = true;
+      document.getElementById("simReset").disabled = true;
+      console.error("Walk simulation could not load", error);
+    }
   </script>
 </body>
 </html>
