@@ -860,6 +860,9 @@ export function createWalkSim(THREE, ui) {
       if (active) {
         resize();
         if (!walking) render();
+      } else if (orbitActive && !walking) {
+        // Orbit can be on screen while the camera's own view is not (the Top tab); it still follows every change.
+        renderOrbit();
       }
     },
     setActive(next) {
