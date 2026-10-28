@@ -173,6 +173,7 @@ function sharedPlacementFrom(p) {
     distanceM: p.distanceM,
     tiltDeg: state.tiltUserAdjusted && preset.lens !== "fisheye" ? Number(els.tiltInput.value) : null,
     entranceM: state.entranceM,
+    offsetM: state.offsetM,
     verdict: p.result.verdict,
     site: state.site,
     location: state.location
@@ -227,6 +228,7 @@ function restoreSharedPlacement() {
   }
   state.entranceM = shared.entranceM;
   els.entranceInput.value = shared.entranceM === null ? "" : String(shared.entranceM);
+  state.offsetM = setFieldValue(els.offsetInput, els.offsetRange, shared.offsetM === null ? 0 : shared.offsetM, 2);
   if (shared.site !== null) state.site = shared.site;
   if (shared.location !== null) state.location = shared.location;
   setSolveMode(["distance", "height", "manual"].includes(shared.solve) ? shared.solve : "distance");
@@ -408,7 +410,7 @@ function sideElevationSvg(p) {
 function sheetReadings(p) {
   const r = p.result;
   const profile = p.profile;
-  const win = feetDistanceWindow(profile, p.heightM);
+  const win = countingWindow(p);
   const face = faceLineCopy(p);
   const fl = r.faceLine;
   const faceTag = !fl.visible ? "muted" : fl.tooSmall ? "ok" : "best";

@@ -14,6 +14,7 @@ const full = {
   distanceM: 4.6,
   tiltDeg: null,
   entranceM: 5,
+  offsetM: -1.25,
   verdict: "best",
   site: "Central World",
   location: "ทางเข้า A, camera 1",
@@ -37,6 +38,14 @@ test("the link stays short: numbers drop trailing zeros and empty fields are lef
 
 test("no entrance width decodes as no entrance check", () => {
   assert.equal(decodePlacement(encodePlacement({ ...full, entranceM: null })).entranceM, null);
+});
+
+test("a link from before the camera could sit off-centre decodes with no offset", () => {
+  assert.equal(decodePlacement("s=open_door&h=4&d=4.6").offsetM, null);
+});
+
+test("a centred camera leaves the offset out of the link", () => {
+  assert.doesNotMatch(encodePlacement({ ...full, offsetM: 0 }), /(^|&)o=/);
 });
 
 test("a hash with or without the leading # decodes the same", () => {

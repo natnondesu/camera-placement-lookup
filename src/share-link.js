@@ -4,10 +4,11 @@
  *   rulesVersion: string | null, scene: string | null, camera: string | null,
  *   focalMm: number | null, resolution: { w: number, h: number } | null, sensor: string | null,
  *   solve: string | null, heightM: number | null, distanceM: number | null,
- *   tiltDeg: number | null, entranceM: number | null, verdict: string | null,
+ *   tiltDeg: number | null, entranceM: number | null, offsetM: number | null, verdict: string | null,
  *   site: string | null, location: string | null
  * }} SharedPlacement
  *   tiltDeg is set only when the tilt was set by hand; verdict is the verdict when the link was made.
+ *   offsetM is the camera's distance right (+) or left (-) of the entrance centre line; links from before it decode null.
  */
 
 const NUMBERS = [
@@ -16,6 +17,7 @@ const NUMBERS = [
   ["d", "distanceM", 2],
   ["t", "tiltDeg", 1],
   ["e", "entranceM", 2],
+  ["o", "offsetM", 2],
 ];
 const TEXTS = [
   ["v", "rulesVersion"],
@@ -39,7 +41,8 @@ export function encodePlacement(placement) {
   TEXTS.slice(0, 5).forEach(([key, field]) => put(key, placement[field]));
   if (placement.resolution) put("r", placement.resolution.w + "x" + placement.resolution.h);
   NUMBERS.forEach(([key, field, digits]) => {
-    if (Number.isFinite(placement[field])) put(key, trimmed(placement[field], digits));
+    // A centred camera is the usual case, so its offset stays out of the link.
+    if (Number.isFinite(placement[field]) && !(field === "offsetM" && placement[field] === 0)) put(key, trimmed(placement[field], digits));
   });
   TEXTS.slice(5).forEach(([key, field]) => put(key, placement[field]));
   return params.toString();

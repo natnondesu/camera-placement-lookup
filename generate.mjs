@@ -13,6 +13,7 @@ const RULE = {
   defaultCameraHeightM: 4,
   minDistanceM: 0.3,
   maxDistanceM: 36,
+  maxOffsetM: 10,
   minTiltAngleDeg: 0,
   maxTiltAngleDeg: 90,
   tiltAngleStepDeg: 0.5,
@@ -2807,6 +2808,19 @@ ${sheetCss}
               </div>
               <p class="field-hint" id="entranceHint" data-i18n="entranceHint">Optional. Width of the door or entrance people pass through, checked against what the camera covers at the counting line.</p>
             </div>
+            <div class="field" id="offsetField">
+              <div class="field-top">
+                <label class="field-label" for="offsetRange" data-i18n="offsetFromCentre">From the centre line</label>
+                <button type="button" class="tilt-auto" id="offsetCentre" aria-pressed="true" data-i18n="centreButton">Centre</button>
+                <span class="value-edit">
+                  <input id="offsetInput" type="number" inputmode="decimal" min="-${RULE.maxOffsetM}" max="${RULE.maxOffsetM}" step="0.05" value="0.00" aria-describedby="offsetCaption" aria-label="Camera offset from the entrance centre line in meters, positive to the right" data-i18n-attr="aria-label:offsetAria">
+                  <span class="unit">m</span>
+                </span>
+              </div>
+              <input id="offsetRange" type="range" min="-${RULE.maxOffsetM}" max="${RULE.maxOffsetM}" step="0.05" value="0">
+              <div class="ticks"><span data-i18n="leftTick">left</span><span data-i18n="rightTick">right</span></div>
+              <p class="field-hint" id="offsetCaption"></p>
+            </div>
             <details class="advanced" id="advancedPanel">
               <summary><span data-i18n="advancedOptics">Advanced optics</span> <span aria-hidden="true">v</span></summary>
               <div class="advanced-body">
@@ -3113,6 +3127,15 @@ ${shareSource}
         solveFor: "Solve for", manual: "Manual", distance: "Distance", height: "Height",
         mountingHeight: "Mounting height", solved: "solved", countingDistance: "Counting line distance",
         recommendedDistance: "recommended distance", useRecommended: "Use recommended distance",
+        offsetFromCentre: "From the centre line", centreButton: "Centre", leftTick: "left", rightTick: "right",
+        offsetAria: "Camera offset from the entrance centre line in meters, positive to the right",
+        offsetCentred: "On the entrance centre line. The camera aims at the middle of the entrance.",
+        offsetSide: "{distance} m {side} of the entrance centre line, as the camera faces it. It turns {pan} deg to aim at the middle.",
+        sideLeft: "left", sideRight: "right",
+        pointAim: "the middle of the entrance", pointNear: "the nearest walkable point", pointFar: "the farthest walkable point",
+        countDecides: "Judged across the walkable {width} m: {point} decides at {angle} deg.",
+        noDistance: "No distance gives an Acceptable feet angle across the walkable width from here. Mount higher, move the camera toward the centre line, or split the entrance between two cameras.",
+        faceOffCentre: "No face-Best spot along the middle of the entrance from this far off-centre. Move the camera toward the centre line.",
         entranceWidth: "Entrance width", none: "none",
         entranceHint: "Optional. Width of the door or entrance people pass through, checked against what the camera covers at the counting line.",
         advancedOptics: "Advanced optics", tiltAngle: "Tilt angle", recommended: "Recommended", level: "level", down: "down",
@@ -3192,6 +3215,15 @@ ${shareSource}
         solveFor: "คำนวณ", manual: "กำหนดเอง", distance: "ระยะ", height: "ความสูง",
         mountingHeight: "ความสูงติดตั้ง", solved: "คำนวณให้", countingDistance: "ระยะเส้นนับ",
         recommendedDistance: "ระยะที่แนะนำ", useRecommended: "ใช้ระยะที่แนะนำ",
+        offsetFromCentre: "ห่างจากแนวกึ่งกลาง", centreButton: "กึ่งกลาง", leftTick: "ซ้าย", rightTick: "ขวา",
+        offsetAria: "ระยะกล้องจากแนวกึ่งกลางทางเข้า เป็นเมตร ค่าบวกคือทางขวา",
+        offsetCentred: "อยู่บนแนวกึ่งกลางทางเข้า กล้องเล็งไปที่กลางทางเข้า",
+        offsetSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า (มองจากกล้อง) กล้องหัน {pan} องศาเพื่อเล็งกลางทางเข้า",
+        sideLeft: "ซ้าย", sideRight: "ขวา",
+        pointAim: "กลางทางเข้า", pointNear: "จุดเดินได้ที่ใกล้ที่สุด", pointFar: "จุดเดินได้ที่ไกลที่สุด",
+        countDecides: "ตัดสินตลอดความกว้างที่เดินได้ {width} m: {point} เป็นตัวตัดสินที่ {angle} องศา",
+        noDistance: "จากตำแหน่งนี้ไม่มีระยะไหนให้มุมเท้าพอใช้ได้ตลอดความกว้างที่เดินได้ ติดกล้องให้สูงขึ้น ขยับกล้องเข้าหาแนวกึ่งกลาง หรือแบ่งทางเข้าให้กล้องสองตัว",
+        faceOffCentre: "กล้องห่างจากกึ่งกลางมากเกินไป จึงไม่มีจุดที่มุมหน้าดีที่สุดตามแนวกลางทางเข้า ขยับกล้องเข้าหาแนวกึ่งกลาง",
         entranceWidth: "ความกว้างทางเข้า", none: "ไม่มี",
         entranceHint: "ไม่บังคับ ความกว้างของประตูหรือทางเข้าที่คนเดินผ่าน ใช้ตรวจว่ากล้องมองเห็นครบที่เส้นนับหรือไม่",
         advancedOptics: "ตั้งค่าเลนส์ขั้นสูง", tiltAngle: "มุมก้ม", recommended: "ค่าแนะนำ", level: "ระดับ", down: "ก้มลง",
@@ -3375,7 +3407,8 @@ ${shareSource}
       mobileAnswerFace: byId("mobileAnswerFace"), mobileAnswerDistance: byId("mobileAnswerDistance"),
       statusbar: byId("statusbar"), sbOverall: byId("sbOverall"), sbFeet: byId("sbFeet"), sbFace: byId("sbFace"), sbDistance: byId("sbDistance"),
       jumpToDiagram: byId("jumpToDiagram"),
-      dual: document.querySelector(".dual"), simWrap: byId("simWrap"), simFallback: byId("simFallback")
+      dual: document.querySelector(".dual"), simWrap: byId("simWrap"), simFallback: byId("simFallback"),
+      offsetInput: byId("offsetInput"), offsetRange: byId("offsetRange"), offsetCaption: byId("offsetCaption"), offsetCentre: byId("offsetCentre")
     };
 
     // Three.js and the 2D overlay need plain sRGB, not the theme's oklch().
@@ -3426,6 +3459,7 @@ ${shareSource}
       profileId: RULES.defaultProfile,
       solveMode: "distance",
       entranceM: 5,
+      offsetM: 0,
       presetId: CAMERA_CATALOG.defaultCamera,
       topView: "camera",
       simFailed: false,
@@ -3487,8 +3521,22 @@ ${shareSource}
       };
     }
 
-    function heightForDistance(profile, distanceM) {
-      return distanceM * Math.tan(toRad(profile.feetAngleDeg.target));
+    function judgedEntrance() {
+      return state.entranceM === null ? undefined : state.entranceM;
+    }
+
+    // The solved distance or height is judged across the walkable width, from wherever the camera sits sideways.
+    function solvedDistance() {
+      return solveDistance({ profile: currentProfile(), heightM: Number(els.heightInput.value), offsetM: state.offsetM, entranceWidthM: judgedEntrance() }).distanceM;
+    }
+
+    function solvedHeight(distanceM) {
+      return solveHeight({ profile: currentProfile(), distanceM: distanceM, offsetM: state.offsetM, entranceWidthM: judgedEntrance() }).heightM;
+    }
+
+    function resolveSolved() {
+      if (state.solveMode === "distance") setFieldValue(els.distanceInput, els.distanceRange, solvedDistance(), 2);
+      if (state.solveMode === "height") setFieldValue(els.heightInput, els.heightRange, solvedHeight(Number(els.distanceInput.value)), 1);
     }
 
     // The sensor format only drives the view for cameras without a datasheet view; a fisheye has no zoom either.
@@ -3515,7 +3563,8 @@ ${shareSource}
         distanceM: distanceM,
         camera: camera,
         tiltDeg: state.tiltUserAdjusted ? Number(els.tiltInput.value) : undefined,
-        entranceWidthM: state.entranceM === null ? undefined : state.entranceM
+        entranceWidthM: judgedEntrance(),
+        offsetM: state.offsetM
       });
       return { profile: profile, heightM: heightM, distanceM: distanceM, camera: camera, resolution: resolution, result: result };
     }
@@ -3524,6 +3573,7 @@ ${shareSource}
       const fl = p.result.faceLine;
       const vFov = p.result.optics.verticalFovDeg;
       if (fl.reason === "camera_below_face_point") return { visible: false, label: t("notVisible"), note: t("faceBelow", { face: fmt(p.profile.facePointM, 2) }) };
+      if (fl.reason === "off_centre") return { visible: false, label: t("notVisible"), note: t("faceOffCentre") };
       if (fl.reason === "outside_frame") {
         if (p.result.optics.lens === "fisheye") return { visible: false, label: t("notVisible"), note: t("faceOutsideFisheye") };
         const lo = Math.max(0, p.result.feet.angleDeg - vFov / 2);
@@ -3543,8 +3593,9 @@ ${shareSource}
     function verdictCopy(p) {
       const r = p.result;
       if (!r.countingLine.framed) return t("cutOff");
+      if (r.countingLine.window.judgedBy === null && state.solveMode !== "height") return t("noDistance");
       // In Height mode the measured line stays put; the answer is the mount height, shown before rounding too.
-      if (state.solveMode === "height") return t("mountAt", { height: fmt(p.heightM, 1), exact: fmt(heightForDistance(p.profile, p.distanceM), 2) });
+      if (state.solveMode === "height") return t("mountAt", { height: fmt(p.heightM, 1), exact: fmt(solvedHeight(p.distanceM), 2) });
       const delta = r.countingLine.recommendedDistanceM - p.distanceM;
       if (Math.abs(delta) < 0.01) return t("onTarget", { scene: sceneName(p.profile) });
       return t("moveLine", { delta: fmt(Math.abs(delta), 2), direction: t(delta > 0 ? "farther" : "closer"), target: fmt(r.countingLine.recommendedDistanceM, 2) });
@@ -3588,11 +3639,8 @@ ${shareSource}
 
     function setScene(id) {
       state.profileId = id;
-      if (state.solveMode === "height") {
-        setFieldValue(els.heightInput, els.heightRange, heightForDistance(currentProfile(), Number(els.distanceInput.value)), 1);
-      } else {
-        setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(Number(els.heightInput.value), currentProfile()), 2);
-      }
+      if (state.solveMode === "manual") setFieldValue(els.distanceInput, els.distanceRange, solvedDistance(), 2);
+      resolveSolved();
       update();
     }
 
@@ -3603,22 +3651,21 @@ ${shareSource}
       els.distanceField.classList.toggle("driven", mode === "distance");
       els.heightInput.disabled = els.heightRange.disabled = mode === "height";
       els.distanceInput.disabled = els.distanceRange.disabled = mode === "distance";
-      if (mode === "distance") setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(Number(els.heightInput.value), currentProfile()), 2);
-      if (mode === "height") setFieldValue(els.heightInput, els.heightRange, heightForDistance(currentProfile(), Number(els.distanceInput.value)), 1);
+      resolveSolved();
       update();
     }
 
     function setHeight(value, typing) {
       if (state.solveMode === "height") return;
       const heightM = setFieldValue(els.heightInput, els.heightRange, value, 1, typing);
-      if (state.solveMode === "distance") setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(heightM, currentProfile()), 2);
+      if (state.solveMode === "distance") setFieldValue(els.distanceInput, els.distanceRange, solvedDistance(), 2);
       update();
     }
 
     function setDistance(value, typing) {
       if (state.solveMode === "distance") return;
       const distanceM = setFieldValue(els.distanceInput, els.distanceRange, value, 2, typing);
-      if (state.solveMode === "height") setFieldValue(els.heightInput, els.heightRange, heightForDistance(currentProfile(), distanceM), 1);
+      if (state.solveMode === "height") setFieldValue(els.heightInput, els.heightRange, solvedHeight(distanceM), 1);
       update();
     }
 
@@ -3631,7 +3678,30 @@ ${shareSource}
     function setEntrance(value) {
       const width = parseFloat(value);
       state.entranceM = value === "" || Number.isNaN(width) || width <= 0 ? null : width;
+      resolveSolved();
       update();
+    }
+
+    // Sideways from the entrance centre line, positive to the camera's right; snapped to the line when within 5 cm.
+    function setOffset(value, typing) {
+      const raw = Number(value);
+      const snapped = Math.abs(raw) < 0.05 ? 0 : raw;
+      state.offsetM = setFieldValue(els.offsetInput, els.offsetRange, snapped, 2, typing);
+      resolveSolved();
+      update();
+    }
+
+    function offsetCopy(p) {
+      if (state.offsetM === 0) return t("offsetCentred");
+      return t("offsetSide", { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "sideRight" : "sideLeft"), pan: fmt(p.result.pan.deg, 1) });
+    }
+
+    function decidingCopy(p) {
+      const line = p.result.countingLine;
+      if (line.judged.length === 1) return "";
+      const width = line.walkable.rightM - line.walkable.leftM;
+      const point = t({ aim: "pointAim", near: "pointNear", far: "pointFar" }[p.result.feet.point]);
+      return t("countDecides", { width: fmt(width, 2), point: point, angle: fmt(p.result.feet.angleDeg, 1) });
     }
 
     function entranceCopy(entrance, coverageWidthM) {
@@ -3655,11 +3725,23 @@ ${shareSource}
       element.className = "status-chip " + status;
     }
 
+    // Counting line distances that keep every walkable point Best or Acceptable; missing when no distance does.
+    function countingWindow(p) {
+      const w = p.result.countingLine.window;
+      return {
+        acceptableMin: w.acceptable ? w.acceptable.minM : NaN, acceptableMax: w.acceptable ? w.acceptable.maxM : NaN,
+        bestMin: w.best ? w.best.minM : NaN, bestMax: w.best ? w.best.maxM : NaN
+      };
+    }
+
     function updateRangeBar(p) {
-      const win = feetDistanceWindow(p.profile, p.heightM);
+      const win = countingWindow(p);
       const rec = p.result.countingLine.recommendedDistanceM;
-      const domainMin = Math.max(0, Math.min(win.acceptableMin, win.bestMin, p.distanceM, rec) - 1);
-      const domainMax = Math.max(win.acceptableMax, win.bestMax, p.distanceM, rec) + 1;
+      const known = [win.acceptableMin, win.acceptableMax, win.bestMin, win.bestMax, p.distanceM, rec].filter(Number.isFinite);
+      const domainMin = Math.max(0, Math.min.apply(null, known) - 1);
+      const domainMax = Math.max.apply(null, known) + 1;
+      els.acceptableZone.hidden = els.minMarker.hidden = els.maxMarker.hidden = !Number.isFinite(win.acceptableMin);
+      els.bestZone.hidden = !Number.isFinite(win.bestMin);
       const setZone = (el, min, max) => {
         el.style.left = pct(min, domainMin, domainMax).toFixed(2) + "%";
         el.style.width = Math.max(0, pct(max, domainMin, domainMax) - pct(min, domainMin, domainMax)).toFixed(2) + "%";
@@ -3668,11 +3750,13 @@ ${shareSource}
         el.style.left = pct(value, domainMin, domainMax).toFixed(2) + "%";
         label.textContent = fmt(value, 2) + " m";
       };
-      setZone(els.acceptableZone, win.acceptableMin, win.acceptableMax);
-      setZone(els.bestZone, win.bestMin, win.bestMax);
-      setMarker(els.minMarker, els.minMarkerLabel, win.acceptableMin);
+      if (Number.isFinite(win.acceptableMin)) {
+        setZone(els.acceptableZone, win.acceptableMin, win.acceptableMax);
+        setMarker(els.minMarker, els.minMarkerLabel, win.acceptableMin);
+        setMarker(els.maxMarker, els.maxMarkerLabel, win.acceptableMax);
+      }
+      if (Number.isFinite(win.bestMin)) setZone(els.bestZone, win.bestMin, win.bestMax);
       setMarker(els.bestMarker, els.bestMarkerLabel, rec);
-      setMarker(els.maxMarker, els.maxMarkerLabel, win.acceptableMax);
       els.distanceCursor.style.left = pct(p.distanceM, domainMin, domainMax).toFixed(2) + "%";
       els.cursorLabel.textContent = fmt(p.distanceM, 2) + " m";
     }
@@ -4421,7 +4505,10 @@ ${shareSource}
       if (fisheye || !state.tiltUserAdjusted) setFieldValue(els.tiltInput, els.tiltRange, r.tilt.value, 1);
       els.tiltAuto.setAttribute("aria-pressed", String(fisheye || !state.tiltUserAdjusted));
       syncDistanceBounds(p);
-      [els.heightRange, els.distanceRange, els.tiltRange, els.focalRange].forEach(setRangeFill);
+      [els.heightRange, els.distanceRange, els.tiltRange, els.focalRange, els.offsetRange].forEach(setRangeFill);
+      els.offsetCaption.textContent = offsetCopy(p);
+      els.offsetCentre.setAttribute("aria-pressed", String(state.offsetM === 0));
+      els.offsetCentre.disabled = state.offsetM === 0;
       document.querySelectorAll("[data-scene]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.scene === profile.id)));
       els.sceneCaption.textContent = sceneDesc(profile);
 
@@ -4457,7 +4544,7 @@ ${shareSource}
       updateStatusElement(els.feetStatus, r.feet.status, STATUS_LABEL[r.feet.status]);
       els.feetAngle.innerHTML = fmt(r.feet.angleDeg, 2) + "<small>deg</small>";
       els.feetBands.innerHTML = profile.feetAngleDeg.best.min + "-" + profile.feetAngleDeg.best.max + " <small>" + t("bandBest") + "</small> / " + profile.feetAngleDeg.acceptable.min + "-" + profile.feetAngleDeg.acceptable.max + " <small>" + t("bandOk") + "</small>";
-      els.countNote.textContent = r.countingLine.framed ? t("countFramed", { target: profile.feetAngleDeg.target }) : t("countCut");
+      els.countNote.textContent = [r.countingLine.framed ? t("countFramed", { target: profile.feetAngleDeg.target }) : t("countCut"), decidingCopy(p)].filter(Boolean).join(" ");
       updateStatusElement(els.faceStatus, visibleClass, face.label);
       els.faceLineDistance.innerHTML = r.faceLine.distanceM === null ? t("none") : fmt(r.faceLine.distanceM, 2) + "<small>m</small>";
       els.faceAngle.innerHTML = r.faceLine.angleDeg === null ? t("none") : fmt(r.faceLine.angleDeg, 1) + "<small>deg</small>";
@@ -4738,7 +4825,10 @@ ${shareSource}
     els.focalRange.addEventListener("input", (event) => { setFieldValue(els.focalInput, els.focalRange, event.target.value, 1); update(); });
     whileTyping(els.focalInput, (value, typing) => { setFieldValue(els.focalInput, els.focalRange, value, 1, typing); update(); });
     els.resolutionSelect.addEventListener("change", update);
-    els.snapButton.addEventListener("click", () => setDistance(recommendedDistance(Number(els.heightInput.value), currentProfile())));
+    els.snapButton.addEventListener("click", () => setDistance(solvedDistance()));
+    whileTyping(els.offsetInput, setOffset);
+    els.offsetRange.addEventListener("input", (event) => setOffset(event.target.value));
+    els.offsetCentre.addEventListener("click", () => setOffset(0));
     els.copyReadings.addEventListener("click", () => copyText(readingsText(currentPlacement()), t("copiedReadings")));
     els.copyCsv.addEventListener("click", () => copyText(toCsv(lookupRows(currentProfile())), t("copiedCsv")));
     els.lookupBody.addEventListener("click", (event) => {
@@ -4747,7 +4837,7 @@ ${shareSource}
       // Height mode solves the height, so a table row can only load in another mode.
       if (state.solveMode === "height") setSolveMode("distance");
       setFieldValue(els.heightInput, els.heightRange, Number(row.dataset.height), 1);
-      setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(Number(row.dataset.height), currentProfile()), 2);
+      setFieldValue(els.distanceInput, els.distanceRange, solvedDistance(), 2);
       setTab("visualizer");
     });
     els.jumpToDiagram.addEventListener("click", () => {
@@ -4837,7 +4927,7 @@ ${sheetSource}
     updateResolutionOptions(startPreset);
     setFieldValue(els.focalInput, els.focalRange, startPreset.focalDefaultMm, 1);
     setFieldValue(els.heightInput, els.heightRange, RULE.defaultCameraHeightM, 1);
-    setFieldValue(els.distanceInput, els.distanceRange, recommendedDistance(RULE.defaultCameraHeightM, currentProfile()), 2);
+    setFieldValue(els.distanceInput, els.distanceRange, solvedDistance(), 2);
     setSolveMode(state.solveMode);
     restoreSharedPlacement();
   </script>

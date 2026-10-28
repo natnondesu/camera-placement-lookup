@@ -416,6 +416,7 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
   const pose = cameraPose({ heightM, distanceM, offsetM, tiltDeg: tilt, fisheye });
 
   const span = walkableSpan(entranceWidthM);
+  const solved = solveDistance({ profile, heightM, offsetM, entranceWidthM });
   const xs = linePoints(offsetM, span);
   const points = Object.fromEntries(Object.entries(xs).map(([key, x]) => {
     const floorDistanceM = Math.hypot(x - offsetM, distanceM);
@@ -441,8 +442,8 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
     feet: { angleDeg: feet.feetAngleDeg, status: feet.status, point: deciding },
     face: { angleDeg: faceAngleDeg, status: judgeFace(faceAngleDeg, profile) },
     countingLine: {
-      distanceM, offsetM, recommendedDistanceM: recommendedDistance(heightM, profile), framed, headAngleDeg,
-      walkable: span, points, judged,
+      distanceM, offsetM, recommendedDistanceM: solved.distanceM, window: { best: solved.best, acceptable: solved.acceptable, judgedBy: solved.judgedBy },
+      framed, headAngleDeg, walkable: span, points, judged,
     },
     faceLine: judgeFaceLine({ profile, camera, heightM, distanceM, offsetM, pose, vFovDeg }),
     tilt: { value: tilt, recommended },
