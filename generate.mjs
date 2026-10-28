@@ -729,16 +729,63 @@ function buildHtml() {
     .verdict-lead {
       display: grid;
       align-content: start;
-      gap: 13px;
+      gap: 10px;
       border-right: 1px solid var(--border);
+    }
+
+    /* The one number the installer acts on, as big as the answer bar shows it on smaller screens. */
+    .verdict-reading {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      margin: 2px 0 0;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .verdict-reading b {
+      color: var(--ink);
+      font-size: 40px;
+      font-weight: 750;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+
+    .verdict-reading small {
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .verdict-reading span {
+      margin-left: 6px;
+      color: var(--muted);
+      font-family: Inter, "Noto Sans Thai", sans-serif;
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    /* The notes run the full width under all three columns, in a strip of fixed height. */
+    .verdict-foot {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 22px;
+      border-top: 1px solid var(--border);
+    }
+
+    .verdict-foot .verdict-notes {
+      flex: 1;
+      min-width: 0;
     }
 
     /* One reserved place for the card's notes: a warning that comes and goes swaps in here instead of pushing the page. */
     .verdict-notes {
       display: grid;
-      align-content: start;
+      align-content: center;
       gap: 6px;
-      min-height: 136px;
+      min-height: 72px;
     }
 
     .verdict-notes > .warn-line,
@@ -754,7 +801,7 @@ function buildHtml() {
     }
 
     .notes-more {
-      justify-self: start;
+      flex: none;
       min-height: 26px;
       padding: 0 8px;
       border: 1px solid var(--border);
@@ -803,7 +850,7 @@ function buildHtml() {
 
     .verdict h1 {
       margin: 0;
-      font-size: 25px;
+      font-size: 28px;
       line-height: 1.14;
       font-weight: 750;
       text-wrap: balance;
@@ -888,9 +935,12 @@ function buildHtml() {
       color: var(--best);
     }
 
+    /* Both columns share one row plan (head, readings, band, note), so their rows line up across the card. */
     .pillar {
       display: grid;
-      gap: 12px;
+      grid-template-rows: 28px auto 30px 1fr;
+      align-content: start;
+      gap: 16px;
       border-right: 1px solid var(--border);
     }
 
@@ -901,8 +951,20 @@ function buildHtml() {
     .pillar-head {
       display: flex;
       align-items: center;
-      justify-content: space-between;
       gap: 10px;
+      min-width: 0;
+    }
+
+    .pillar-head .status-chip {
+      min-height: 26px;
+      padding: 2px 11px;
+      border-radius: 999px;
+      font-size: 13px;
+    }
+
+    .pillar-head .tag,
+    .pillar-head .tag-info {
+      margin-left: auto;
     }
 
     .pillar-name {
@@ -926,7 +988,10 @@ function buildHtml() {
     }
 
     .tag {
-      padding: 3px 7px;
+      display: inline-flex;
+      align-items: center;
+      height: 22px;
+      padding: 0 7px;
     }
 
     .tag-info {
@@ -935,7 +1000,8 @@ function buildHtml() {
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      padding: 4px 7px;
+      height: 22px;
+      padding: 0 7px;
     }
 
     .tag-info svg {
@@ -1010,27 +1076,81 @@ function buildHtml() {
     }
 
     .pillar-meta {
-      display: flex;
-      gap: 18px;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
     }
 
     .meta {
       display: grid;
-      gap: 3px;
+      gap: 4px;
+      min-width: 0;
     }
 
     .meta span {
       color: var(--muted);
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
 
     .meta b {
       color: var(--ink);
       font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: 16px;
-      font-weight: 800;
+      font-size: 20px;
+      font-weight: 750;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* The bands as a scale: Acceptable amber, Best green, a tick where the reading sits, numbers at the band edges. */
+    .band-bar {
+      position: relative;
+      align-self: start;
+      height: 30px;
+    }
+
+    .band-bar .track,
+    .band-bar .zone {
+      position: absolute;
+      top: 4px;
+      height: 6px;
+      border-radius: 3px;
+    }
+
+    .band-bar .track {
+      left: 0;
+      right: 0;
+      background: var(--surface-2);
+    }
+
+    .band-bar .zone.acceptable {
+      background: oklch(0.820 0.140 82 / 0.55);
+    }
+
+    .band-bar .zone.best {
+      background: oklch(0.780 0.165 152 / 0.8);
+    }
+
+    .band-bar .tick {
+      position: absolute;
+      top: 0;
+      width: 3px;
+      height: 14px;
+      margin-left: -1.5px;
+      border-radius: 2px;
+      background: var(--ink);
+      box-shadow: 0 0 0 2px var(--surface);
+    }
+
+    .band-bar .edge {
+      position: absolute;
+      top: 15px;
+      transform: translateX(-50%);
+      color: var(--muted);
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 10.5px;
+      font-variant-numeric: tabular-nums;
     }
 
     .meta b small {
@@ -1970,9 +2090,23 @@ function buildHtml() {
 
     .verdict-actions {
       display: flex;
+      flex: none;
       align-items: center;
       gap: 10px;
-      margin-top: 14px;
+    }
+
+    .button.ghost {
+      min-height: 30px;
+      padding: 0 10px;
+      border-color: transparent;
+      background: none;
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+
+    .button.ghost:hover {
+      border-color: var(--border);
+      color: var(--ink);
     }
 
     .copy-status {
@@ -1980,8 +2114,10 @@ function buildHtml() {
       font-size: 12px;
     }
 
+    /* Three lines reserved, so a longer note never changes the card's height. */
     .pillar-note {
-      margin: 10px 0 0;
+      margin: 0;
+      min-height: calc(12.5px * 1.45 * 3);
       color: var(--muted);
       font-size: 12.5px;
       line-height: 1.45;
@@ -2355,9 +2491,7 @@ function buildHtml() {
         padding-bottom: 40px;
       }
 
-      .verdict-kicker,
-      #verdictHeadline,
-      .verdict-sub {
+      .verdict-lead {
         display: none;
       }
 
@@ -2441,6 +2575,11 @@ function buildHtml() {
         border-bottom: 1px solid var(--border);
       }
 
+      /* A narrower strip wraps the longest warning to four lines. */
+      .verdict-foot .verdict-notes {
+        min-height: 88px;
+      }
+
       .rail {
         position: sticky;
         top: calc(var(--topbar-h, 64px) + var(--answer-h, 120px) + 16px);
@@ -2456,6 +2595,22 @@ function buildHtml() {
         flex-wrap: nowrap;
         gap: 10px;
         padding: 10px 14px;
+      }
+
+      /* On a phone the notes strip stacks: the note gets the full width and room for four lines, the actions under it. */
+      .verdict-foot {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 12px 16px;
+      }
+
+      .verdict-foot .verdict-notes {
+        min-height: 104px;
+        align-content: start;
+      }
+
+      .verdict-actions {
+        justify-content: space-between;
       }
 
       .brand {
@@ -2974,27 +3129,13 @@ ${sheetCss}
               <div class="verdict-lead">
                 <div class="verdict-kicker"><span class="dot"></span><span id="overallLabel" data-i18n="placementVerdict">Placement verdict</span></div>
                 <h1 id="verdictHeadline">Placement is best</h1>
+                <p class="verdict-reading"><b id="verdictReading">4.60</b><small>m</small><span id="verdictReadingLabel" data-i18n="countingLineLower">counting line</span></p>
                 <p class="verdict-sub" id="verdictSub"></p>
-                <div class="verdict-notes" id="verdictNotes">
-                  <p class="warn-line edge-warn" id="edgeWarn" role="note" hidden></p>
-                  <p class="warn-line" id="densityWarn" hidden></p>
-                  <p class="warn-line" id="heightWarn" hidden></p>
-                  <p class="entrance-line" id="entranceLine" data-state="covered" hidden></p>
-                  <p class="notes-none" id="notesNone" data-i18n="notesNone" hidden>Nothing to flag for this placement.</p>
-                  <button type="button" class="notes-more" id="notesMore" hidden></button>
-                </div>
-                <div class="verdict-actions">
-                  <button type="button" class="button" id="copyReadings">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"></path></svg>
-                    <span data-i18n="copyReadings">Copy readings</span>
-                  </button>
-                  <span class="copy-status" id="copyStatus" aria-live="polite"></span>
-                </div>
-                <p class="sr-only" id="placementAnnouncement" aria-live="polite" aria-atomic="true"></p>
               </div>
-              <div class="pillar">
+              <div class="pillar" role="group" aria-labelledby="countingName">
                 <div class="pillar-head">
-                  <span class="pillar-name" data-i18n="countingLine">Counting line</span>
+                  <span class="pillar-name" id="countingName" data-i18n="countingLine">Counting line</span>
+                  <span class="status-chip best" id="feetStatus">Best</span>
                   <button class="tag-info" type="button" id="priorityInfo" aria-expanded="false" aria-describedby="priorityTip">
                     <span data-i18n="verdictTag">verdict</span>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -3004,24 +3145,43 @@ ${sheetCss}
                     </svg>
                   </button>
                 </div>
-                <span class="status-chip best" id="feetStatus">Best</span>
                 <div class="pillar-meta">
                   <span class="meta"><span data-i18n="feetAngle">feet angle</span><b id="feetAngle"></b></span>
-                  <span class="meta"><span data-i18n="bands">bands</span><b id="feetBands"></b></span>
+                  <span class="meta"><span data-i18n="pixelDensityMeta">pixel density</span><b id="feetPpm"></b></span>
                 </div>
+                <div class="band-bar" id="feetBar" aria-hidden="true"></div>
                 <p class="pillar-note" id="countNote"></p>
               </div>
-              <div class="pillar">
+              <div class="pillar" role="group" aria-labelledby="faceName">
                 <div class="pillar-head">
-                  <span class="pillar-name" data-i18n="faceLine">Face line</span>
+                  <span class="pillar-name" id="faceName" data-i18n="faceLine">Face line</span>
+                  <span class="status-chip visible" id="faceStatus">Visible</span>
                   <span class="tag" data-i18n="demographics">demographics</span>
                 </div>
-                <span class="status-chip visible" id="faceStatus">Visible</span>
                 <div class="pillar-meta">
                   <span class="meta"><span data-i18n="distanceMeta">distance</span><b id="faceLineDistance"></b></span>
                   <span class="meta"><span data-i18n="faceAngle">face angle</span><b id="faceAngle"></b></span>
                 </div>
+                <div class="band-bar" id="faceBar" aria-hidden="true"></div>
                 <p class="pillar-note" id="faceNote"></p>
+              </div>
+              <div class="verdict-foot">
+                <div class="verdict-notes" id="verdictNotes">
+                  <p class="warn-line edge-warn" id="edgeWarn" role="note" hidden></p>
+                  <p class="warn-line" id="densityWarn" hidden></p>
+                  <p class="warn-line" id="heightWarn" hidden></p>
+                  <p class="entrance-line" id="entranceLine" data-state="covered" hidden></p>
+                  <p class="notes-none" id="notesNone" data-i18n="notesNone" hidden>Nothing to flag for this placement.</p>
+                </div>
+                <div class="verdict-actions">
+                  <button type="button" class="notes-more" id="notesMore" hidden></button>
+                  <button type="button" class="button ghost" id="copyReadings">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"></path></svg>
+                    <span data-i18n="copyReadings">Copy readings</span>
+                  </button>
+                  <span class="copy-status" id="copyStatus" aria-live="polite"></span>
+                </div>
+                <p class="sr-only" id="placementAnnouncement" aria-live="polite" aria-atomic="true"></p>
               </div>
             </section>
             <div class="dual sim-mode">
@@ -3263,7 +3423,7 @@ ${shareSource}
         focalLength: "Focal length", resolution: "Resolution",
         placementVerdict: "Placement verdict", copyReadings: "Copy readings", countingLine: "Counting line", verdictTag: "verdict",
         feetAngle: "feet angle", bands: "bands", bandBest: "best", bandOk: "ok", faceLine: "Face line", demographics: "demographics",
-        distanceMeta: "distance", faceAngle: "face angle", sideView: "Side view", feetWindow: "Feet distance window",
+        distanceMeta: "distance", faceAngle: "face angle", pixelDensityMeta: "pixel density", mountHeightLower: "mount height", sideView: "Side view", feetWindow: "Feet distance window",
         okFeet: "ok feet", bestFeet: "best feet", viewTop: "Top", viewCamera: "Camera",
         titleTop: "Top view", titleCamera: "Camera view",
         in: "In", out: "Out", faces: "Faces", passers: "Passers-by, not counted", crossTraffic: "Cross traffic",
@@ -3361,7 +3521,7 @@ ${shareSource}
         focalLength: "ความยาวโฟกัส", resolution: "ความละเอียด",
         placementVerdict: "ผลการประเมิน", copyReadings: "คัดลอกค่า", countingLine: "เส้นนับ", verdictTag: "ตัดสินผล",
         feetAngle: "มุมเท้า", bands: "ช่วงมุม", bandBest: "ดีสุด", bandOk: "พอใช้", faceLine: "เส้นจับใบหน้า", demographics: "ข้อมูลเพศ/อายุ",
-        distanceMeta: "ระยะ", faceAngle: "มุมใบหน้า", sideView: "มุมมองด้านข้าง", feetWindow: "ช่วงระยะตามมุมเท้า",
+        distanceMeta: "ระยะ", faceAngle: "มุมใบหน้า", pixelDensityMeta: "ความละเอียด", mountHeightLower: "ความสูงติดตั้ง", sideView: "มุมมองด้านข้าง", feetWindow: "ช่วงระยะตามมุมเท้า",
         okFeet: "พอใช้", bestFeet: "ดีที่สุด", viewTop: "บน", viewCamera: "กล้อง",
         titleTop: "มุมมองจากด้านบน", titleCamera: "ภาพจากกล้อง",
         in: "เข้า", out: "ออก", faces: "ใบหน้า", passers: "คนเดินผ่าน (ไม่นับ)", crossTraffic: "คนเดินตัดผ่าน",
@@ -3515,7 +3675,8 @@ ${shareSource}
       copyReadings: byId("copyReadings"), copyStatus: byId("copyStatus"), placementAnnouncement: byId("placementAnnouncement"),
       recommendedDistance: byId("recommendedDistance"), snapButton: byId("snapButton"), snapLabel: byId("snapLabel"), densityWarn: byId("densityWarn"),
       answerFaceChip: byId("answerFaceChip"), answerFaceState: byId("answerFaceState"), answerPpmChip: byId("answerPpmChip"),
-      feetStatus: byId("feetStatus"), feetAngle: byId("feetAngle"), feetBands: byId("feetBands"), countNote: byId("countNote"),
+      feetStatus: byId("feetStatus"), feetAngle: byId("feetAngle"), feetPpm: byId("feetPpm"), feetBar: byId("feetBar"), faceBar: byId("faceBar"),
+      verdictReading: byId("verdictReading"), verdictReadingLabel: byId("verdictReadingLabel"), countNote: byId("countNote"),
       faceStatus: byId("faceStatus"), faceLineDistance: byId("faceLineDistance"), faceAngle: byId("faceAngle"), faceNote: byId("faceNote"),
       priorityInfo: byId("priorityInfo"), priorityTip: byId("priorityTip"),
       stageBadge: byId("stageBadge"), sideFeetReading: byId("sideFeetReading"), sideFaceReading: byId("sideFaceReading"), sideTiltReading: byId("sideTiltReading"),
@@ -3852,6 +4013,17 @@ ${shareSource}
     }
 
     // The card's notes share one reserved slot, most important first; "+N more" steps through the rest.
+    // A band scale from lo to hi deg: zones drawn in order (later on top), band edges numbered, a tick at the reading.
+    function renderBandBar(el, lo, hi, zones, value) {
+      const at = (deg) => pct(deg, lo, hi).toFixed(2) + "%";
+      const edges = [];
+      zones.forEach((z) => { [z[0], z[1]].forEach((e) => { if (e > lo && e < hi && edges.indexOf(e) === -1) edges.push(e); }); });
+      el.innerHTML = '<span class="track"></span>' +
+        zones.map((z) => '<span class="zone ' + z[2] + '" style="left:' + at(z[0]) + ";width:calc(" + at(z[1]) + " - " + at(z[0]) + ')"></span>').join("") +
+        edges.map((e) => '<span class="edge" style="left:' + at(e) + '">' + e + "</span>").join("") +
+        (value === null || value === undefined ? "" : '<span class="tick" style="left:' + at(clamp(value, lo, hi)) + '"></span>');
+    }
+
     function showNotes(candidates) {
       const notes = candidates.filter((c) => c[1]).map((c) => c[0]);
       const key = notes.map((el) => el.id).join(",");
@@ -4909,7 +5081,17 @@ ${shareSource}
 
       updateStatusElement(els.feetStatus, r.feet.status, STATUS_LABEL[r.feet.status]);
       els.feetAngle.innerHTML = fmt(r.feet.angleDeg, 2) + "<small>deg</small>";
-      els.feetBands.innerHTML = profile.feetAngleDeg.best.min + "-" + profile.feetAngleDeg.best.max + " <small>" + t("bandBest") + "</small> / " + profile.feetAngleDeg.acceptable.min + "-" + profile.feetAngleDeg.acceptable.max + " <small>" + t("bandOk") + "</small>";
+      els.feetPpm.innerHTML = fmt(r.optics.pixelsPerMetre, 0) + "<small>px/m</small>";
+      const feetBandsDeg = profile.feetAngleDeg;
+      renderBandBar(els.feetBar, feetBandsDeg.acceptable.min - 6, feetBandsDeg.acceptable.max + 6,
+        [[feetBandsDeg.acceptable.min, feetBandsDeg.acceptable.max, "acceptable"], [feetBandsDeg.best.min, feetBandsDeg.best.max, "best"]], r.feet.angleDeg);
+      const faceBandsDeg = profile.faceAngleDeg;
+      renderBandBar(els.faceBar, 0, faceBandsDeg.acceptableMax + 10,
+        [[0, faceBandsDeg.acceptableMax, "acceptable"], [faceBandsDeg.best.min, faceBandsDeg.best.max, "best"]], r.faceLine.angleDeg);
+      // Height mode solves the mount, so the big number is the height; otherwise it is the counting line distance.
+      const readingIsHeight = state.solveMode === "height";
+      els.verdictReading.textContent = readingIsHeight ? fmt(heightM, 1) : fmt(distanceM, 2);
+      els.verdictReadingLabel.textContent = t(readingIsHeight ? "mountHeightLower" : "countingLineLower");
       els.countNote.textContent = r.countingLine.framed ? t("countFramed", { target: profile.feetAngleDeg.target }) : t("countCut");
       updateStatusElement(els.faceStatus, visibleClass, face.label);
       els.faceLineDistance.innerHTML = r.faceLine.distanceM === null ? t("none") : fmt(r.faceLine.distanceM, 2) + "<small>m</small>";
