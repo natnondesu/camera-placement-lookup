@@ -94,10 +94,12 @@
       font-feature-settings: "tnum" 1;
     }
 
+    /* Every row sits at its content height; a 1fr row would stretch the shared-link banner on a tall window. */
     .app {
       min-height: 100vh;
       display: grid;
-      grid-template-rows: auto 1fr;
+      grid-auto-rows: auto;
+      align-content: start;
     }
 
     .topbar {
@@ -325,7 +327,7 @@
     .table-head h2 {
       margin: 0;
       color: var(--ink-soft);
-      font-size: 13px;
+      font-size: 15px;
       font-weight: 700;
       line-height: 1.25;
     }
@@ -662,8 +664,14 @@
 
     .verdict-lead {
       display: grid;
+      align-content: start;
       gap: 13px;
       border-right: 1px solid var(--border);
+    }
+
+    .verdict-lead > .warn-line,
+    .verdict-lead > .entrance-line {
+      margin-top: 0;
     }
 
     .verdict-kicker {
@@ -1018,14 +1026,10 @@
     }
 
     .stage-badge {
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      background: var(--surface-2);
       color: var(--muted);
-      padding: 3px 8px;
-      font-family: "JetBrains Mono", ui-monospace, monospace;
-      font-size: 11px;
-      font-weight: 700;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
     }
 
     .diagram-wrap {
@@ -2030,6 +2034,30 @@
       font-weight: 650;
     }
 
+    .warn-line > svg {
+      flex: none;
+      width: 15px;
+      height: 15px;
+      margin-top: 1px;
+    }
+
+    .edge-warn {
+      font-weight: 500;
+      line-height: 1.45;
+    }
+
+    .edge-warn b {
+      font-weight: 750;
+    }
+
+    .mono-chip {
+      padding: 0 5px;
+      border-radius: 4px;
+      background: oklch(0.820 0.140 82 / 0.18);
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
     /* ---------- Phone and tablet ---------- */
     .answer,
     .sheet-bar,
@@ -2212,13 +2240,6 @@
       .on-table .answer,
       .statusbar {
         display: none;
-      }
-
-      /* The answer band sits in the shell grid; keep every row at its content height. */
-      .app {
-        grid-template-rows: none;
-        grid-auto-rows: auto;
-        align-content: start;
       }
 
       .workspace {
@@ -3757,7 +3778,7 @@
                 <p class="verdict-sub" id="verdictSub"></p>
                 <p class="warn-line" id="heightWarn" hidden></p>
                 <p class="warn-line" id="densityWarn" hidden></p>
-                <p class="warn-line" id="edgeWarn" hidden></p>
+                <p class="warn-line edge-warn" id="edgeWarn" role="note" hidden></p>
                 <p class="entrance-line" id="entranceLine" data-state="covered" hidden></p>
                 <div class="verdict-actions">
                   <button type="button" class="button" id="copyReadings">
@@ -4623,8 +4644,9 @@ function decodePlacement(hash) {
         offsetSide: "{distance} m {side} of the entrance centre line, as the camera faces it. It turns {pan} deg to aim at the middle.",
         offsetSideFisheye: "{distance} m {side} of the entrance centre line. A ceiling fisheye looks straight down, so it does not turn.",
         sideLeft: "left", sideRight: "right",
-        edgeWarn: "The {side} end of the walkable width is at {angle} deg, outside the bands: people walking there may be missed. Move the camera toward the centre line or mount it higher.",
-        edgeCut: "A person at the {side} end of the walkable width is not wholly in frame: people walking there may be missed. Move the camera toward the centre line or zoom out.",
+        edgeLead: "{side} end at {angle}", edgeBody: "is outside the feet bands, so people walking there may be missed. Move the camera toward the centre line or mount it higher.",
+        edgeCutLead: "{side} end cut off:", edgeCutBody: "a person there is not wholly in frame, so people walking there may be missed. Move the camera toward the centre line or zoom out.",
+        sideLeftCap: "Left", sideRightCap: "Right",
         noDistance: "From this far off-centre no distance gives an Acceptable feet angle in the middle of the entrance. Move the camera toward the centre line or mount it higher.",
         faceOffCentre: "No face-Best spot along the middle of the entrance from this far off-centre. Move the camera toward the centre line.",
         entranceWidth: "Entrance width", none: "none",
@@ -4719,8 +4741,9 @@ function decodePlacement(hash) {
         offsetSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า (มองจากกล้อง) กล้องหัน {pan} องศาเพื่อเล็งกลางทางเข้า",
         offsetSideFisheye: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า ฟิชอายติดเพดานมองลงตรงๆ จึงไม่ต้องหัน",
         sideLeft: "ซ้าย", sideRight: "ขวา",
-        edgeWarn: "ปลายด้าน{side}ของช่วงที่เดินได้มีมุม {angle} องศา อยู่นอกเกณฑ์ คนที่เดินตรงนั้นอาจนับไม่ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น",
-        edgeCut: "คนที่ยืนปลายด้าน{side}ของช่วงที่เดินได้อยู่ในภาพไม่ครบตัว อาจนับไม่ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือซูมออก",
+        edgeLead: "ปลายด้าน{side} {angle}", edgeBody: "อยู่นอกเกณฑ์มุมเท้า คนที่เดินตรงนั้นอาจนับไม่ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น",
+        edgeCutLead: "ปลายด้าน{side}อยู่นอกภาพ:", edgeCutBody: "คนที่ยืนตรงนั้นอยู่ในภาพไม่ครบตัว อาจนับไม่ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือซูมออก",
+        sideLeftCap: "ซ้าย", sideRightCap: "ขวา",
         noDistance: "กล้องห่างจากกึ่งกลางมากจนไม่มีระยะไหนให้มุมเท้าที่กลางทางเข้าพอใช้ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น",
         faceOffCentre: "กล้องห่างจากกึ่งกลางมากเกินไป จึงไม่มีจุดที่มุมหน้าดีที่สุดตามแนวกลางทางเข้า ขยับกล้องเข้าหาแนวกึ่งกลาง",
         entranceWidth: "ความกว้างทางเข้า", none: "ไม่มี",
@@ -5202,11 +5225,26 @@ function decodePlacement(hash) {
     }
 
 
-    function edgeCopy(p) {
+    // The warning leads with which end and its angle, then what it means and what to do.
+    function edgeParts(p, angleMarkup) {
       const edge = p.result.countingLine.edge;
-      if (edge === null) return "";
-      const side = t(edge.side === "right" ? "sideRight" : "sideLeft");
-      return edge.framed ? t("edgeWarn", { side: side, angle: fmt(edge.feetAngleDeg, 1) }) : t("edgeCut", { side: side });
+      const side = t(edge.side === "right" ? "sideRightCap" : "sideLeftCap");
+      const angle = fmt(edge.feetAngleDeg, 1) + " deg";
+      return edge.framed
+        ? { lead: t("edgeLead", { side: side, angle: angleMarkup(angle) }), body: t("edgeBody") }
+        : { lead: t("edgeCutLead", { side: side }), body: t("edgeCutBody") };
+    }
+
+    function edgeCopy(p) {
+      if (p.result.countingLine.edge === null) return "";
+      const parts = edgeParts(p, (angle) => angle);
+      return parts.lead + " " + parts.body;
+    }
+
+    function edgeHtml(p) {
+      if (p.result.countingLine.edge === null) return "";
+      const parts = edgeParts(p, (angle) => '<span class="mono-chip">' + angle + "</span>");
+      return SHEET_ICON.warn + "<span><b>" + parts.lead + "</b> " + parts.body + "</span>";
     }
 
     function entranceCopy(entrance, coverageWidthM) {
@@ -5335,6 +5373,21 @@ function decodePlacement(hash) {
       ctx.textBaseline = "middle";
       ctx.fillText(fmt(profile.humanHeightM, 1) + " " + t("canvasHead"), x + 12, headY - 6);
       ctx.fillText(fmt(profile.facePointM, 1) + " " + t("canvasFace"), x + 12, faceY);
+    }
+
+    // A label on a small plate in the panel colour, for text that sits where rays and figures cross.
+    function plateText(ctx, text, x, y) {
+      // ctx.font reads like "700 12px Inter, ..."; the number before "px" is the size.
+      const size = parseFloat(ctx.font.split("px")[0].split(" ").pop()) || 12;
+      const width = ctx.measureText(text).width;
+      const left = ctx.textAlign === "right" ? x - width : ctx.textAlign === "center" ? x - width / 2 : x;
+      const top = ctx.textBaseline === "bottom" ? y - size * 1.15 : ctx.textBaseline === "middle" ? y - size * 0.62 : y - size * 0.1;
+      const fill = ctx.fillStyle;
+      ctx.fillStyle = colorWithAlpha(COL.surface, "0.9");
+      roundRect(ctx, left - 4, top - 2, width + 8, size * 1.25 + 4, 4);
+      ctx.fill();
+      ctx.fillStyle = fill;
+      ctx.fillText(text, x, y);
     }
 
     // A thin outline in the panel colour keeps diagram labels readable where they cross rays and figures.
@@ -5518,25 +5571,22 @@ function decodePlacement(hash) {
           ctx.moveTo(faceX - 9, groundY);
           ctx.lineTo(faceX + 9, groundY);
           ctx.stroke();
-          ctx.globalAlpha = fl.visible ? 0.75 : 0.35;
+          // Within a hand's width of the counting line the face figure steps back, so the two do not blur together.
+          ctx.globalAlpha = nearlyTouching ? 0.3 : fl.visible ? 0.75 : 0.35;
           drawPerson(ctx, faceX, groundY, yFor, COL.face, profile, false);
           ctx.globalAlpha = 1;
           ctx.fillStyle = COL.face;
           ctx.font = "700 12px Inter, 'Noto Sans Thai', sans-serif";
           ctx.textAlign = crowded ? (faceRight ? "left" : "right") : "center";
           ctx.textBaseline = "bottom";
-          haloText(ctx, t("faceLine"), crowded ? faceX + (faceRight ? -6 : 6) : faceX, Math.max(22, yFor(profile.humanHeightM) - (nearlyTouching ? 30 : 14)));
-          ctx.font = "600 11px JetBrains Mono, monospace";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "top";
-          haloText(ctx, fmt(faceReach, 2, " m"), faceX, groundY + 22);
+          plateText(ctx, t("faceLine"), crowded ? faceX + (faceRight ? -6 : 6) : faceX, Math.max(22, yFor(profile.humanHeightM) - (nearlyTouching ? 30 : 14)));
         }
         ctx.globalAlpha = 1;
         ctx.fillStyle = COL.face;
         ctx.font = "700 12px Inter, 'Noto Sans Thai', sans-serif";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        haloText(ctx, t("canvasFaceAngle", { angle: fmt(fl.angleDeg, 1) }), faceX + 12, faceY);
+        plateText(ctx, t("canvasFaceAngle", { angle: fmt(fl.angleDeg, 1) }), faceX + 12, faceY);
       }
 
       ctx.strokeStyle = feetColor;
@@ -5551,7 +5601,7 @@ function decodePlacement(hash) {
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
       ctx.fillStyle = feetColor;
-      haloText(ctx, t("canvasFeetAngle", { angle: fmt(slice.feetAngleDeg, 1) }), subX - 12, groundY - 6);
+      plateText(ctx, t("canvasFeetAngle", { angle: fmt(slice.feetAngleDeg, 1) }), subX - 12, groundY - 6);
 
       // When the face line is the counting line, its face angle label already sits at the face point.
       drawPerson(ctx, subX, groundY, yFor, personColor, profile, !crowded && !(fl.distanceM !== null && fl.coincides));
@@ -5567,7 +5617,7 @@ function decodePlacement(hash) {
         // The aim label sits on the side away from a close face line.
         const aimLeft = crowded && faceRight;
         ctx.textAlign = aimLeft ? "right" : "left";
-        haloText(ctx, t("canvasAim", { height: fmt(aimHeightM, 2) }), subX + (aimLeft ? -10 : 10), aimY - 8);
+        plateText(ctx, t("canvasAim", { height: fmt(aimHeightM, 2) }), subX + (aimLeft ? -10 : 10), aimY - 8);
       }
 
       ctx.fillStyle = COL.accent;
@@ -5600,7 +5650,7 @@ function decodePlacement(hash) {
       haloText(ctx, t("canvasCamera"), camX, Math.max(22, camY - 14));
       ctx.fillStyle = personColor;
       ctx.textAlign = crowded ? (faceRight ? "right" : "left") : "center";
-      haloText(ctx, t("countingLine"), crowded ? subX + (faceRight ? 6 : -6) : subX, Math.max(22, yFor(profile.humanHeightM) - 14));
+      plateText(ctx, t("countingLine"), crowded ? subX + (faceRight ? 6 : -6) : subX, Math.max(22, yFor(profile.humanHeightM) - 14));
     }
 
     // Plan of the entrance: the counting line coloured by the feet angle at each point, the judged points, the camera
@@ -5711,9 +5761,10 @@ function decodePlacement(hash) {
         ctx.beginPath(); ctx.moveTo(S(-shownHalf, 0)[0], fy); ctx.lineTo(S(shownHalf, 0)[0], fy); ctx.stroke();
         ctx.setLineDash([]);
         ctx.fillStyle = COL.face;
-        ctx.textAlign = "left";
+        ctx.font = "600 11.5px Inter, 'Noto Sans Thai', sans-serif";
+        ctx.textAlign = "right";
         ctx.textBaseline = "middle";
-        haloText(ctx, t("faceLineLower"), S(shownHalf, 0)[0] + 8, fy);
+        haloText(ctx, t("faceLineLower"), Math.max(ctx.measureText(t("faceLineLower")).width + 6, S(-shownHalf, 0)[0] - 8), fy);
       }
 
       // The counting line, coloured by the feet angle at each point; dimmed outside the walkable width.
@@ -5751,8 +5802,8 @@ function decodePlacement(hash) {
         ctx.fillStyle = entryColor;
         ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
         ctx.textAlign = "center";
-        ctx.textBaseline = "bottom";
-        haloText(ctx, t("entranceLabel") + " " + fmt(r.entrance.widthM, 1, " m"), ox, S(0, -0.35)[1] - 0.16 * scale - 4);
+        ctx.textBaseline = "top";
+        haloText(ctx, t("entranceLabel") + " " + fmt(r.entrance.widthM, 1, " m"), ox, S(0, 0)[1] + 12);
       }
 
       // Aim line from the camera to the middle of the entrance.
@@ -5768,6 +5819,7 @@ function decodePlacement(hash) {
       // The aim point, which the verdict is judged at, and the walkable ends; an end that warns is ringed.
       const keys = hasEnds ? ["aim", "near", "far"] : ["aim"];
       const placed = [];
+      const labelled = [];
       keys.forEach((key) => {
         const pt = line.points[key];
         const q = S(pt.xM, 0);
@@ -5789,12 +5841,20 @@ function decodePlacement(hash) {
           ctx.lineWidth = 1.5;
           ctx.stroke();
         }
+        // Angles sit above the strip on short leaders; a second row takes any label that would touch its neighbour.
         const text = fmt(pt.feetAngleDeg, 1) + "°";
         ctx.font = "700 12px JetBrains Mono, monospace";
+        const half = ctx.measureText(text).width / 2 + 4;
+        const row = labelled.some((l) => l.row === 0 && Math.abs(l.x - q[0]) < l.half + half) ? 1 : 0;
+        labelled.push({ x: q[0], half: half, row: row });
+        const labelY = q[1] - 18 - row * 17;
+        ctx.strokeStyle = colorWithAlpha(statusColor[pt.status], "0.7");
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(q[0], q[1] - (isAim ? 8 : 6)); ctx.lineTo(q[0], labelY + 1); ctx.stroke();
         ctx.textAlign = "center";
         ctx.textBaseline = "bottom";
         ctx.fillStyle = statusColor[pt.status];
-        haloText(ctx, text, q[0], q[1] - 11);
+        plateText(ctx, text, clamp(q[0], half, w - half), labelY);
       });
 
       // Dimensions: straight back to the counting line, and sideways to the centre line.
@@ -5871,7 +5931,8 @@ function decodePlacement(hash) {
       ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
       const hint = t(state.solveMode === "distance" ? "planDragSideways" : "planDragAnywhere");
       const width = fisheye ? t("planEffectiveOnly", { effective: fmt(o.effectiveWidthM, 1) }) : t("planWidths", { width: fmt(o.coverageWidthM, 1), effective: fmt(o.effectiveWidthM, 1) });
-      haloText(ctx, width + "  ·  " + hint, 8, h - 8);
+      haloText(ctx, width, 8, h - 24);
+      haloText(ctx, hint, 8, h - 8);
     }
 
     // Dragging the camera on the plan moves it sideways, and nearer or farther unless the distance is solved.
@@ -6173,7 +6234,7 @@ function decodePlacement(hash) {
       els.verdictSub.textContent = verdictCopy(p);
       const outside = r.warnings.indexOf("height_outside_range") >= 0;
       const lowDensity = r.warnings.includes("low_pixel_density");
-      els.edgeWarn.textContent = edgeCopy(p);
+      els.edgeWarn.innerHTML = edgeHtml(p);
       els.edgeWarn.hidden = r.countingLine.edge === null;
       els.densityWarn.hidden = !lowDensity;
       els.densityWarn.textContent = lowDensity ? t("densityWarn", { ppm: fmt(r.optics.pixelsPerMetre, 0), min: profile.minPixelsPerMetre.counting }) : "";
