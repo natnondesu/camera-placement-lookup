@@ -120,7 +120,8 @@ export function createWalkSim(THREE, ui) {
   let layoutKey = "";
   let agents = [];
   let active = false;
-  let playing = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // The view opens still, on one person standing at the counting line; the crowd walks only when asked.
+  let walking = false;
   let crossTraffic = true;
   // The site sheet's snapshot draws lines, bands and boxes but no text, which would shrink to smudges on paper.
   let quiet = false;
@@ -164,6 +165,25 @@ export function createWalkSim(THREE, ui) {
     cap.position.y = 1.605;
     group.add(legL, legR, torso, armL, armR, head, cap);
     return { group, legL, legR, armL, armR };
+  }
+
+  const standing = { body: makePerson(), flash: 0, flashDirection: null, faceFlash: 0 };
+  scene.add(standing.body.group);
+  const shownAgents = () => (walking ? agents : [standing]);
+
+  function poseStanding(p) {
+    const g = standing.body.group;
+    g.position.set(0, 0, p.distanceM);
+    g.rotation.y = Math.PI;
+    g.scale.setScalar(p.humanHeightM / MODEL_HEIGHT_M);
+  }
+
+  function syncWalking() {
+    agents.forEach((agent) => { agent.body.group.visible = walking; });
+    standing.body.group.visible = !walking;
+    ui.walkButton.setAttribute("aria-pressed", String(walking));
+    ui.walkOnly.forEach((el) => { el.hidden = !walking; });
+    ui.stillOnly.forEach((el) => { el.hidden = walking; });
   }
 
   function lineStrip(z, width, color, opacity) {
@@ -275,6 +295,7 @@ export function createWalkSim(THREE, ui) {
       spawn(agent, lay, p, true);
       return agent;
     });
+    syncWalking();
   }
 
   function resize() {
@@ -446,7 +467,7 @@ export function createWalkSim(THREE, ui) {
     if (input.faceLineDistanceM !== null && Math.abs(input.faceLineDistanceM - input.distanceM) > 0.02) {
       label(input.faceLineDistanceM, input.text.faceLine + " " + input.faceLineDistanceM.toFixed(2) + " m", input.colors.face);
     }
-    for (const agent of agents) {
+    for (const agent of shownAgents()) {
       const g = agent.body.group;
       const behindWall = lay.doorZ !== null && g.position.z > lay.doorZ + 0.1 && Math.abs(g.position.x) > lay.doorHalf - 0.1;
       if (behindWall) continue;
@@ -552,7 +573,7 @@ export function createWalkSim(THREE, ui) {
   }
 
   function frame(time) {
-    if (!active || !playing) return;
+    if (!active || !walking) return;
     const dt = lastTime ? Math.min(0.05, (time - lastTime) / 1000) : 0;
     lastTime = time;
     step(dt);
@@ -562,14 +583,8 @@ export function createWalkSim(THREE, ui) {
 
   function start() {
     lastTime = 0;
-    if (active && playing) requestAnimationFrame(frame);
+    if (active && walking) requestAnimationFrame(frame);
     else render();
-  }
-
-  function syncPlayButton() {
-    const text = input ? input.text : { pause: "Pause", play: "Play" };
-    ui.playButton.textContent = playing ? text.pause : text.play;
-    ui.playButton.setAttribute("aria-pressed", String(playing));
   }
 
   function syncPassersRow() {
@@ -585,9 +600,9 @@ export function createWalkSim(THREE, ui) {
     start();
   });
 
-  ui.playButton.addEventListener("click", () => {
-    playing = !playing;
-    syncPlayButton();
+  ui.walkButton.addEventListener("click", () => {
+    walking = !walking;
+    syncWalking();
     start();
   });
   ui.resetButton.addEventListener("click", () => {
@@ -603,40 +618,20 @@ export function createWalkSim(THREE, ui) {
     resize();
     render();
   });
-  syncPlayButton();
+  syncWalking();
 
-  // One person standing on the counting line in the middle of the entrance, facing the camera, for the site sheet.
-  // The whole frame, framed exactly as the console shows it; the live crowd and view are put back before returning.
+  // The still view for the site sheet: the whole frame, framed exactly as the console shows it.
+  // The live view (walking or not) is put back before returning.
   function snapshot() {
     if (!input) return null;
     const width = 960;
     const height = Math.round(width / input.aspect);
-    const crowd = agents;
-    const wasPlaying = playing;
-    const person = { body: makePerson() };
-    const half = 0.6;
-    Object.assign(person, {
-      kind: "in",
-      from: { x: 0, z: input.distanceM + half },
-      to: { x: 0, z: input.distanceM - half },
-      length: 2 * half,
-      travelled: half,
-      speed: 0,
-      phase: 0,
-      lastZ: null,
-      flash: 0,
-      flashDirection: null,
-      faceFlash: 0,
-    });
-    person.body.group.scale.setScalar(input.humanHeightM / MODEL_HEIGHT_M);
-    scene.add(person.body.group);
-    crowd.forEach((agent) => { agent.body.group.visible = false; });
-    agents = [person];
-    playing = false;
+    const wasWalking = walking;
+    walking = false;
+    syncWalking();
     quiet = true;
     try {
       setSize(width, height);
-      step(0);
       render();
       const out = document.createElement("canvas");
       out.width = width;
@@ -647,10 +642,8 @@ export function createWalkSim(THREE, ui) {
       return { url: out.toDataURL("image/jpeg", 0.9), aspect: width / height };
     } finally {
       quiet = false;
-      scene.remove(person.body.group);
-      crowd.forEach((agent) => { agent.body.group.visible = true; });
-      agents = crowd;
-      playing = wasPlaying;
+      walking = wasWalking;
+      syncWalking();
       resize();
       render();
     }
@@ -668,14 +661,14 @@ export function createWalkSim(THREE, ui) {
       camera.updateProjectionMatrix();
       if (placement.lens === "fisheye") fisheyeMaterial.uniforms.halfFov.value = (placement.fovDeg * Math.PI) / 360;
       rebuildProps(placement);
+      poseStanding(placement);
       syncPassersRow();
-      syncPlayButton();
       const key = [placement.scene, placement.lens, placement.distanceM.toFixed(1), placement.entranceWidthM || 0, (placement.faceLineDistanceM || 0).toFixed(1)].join("|");
       if (first || key !== layoutKey) respawnAll(placement);
       layoutKey = key;
       if (active) {
         resize();
-        if (!playing) render();
+        if (!walking) render();
       }
     },
     setActive(next) {

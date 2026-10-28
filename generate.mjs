@@ -2012,6 +2012,16 @@ function buildHtml() {
       font-size: 13px;
     }
 
+    .diagram-wrap > .warn-line {
+      margin: 12px 12px 0;
+    }
+
+    .sim-counts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+    }
+
     .sim-actions {
       display: flex;
       flex-wrap: wrap;
@@ -2932,15 +2942,15 @@ ${sheetCss}
               <section class="stage" aria-label="Top-down coverage and camera view">
                 <div class="stage-head">
                   <div class="stage-title">
-                    <h2 id="topTitle">Simulation</h2>
+                    <h2 id="topTitle">Camera view</h2>
                     <div class="solve-seg view-seg" role="group" aria-label="Second diagram">
                       <button type="button" data-topview="top" aria-pressed="false" data-i18n="viewTop">Top</button>
-                      <button type="button" data-topview="camera" aria-pressed="false" data-i18n="viewCamera">Camera</button>
-                      <button type="button" data-topview="sim" aria-pressed="true" data-i18n="viewSim">Simulate</button>
+                      <button type="button" data-topview="camera" aria-pressed="true" data-i18n="viewCamera">Camera</button>
                     </div>
                   </div>
                 </div>
                 <div class="diagram-wrap">
+                  <p class="warn-line" id="simFallback" data-i18n="simFallback" hidden>The 3D view could not load. It needs an internet connection; this flat camera view is shown instead.</p>
                   <canvas id="topCanvas" width="600" height="560" role="img" aria-label="Top-down coverage diagram" hidden></canvas>
                   <div class="sim" id="simWrap">
                     <div class="sim-stage">
@@ -2948,18 +2958,20 @@ ${sheetCss}
                       <canvas id="simOverlay" class="sim-overlay" aria-hidden="true"></canvas>
                     </div>
                     <div class="sim-hud" aria-live="off">
-                      <span><span data-i18n="in">In</span> <b id="simIn">0</b></span>
-                      <span><span data-i18n="out">Out</span> <b id="simOut">0</b></span>
-                      <span><span data-i18n="faces">Faces</span> <b id="simFaces">0</b></span>
-                      <span id="simPassersRow"><span data-i18n="passers">Passers-by, not counted</span> <b id="simPassers">0</b></span>
+                      <span class="sim-counts" id="simCounts" hidden>
+                        <span><span data-i18n="in">In</span> <b id="simIn">0</b></span>
+                        <span><span data-i18n="out">Out</span> <b id="simOut">0</b></span>
+                        <span><span data-i18n="faces">Faces</span> <b id="simFaces">0</b></span>
+                        <span id="simPassersRow"><span data-i18n="passers">Passers-by, not counted</span> <b id="simPassers">0</b></span>
+                      </span>
                       <span class="sim-actions">
-                        <button type="button" class="button sim-toggle" id="simCross" aria-pressed="true" title="People also walk left to right across the view, without crossing the counting line" data-i18n-attr="title:crossTitle" data-i18n="crossTraffic">Cross traffic</button>
-                        <button type="button" class="button" id="simPlay" aria-pressed="true">Pause</button>
-                        <button type="button" class="button" id="simReset" data-i18n="reset">Reset</button>
+                        <button type="button" class="button sim-toggle" id="simCross" aria-pressed="true" title="People also walk left to right across the view, without crossing the counting line" data-i18n-attr="title:crossTitle" data-i18n="crossTraffic" hidden>Cross traffic</button>
+                        <button type="button" class="button" id="simReset" data-i18n="reset" hidden>Reset</button>
+                        <button type="button" class="button sim-toggle" id="simWalk" aria-pressed="false" data-i18n="walkPeople">Walk people</button>
                       </span>
                     </div>
-                    <p class="field-hint sim-note" data-i18n="simNote">Simulated people through this camera. Counts come from the simulation, not real traffic.</p>
-                    <p class="warn-line" id="simFallback" data-i18n="simFallback" hidden>The 3D simulation could not load. It needs an internet connection; Top and Camera still work.</p>
+                    <p class="field-hint sim-note" id="simStillNote" data-i18n="simStillNote">One person standing on the counting line, as this camera sees them. Walk people to watch the counting.</p>
+                    <p class="field-hint sim-note" id="simNote" data-i18n="simNote" hidden>Simulated people through this camera. Counts come from the simulation, not real traffic.</p>
                   </div>
                 </div>
               </section>
@@ -3109,13 +3121,14 @@ ${shareSource}
         placementVerdict: "Placement verdict", copyReadings: "Copy readings", countingLine: "Counting line", verdictTag: "verdict",
         feetAngle: "feet angle", bands: "bands", bandBest: "best", bandOk: "ok", faceLine: "Face line", demographics: "demographics",
         distanceMeta: "distance", faceAngle: "face angle", sideView: "Side view", feetWindow: "Feet distance window",
-        okFeet: "ok feet", bestFeet: "best feet", viewTop: "Top", viewCamera: "Camera", viewSim: "Simulate",
-        titleTop: "Top view", titleCamera: "Camera view", titleSim: "Simulation",
+        okFeet: "ok feet", bestFeet: "best feet", viewTop: "Top", viewCamera: "Camera",
+        titleTop: "Top view", titleCamera: "Camera view",
         in: "In", out: "Out", faces: "Faces", passers: "Passers-by, not counted", crossTraffic: "Cross traffic",
         crossTitle: "People also walk left to right across the view, without crossing the counting line",
-        pause: "Pause", play: "Play", reset: "Reset",
+        walkPeople: "Walk people", reset: "Reset",
+        simStillNote: "One person standing on the counting line, as this camera sees them. Walk people to watch the counting.",
         simNote: "Simulated people through this camera. Counts come from the simulation, not real traffic.",
-        simFallback: "The 3D simulation could not load. It needs an internet connection; Top and Camera still work.",
+        simFallback: "The 3D view could not load. It needs an internet connection; this flat camera view is shown instead.",
         linesOnFloor: "Lines on the floor", countingLineLower: "counting line", faceLineLower: "face line",
         opticsFov: "Optics - field of view", horizontalFov: "horizontal FOV", verticalFov: "vertical FOV",
         coverageAtLine: "Coverage at counting line", fullWidth: "full width", effective80: "effective 80%",
@@ -3187,13 +3200,14 @@ ${shareSource}
         placementVerdict: "ผลการประเมิน", copyReadings: "คัดลอกค่า", countingLine: "เส้นนับ", verdictTag: "ตัดสินผล",
         feetAngle: "มุมเท้า", bands: "ช่วงมุม", bandBest: "ดีสุด", bandOk: "พอใช้", faceLine: "เส้นจับใบหน้า", demographics: "ข้อมูลเพศ/อายุ",
         distanceMeta: "ระยะ", faceAngle: "มุมใบหน้า", sideView: "มุมมองด้านข้าง", feetWindow: "ช่วงระยะตามมุมเท้า",
-        okFeet: "พอใช้", bestFeet: "ดีที่สุด", viewTop: "บน", viewCamera: "กล้อง", viewSim: "จำลอง",
-        titleTop: "มุมมองจากด้านบน", titleCamera: "ภาพจากกล้อง", titleSim: "การจำลอง",
+        okFeet: "พอใช้", bestFeet: "ดีที่สุด", viewTop: "บน", viewCamera: "กล้อง",
+        titleTop: "มุมมองจากด้านบน", titleCamera: "ภาพจากกล้อง",
         in: "เข้า", out: "ออก", faces: "ใบหน้า", passers: "คนเดินผ่าน (ไม่นับ)", crossTraffic: "คนเดินตัดผ่าน",
         crossTitle: "ให้มีคนเดินซ้ายไปขวาผ่านภาพด้วย โดยไม่ข้ามเส้นนับ",
-        pause: "หยุด", play: "เล่น", reset: "เริ่มใหม่",
+        walkPeople: "ให้คนเดิน", reset: "เริ่มใหม่",
+        simStillNote: "คนหนึ่งคนยืนบนเส้นนับ ตามที่กล้องนี้มองเห็น กด ให้คนเดิน เพื่อดูการนับ",
         simNote: "คนจำลองที่มองผ่านกล้องนี้ ตัวเลขมาจากการจำลอง ไม่ใช่การนับจริง",
-        simFallback: "โหลดการจำลอง 3 มิติไม่ได้ ต้องใช้อินเทอร์เน็ต มุมมองด้านบนและภาพจากกล้องยังใช้ได้",
+        simFallback: "โหลดภาพ 3 มิติไม่ได้ ต้องใช้อินเทอร์เน็ต จึงแสดงภาพจากกล้องแบบแบนแทน",
         linesOnFloor: "เส้นบนพื้น", countingLineLower: "เส้นนับ", faceLineLower: "เส้นจับใบหน้า",
         opticsFov: "เลนส์ - มุมรับภาพ", horizontalFov: "มุมรับภาพแนวนอน", verticalFov: "มุมรับภาพแนวตั้ง",
         coverageAtLine: "ความกว้างที่เส้นนับ", fullWidth: "กว้างทั้งหมด", effective80: "ใช้งานได้ 80%",
@@ -3361,7 +3375,7 @@ ${shareSource}
       mobileAnswerFace: byId("mobileAnswerFace"), mobileAnswerDistance: byId("mobileAnswerDistance"),
       statusbar: byId("statusbar"), sbOverall: byId("sbOverall"), sbFeet: byId("sbFeet"), sbFace: byId("sbFace"), sbDistance: byId("sbDistance"),
       jumpToDiagram: byId("jumpToDiagram"),
-      dual: document.querySelector(".dual"), simWrap: byId("simWrap")
+      dual: document.querySelector(".dual"), simWrap: byId("simWrap"), simFallback: byId("simFallback")
     };
 
     // Three.js and the 2D overlay need plain sRGB, not the theme's oklch().
@@ -3403,8 +3417,7 @@ ${shareSource}
         colors: { count: SIM_COLORS[r.feet.status], out: SIM_COLORS.out, face: SIM_COLORS.face, bad: SIM_COLORS.bad },
         text: {
           countingLine: t("simCountingLine"), faceLine: t("simFaceLine"), face: t("simFace"),
-          in: t("simIn"), out: t("simOut"), outsideFrame: t("simOutsideFrame"), effective: t("simEffective"),
-          pause: t("pause"), play: t("play")
+          in: t("simIn"), out: t("simOut"), outsideFrame: t("simOutsideFrame"), effective: t("simEffective")
         }
       };
     }
@@ -3414,7 +3427,8 @@ ${shareSource}
       solveMode: "distance",
       entranceM: 5,
       presetId: CAMERA_CATALOG.defaultCamera,
-      topView: "sim",
+      topView: "camera",
+      simFailed: false,
       tiltUserAdjusted: false,
       tableProfileId: null,
       tableSelectedHeightKey: null,
@@ -4455,19 +4469,21 @@ ${shareSource}
       els.sideFaceReading.textContent = t("sideFace", { distance: r.faceLine.distanceM === null ? t("none") : fmt(r.faceLine.distanceM, 2, " m"), state: face.label });
       els.sideFaceReading.className = "reading-chip " + (face.visible ? "face" : "not-visible");
       els.sideTiltReading.textContent = t("sideTilt", { tilt: fmt(r.tilt.value, 1), mode: t(fisheye ? "tiltFisheye" : state.tiltUserAdjusted ? "tiltManual" : "tiltRecommended"), fov: fmt(r.optics.verticalFovDeg, 1) });
-      els.topTitle.textContent = t({ top: "titleTop", camera: "titleCamera", sim: "titleSim" }[state.topView]);
+      els.topTitle.textContent = t({ top: "titleTop", camera: "titleCamera" }[state.topView]);
 
       updateRangeBar(p);
       updateMetrics(p, verticalPpm);
       els.sideCanvas.setAttribute("aria-label", t("sideAria", { height: fmt(heightM, 1), distance: fmt(distanceM, 2), angle: fmt(r.feet.angleDeg, 1), status: STATUS_LABEL[r.feet.status] }));
       els.topCanvas.setAttribute("aria-label", state.topView === "top" ? t("topAria", { width: fmt(r.optics.coverageWidthM, 1) }) : t("cameraAria", { tilt: fmt(r.tilt.value, 1) }));
       drawSide(p);
-      const simOn = state.topView === "sim";
+      // The camera view is the 3D scene; the flat drawing stands in only when three.js could not load.
+      const simOn = state.topView === "camera" && !state.simFailed;
       els.topCanvas.hidden = simOn;
       els.simWrap.hidden = !simOn;
+      els.simFallback.hidden = !(state.topView === "camera" && state.simFailed);
       els.dual.classList.toggle("sim-mode", simOn);
       if (state.topView === "top") drawTop(p);
-      if (state.topView === "camera") drawCameraView(p);
+      if (state.topView === "camera" && state.simFailed) drawCameraView(p);
       if (window.walkSim) {
         window.walkSim.setPlacement(simInput(p));
         window.walkSim.setActive(simOn && !els.visualizerView.hidden);
@@ -4832,7 +4848,9 @@ ${simSource}
       window.walkSim = createWalkSim(THREE, {
         canvas: document.getElementById("simCanvas"),
         overlay: document.getElementById("simOverlay"),
-        playButton: document.getElementById("simPlay"),
+        walkButton: document.getElementById("simWalk"),
+        walkOnly: ["simCounts", "simCross", "simReset", "simNote"].map((id) => document.getElementById(id)),
+        stillOnly: [document.getElementById("simStillNote")],
         resetButton: document.getElementById("simReset"),
         crossButton: document.getElementById("simCross"),
         passersRow: document.getElementById("simPassersRow"),
@@ -4845,12 +4863,8 @@ ${simSource}
       });
       update();
     } catch (error) {
-      document.getElementById("simFallback").hidden = false;
-      document.getElementById("simPlay").disabled = true;
-      document.getElementById("simReset").disabled = true;
-      // Without the 3D view the default panel would stay blank, so show the Top view instead.
-      const simButton = document.querySelector('[data-topview="sim"]');
-      if (simButton && simButton.getAttribute("aria-pressed") === "true") document.querySelector('[data-topview="top"]').click();
+      state.simFailed = true;
+      update();
       console.error("Walk simulation could not load", error);
     }
   </script>
