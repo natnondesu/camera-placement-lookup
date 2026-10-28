@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { lookupTable, toCsv, validateProfile } from "./src/placement-rule.js";
+import { cacheVersion, buildManifest, renderServiceWorker } from "./src/pwa-build.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -59,6 +60,17 @@ const sheetCss = await fs.readFile(path.join(__dirname, "src/site-sheet.css"), "
 const tourPlacementSource = (await fs.readFile(path.join(__dirname, "src/tour-placement.js"), "utf8")).replace(/^export /gm, "");
 const helpSource = await fs.readFile(path.join(__dirname, "src/help-tour.js"), "utf8");
 const helpCss = await fs.readFile(path.join(__dirname, "src/help-tour.css"), "utf8");
+const pwaSource = await fs.readFile(path.join(__dirname, "src/pwa.js"), "utf8");
+const pwaCss = await fs.readFile(path.join(__dirname, "src/pwa.css"), "utf8");
+const serviceWorkerTemplate = await fs.readFile(path.join(__dirname, "src/service-worker.js"), "utf8");
+
+// The outside libraries the page loads; the service worker caches the same URLs so the console works offline.
+const FONTS_URL = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap";
+const THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+const ORBIT_URL = "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+const QR_URL = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js";
+if (!sheetSource.includes(QR_URL)) throw new Error("src/site-sheet.js no longer loads " + QR_URL + "; update QR_URL in generate.mjs so it stays cached offline.");
+const APP_BACKGROUND = "#0b0f14";
 
 function buildHtml() {
   const ruleJson = JSON.stringify(RULE, null, 2);
@@ -73,7 +85,15 @@ function buildHtml() {
   <title>Camera Placement Lookup</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="${FONTS_URL}" rel="stylesheet">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="${APP_BACKGROUND}">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Camera Placement">
   <style>
     :root {
       --bg: oklch(0.165 0.013 256);
@@ -2912,6 +2932,7 @@ function buildHtml() {
     }
 ${sheetCss}
 ${helpCss}
+${pwaCss}
   </style>
 </head>
 <body>
@@ -5483,6 +5504,7 @@ ${shareSource}
 ${sheetSource}
 ${tourPlacementSource}
 ${helpSource}
+${pwaSource}
     // ---------- Start ----------
     trackHeights();
     applyStaticText();
@@ -5505,14 +5527,14 @@ ${helpSource}
     setSolveMode(state.solveMode);
     restoreSharedPlacement();
   </script>
-  <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
+  <script type="importmap">{ "imports": { "three": "${THREE_URL}" } }</script>
   <script type="module">
 ${simSource}
     try {
       const THREE = await import("three");
       // The orbit view is an extra; without its controls the side view simply has no Orbit mode.
       try {
-        window.OrbitControlsClass = (await import("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js")).OrbitControls;
+        window.OrbitControlsClass = (await import("${ORBIT_URL}")).OrbitControls;
       } catch (error) {
         document.getElementById("sideModeSeg").hidden = true;
         console.error("Orbit controls could not load", error);
@@ -5548,10 +5570,28 @@ ${simSource}
 const publicDir = path.join(__dirname, "public");
 
 await fs.mkdir(publicDir, { recursive: true });
-await fs.writeFile(path.join(publicDir, "index.html"), buildHtml(), "utf8");
-for (const profile of rules.profiles) {
-  await fs.writeFile(path.join(publicDir, `camera-placement-lookup-${profile.id}.csv`), toCsv(lookupTable(profile)), "utf8");
+const html = buildHtml();
+await fs.writeFile(path.join(publicDir, "index.html"), html, "utf8");
+const csvs = rules.profiles.map((profile) => [`camera-placement-lookup-${profile.id}.csv`, toCsv(lookupTable(profile))]);
+for (const [name, csv] of csvs) {
+  await fs.writeFile(path.join(publicDir, name), csv, "utf8");
 }
 
-console.log(`Generated index.html and ${rules.profiles.length} lookup CSVs (rules ${rules.version}).`);
+// ---------- Installable, offline app ----------
+const ICONS = ["icon.svg", "icon-192.png", "icon-512.png", "maskable-512.png", "apple-touch-icon.png"];
+await fs.mkdir(path.join(publicDir, "icons"), { recursive: true });
+const iconBytes = [];
+for (const icon of ICONS) {
+  const bytes = await fs.readFile(path.join(__dirname, "assets/icons", icon));
+  iconBytes.push(bytes);
+  await fs.writeFile(path.join(publicDir, "icons", icon), bytes);
+}
+const manifest = JSON.stringify(buildManifest({ themeColor: APP_BACKGROUND, backgroundColor: APP_BACKGROUND }), null, 2) + "\n";
+await fs.writeFile(path.join(publicDir, "manifest.webmanifest"), manifest, "utf8");
+const localFiles = ["/", "/index.html", "/manifest.webmanifest", ...ICONS.map((icon) => "/icons/" + icon), ...csvs.map(([name]) => "/" + name)];
+const version = cacheVersion([html, manifest, serviceWorkerTemplate, ...csvs.map(([, csv]) => csv), ...iconBytes]);
+const serviceWorker = renderServiceWorker(serviceWorkerTemplate, { version, local: localFiles, remote: [FONTS_URL, THREE_URL, ORBIT_URL, QR_URL] });
+await fs.writeFile(path.join(publicDir, "sw.js"), serviceWorker, "utf8");
+
+console.log(`Generated index.html, ${rules.profiles.length} lookup CSVs and the offline app (cache ${version}, rules ${rules.version}).`);
 console.log(publicDir);

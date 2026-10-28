@@ -1,0 +1,77 @@
+    /* ---------- Offline support: update and saved-for-offline notes ---------- */
+    .pwa-toast {
+      position: fixed;
+      left: 22px;
+      bottom: 22px;
+      z-index: 900;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: min(460px, calc(100vw - 32px));
+      padding: 10px 10px 10px 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: 12px;
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: 0 14px 36px oklch(0 0 0 / 0.45);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .pwa-toast > span {
+      flex: 1;
+    }
+
+    .pwa-reload {
+      flex: none;
+      min-height: 32px;
+      padding: 0 12px;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      background: var(--accent);
+      color: var(--accent-ink);
+      font-size: 12.5px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .pwa-dismiss {
+      flex: none;
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border: 0;
+      border-radius: 8px;
+      background: none;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .pwa-dismiss svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .pwa-reload:focus-visible,
+    .pwa-dismiss:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* On a phone the controls sheet owns the bottom edge, so the note sits under the top bar. */
+    @media (max-width: 760px) {
+      .pwa-toast {
+        left: 16px;
+        right: 16px;
+        bottom: auto;
+        top: calc(var(--topbar-h, 64px) + 10px);
+        max-width: none;
+      }
+
+      .pwa-reload,
+      .pwa-dismiss {
+        min-height: 44px;
+        min-width: 44px;
+      }
+    }

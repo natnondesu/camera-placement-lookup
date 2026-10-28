@@ -7,6 +7,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#0b0f14">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Camera Placement">
   <style>
     :root {
       --bg: oklch(0.165 0.013 256);
@@ -3995,6 +4003,84 @@
       .tour-ring,
       .tour-pop {
         transition: none;
+      }
+    }
+
+    /* ---------- Offline support: update and saved-for-offline notes ---------- */
+    .pwa-toast {
+      position: fixed;
+      left: 22px;
+      bottom: 22px;
+      z-index: 900;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: min(460px, calc(100vw - 32px));
+      padding: 10px 10px 10px 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: 12px;
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: 0 14px 36px oklch(0 0 0 / 0.45);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .pwa-toast > span {
+      flex: 1;
+    }
+
+    .pwa-reload {
+      flex: none;
+      min-height: 32px;
+      padding: 0 12px;
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      background: var(--accent);
+      color: var(--accent-ink);
+      font-size: 12.5px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .pwa-dismiss {
+      flex: none;
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border: 0;
+      border-radius: 8px;
+      background: none;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .pwa-dismiss svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    .pwa-reload:focus-visible,
+    .pwa-dismiss:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* On a phone the controls sheet owns the bottom edge, so the note sits under the top bar. */
+    @media (max-width: 760px) {
+      .pwa-toast {
+        left: 16px;
+        right: 16px;
+        bottom: auto;
+        top: calc(var(--topbar-h, 64px) + 10px);
+        max-width: none;
+      }
+
+      .pwa-reload,
+      .pwa-dismiss {
+        min-height: 44px;
+        min-width: 44px;
       }
     }
 
@@ -8032,6 +8118,84 @@ document.addEventListener("keydown", (event) => {
     openHelp();
   }
 });
+
+// Offline support. Inlined into the console's script by generate.mjs. Registers the service worker (public/sw.js),
+// says once when the console is saved for offline use, and offers a reload when a new version is ready.
+
+const PWA_TEXT = {
+  en: {
+    pwUpdate: "A new version of the console is ready.", pwReload: "Reload", pwDismiss: "Dismiss",
+    pwOffline: "Saved for offline use: the console now works without a connection."
+  },
+  th: {
+    pwUpdate: "มีโปรแกรมเวอร์ชันใหม่แล้ว", pwReload: "โหลดใหม่", pwDismiss: "ปิด",
+    pwOffline: "บันทึกไว้ใช้แบบออฟไลน์แล้ว โปรแกรมใช้งานได้แม้ไม่มีอินเทอร์เน็ต"
+  }
+};
+Object.keys(PWA_TEXT).forEach((code) => Object.assign(I18N[code], PWA_TEXT[code]));
+
+(function startOfflineSupport() {
+  if (!("serviceWorker" in navigator) || location.protocol.indexOf("http") !== 0) return;
+
+  const toast = document.createElement("div");
+  toast.className = "pwa-toast";
+  toast.id = "pwaToast";
+  toast.hidden = true;
+  toast.setAttribute("role", "status");
+  toast.innerHTML = '<span id="pwaText"></span>' +
+    '<button type="button" class="pwa-reload" id="pwaReload" data-i18n="pwReload">Reload</button>' +
+    '<button type="button" class="pwa-dismiss" id="pwaDismiss" data-i18n-attr="aria-label:pwDismiss">' + SHEET_ICON.close + "</button>";
+  document.body.appendChild(toast);
+  const text = document.getElementById("pwaText");
+  const reload = document.getElementById("pwaReload");
+  let waiting = null;
+  let reloadRequested = false;
+  let hideTimer = 0;
+
+  function show(key, offerReload) {
+    window.clearTimeout(hideTimer);
+    text.textContent = t(key);
+    reload.hidden = !offerReload;
+    toast.hidden = false;
+    // The offline note is news, not a decision; it goes by itself.
+    if (!offerReload) hideTimer = window.setTimeout(() => { toast.hidden = true; }, 6000);
+  }
+
+  reload.addEventListener("click", () => {
+    if (!waiting) return;
+    reloadRequested = true;
+    waiting.postMessage("skipWaiting");
+  });
+  document.getElementById("pwaDismiss").addEventListener("click", () => { toast.hidden = true; });
+
+  // The first install also takes control of the page; only a reload the user asked for may reload it.
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloadRequested) location.reload();
+  });
+
+  window.addEventListener("load", () => {
+    const firstInstall = !navigator.serviceWorker.controller;
+    navigator.serviceWorker.register("/sw.js").then((registration) => {
+      const offer = (worker) => {
+        waiting = worker;
+        show("pwUpdate", true);
+      };
+      if (registration.waiting && navigator.serviceWorker.controller) offer(registration.waiting);
+      registration.addEventListener("updatefound", () => {
+        const worker = registration.installing;
+        if (!worker) return;
+        worker.addEventListener("statechange", () => {
+          if (worker.state === "installed" && navigator.serviceWorker.controller) offer(worker);
+          if (worker.state === "activated" && firstInstall) show("pwOffline", false);
+        });
+      });
+      // A console left open on site checks for a new version whenever it comes back to the screen.
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") registration.update().catch(() => {});
+      });
+    }).catch((error) => console.error("Offline support could not start", error));
+  });
+})();
 
     // ---------- Start ----------
     trackHeights();
