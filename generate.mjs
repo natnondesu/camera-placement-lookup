@@ -56,6 +56,9 @@ const simSource = (await fs.readFile(path.join(__dirname, "src/walk-sim.js"), "u
 const shareSource = (await fs.readFile(path.join(__dirname, "src/share-link.js"), "utf8")).replace(/^export /gm, "");
 const sheetSource = await fs.readFile(path.join(__dirname, "src/site-sheet.js"), "utf8");
 const sheetCss = await fs.readFile(path.join(__dirname, "src/site-sheet.css"), "utf8");
+const tourPlacementSource = (await fs.readFile(path.join(__dirname, "src/tour-placement.js"), "utf8")).replace(/^export /gm, "");
+const helpSource = await fs.readFile(path.join(__dirname, "src/help-tour.js"), "utf8");
+const helpCss = await fs.readFile(path.join(__dirname, "src/help-tour.css"), "utf8");
 
 function buildHtml() {
   const ruleJson = JSON.stringify(RULE, null, 2);
@@ -2908,6 +2911,7 @@ function buildHtml() {
       }
     }
 ${sheetCss}
+${helpCss}
   </style>
 </head>
 <body>
@@ -5477,6 +5481,8 @@ ${shareSource}
     document.querySelectorAll("[data-lang]").forEach((button) => button.addEventListener("click", () => setLanguage(button.dataset.lang)));
 
 ${sheetSource}
+${tourPlacementSource}
+${helpSource}
     // ---------- Start ----------
     trackHeights();
     applyStaticText();

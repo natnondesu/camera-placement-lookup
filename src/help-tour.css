@@ -1,0 +1,243 @@
+    /* ---------- Help panel and Show me tours ---------- */
+    .help-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 40px;
+      margin-left: auto;
+      padding: 0 13px;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      background: none;
+      color: var(--ink-soft);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color 160ms var(--ease), color 160ms var(--ease);
+    }
+
+    .help-button:hover {
+      border-color: var(--border-strong);
+      color: var(--ink);
+    }
+
+    .help-button svg {
+      width: 17px;
+      height: 17px;
+    }
+
+    .help-button + .share-button {
+      margin-left: 0;
+    }
+
+    .help-dialog {
+      width: min(560px, calc(100% - 32px));
+    }
+
+    .help-dialog .share-help {
+      margin-right: 40px;
+    }
+
+    .help-guides {
+      display: grid;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      border-top: 1px solid var(--border);
+    }
+
+    .help-guides li {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .help-guides li > div {
+      display: grid;
+      flex: 1;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .help-guides b {
+      font-size: 14px;
+    }
+
+    .help-guides span {
+      color: var(--muted);
+      font-size: 12.5px;
+      line-height: 1.4;
+    }
+
+    .help-show {
+      flex: none;
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid oklch(0.715 0.150 256 / 0.5);
+      border-radius: 9px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-size: 12.5px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .help-show:hover {
+      border-color: var(--accent);
+    }
+
+    .help-shortcut {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .tour {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+    }
+
+    /* The page under a tour is shown, not used; the caption's buttons drive it. */
+    .tour-shield {
+      position: absolute;
+      inset: 0;
+    }
+
+    .tour-ring {
+      position: fixed;
+      border-radius: 12px;
+      outline: 2px solid var(--accent);
+      box-shadow: 0 0 0 9999px oklch(0.08 0.01 256 / 0.66);
+      pointer-events: none;
+      transition: left 240ms var(--ease), top 240ms var(--ease), width 240ms var(--ease), height 240ms var(--ease);
+    }
+
+    .tour-pop {
+      position: fixed;
+      display: grid;
+      gap: 10px;
+      padding: 14px 16px 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: 14px;
+      background: var(--surface);
+      color: var(--ink);
+      box-shadow: 0 18px 44px oklch(0 0 0 / 0.5);
+      transition: left 240ms var(--ease), top 240ms var(--ease);
+    }
+
+    .tour-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tour-head b {
+      flex: 1;
+      font-size: 14px;
+    }
+
+    .tour-head span {
+      color: var(--muted);
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 11.5px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tour-close {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      margin: -6px -8px -6px 0;
+      border: 0;
+      border-radius: 8px;
+      background: none;
+      color: var(--muted);
+      cursor: pointer;
+    }
+
+    .tour-close:hover {
+      color: var(--ink);
+    }
+
+    .tour-close svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .tour-text {
+      margin: 0;
+      color: var(--ink-soft);
+      font-size: 13.5px;
+      line-height: 1.5;
+    }
+
+    .tour-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .tour-back,
+    .tour-next {
+      min-height: 36px;
+      padding: 0 14px;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .tour-back {
+      border: 1px solid var(--border);
+      background: none;
+      color: var(--ink-soft);
+    }
+
+    .tour-next {
+      border: 1px solid var(--accent);
+      background: var(--accent);
+      color: var(--accent-ink);
+    }
+
+    .tour-back:focus-visible,
+    .tour-next:focus-visible,
+    .tour-close:focus-visible,
+    .help-show:focus-visible,
+    .help-button:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    @media (max-width: 760px) {
+      .help-button span {
+        display: none;
+      }
+
+      .help-button {
+        min-height: 44px;
+        padding: 0 11px;
+      }
+
+      .help-guides li {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .help-show,
+      .tour-back,
+      .tour-next {
+        min-height: 44px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .tour-ring,
+      .tour-pop {
+        transition: none;
+      }
+    }
