@@ -667,6 +667,27 @@ export function createWalkSim(THREE, ui) {
       centre.computeLineDistances();
       helpers.add(centre);
     }
+    // The feet angle the verdict is judged by: from level, down to the feet at the middle of the entrance.
+    const feet = new THREE.Vector3(0, 0.02, p.distanceM);
+    const level = new THREE.Vector3(feet.x - origin.x, 0, feet.z - origin.z).normalize();
+    const feetAngle = Math.atan2(p.heightM, Math.hypot(feet.x - origin.x, feet.z));
+    const ray = new THREE.Line(new THREE.BufferGeometry().setFromPoints([origin, feet]), new THREE.LineBasicMaterial({ color: p.colors.count, depthTest: false }));
+    ray.renderOrder = 9;
+    const reference = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([origin, origin.clone().addScaledVector(level, 1.4)]),
+      new THREE.LineDashedMaterial({ color: "#eef2f8", dashSize: 0.08, gapSize: 0.06, transparent: true, opacity: 0.7, depthTest: false }),
+    );
+    reference.computeLineDistances();
+    const down = new THREE.Vector3(0, -1, 0);
+    const swing = (angle, reach) => origin.clone().addScaledVector(level, Math.cos(angle) * reach).addScaledVector(down, Math.sin(angle) * reach);
+    const arc = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(Array.from({ length: 25 }, (_, i) => swing((feetAngle * i) / 24, 0.9))),
+      new THREE.LineBasicMaterial({ color: p.colors.count, depthTest: false }),
+    );
+    arc.renderOrder = 9;
+    const angleTag = labelSprite(((feetAngle * 180) / Math.PI).toFixed(1) + "°", p.colors.count);
+    angleTag.position.copy(swing(feetAngle / 2, 1.35));
+    helpers.add(ray, reference, arc, angleTag);
     helpers.traverse((o) => o.layers.set(HELPER_LAYER));
     scene.add(helpers);
   }

@@ -444,7 +444,7 @@ function sheetReadings(p) {
   if (r.entrance !== null) {
     const entryClass = { covered: "best", tight: "ok", too_wide: "bad" }[r.entrance.status];
     const note = r.entrance.status === "covered"
-      ? t("shRowEntrance", { eff: fmt(r.optics.effectiveWidthM, 1), cover: fmt(r.optics.coverageWidthM, 1) })
+      ? t("shRowEntrance", { eff: widthText(r.optics.effectiveWidthM), cover: widthText(r.optics.coverageWidthM) })
       : entranceCopy(r.entrance, r.optics.coverageWidthM);
     rows.push([t("entranceShort"), fmt(r.entrance.widthM, 1, " m"), entryClass, t(ENTRY_STATE[r.entrance.status]), note, ""]);
   }

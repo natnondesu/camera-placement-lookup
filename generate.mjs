@@ -3565,6 +3565,11 @@ ${shareSource}
       return Number(value).toFixed(decimals) + (suffix || "");
     }
 
+    // Turned far enough, one edge of the view never meets the counting line; past 100 m the width only reads as "a lot".
+    function widthText(metres) {
+      return Number.isFinite(metres) && metres <= 100 ? fmt(metres, 1) : ">100";
+    }
+
     function pct(value, min, max) {
       if (max <= min) return 0;
       return clamp(((value - min) / (max - min)) * 100, 0, 100);
@@ -3805,7 +3810,7 @@ ${shareSource}
     }
 
     function entranceCopy(entrance, coverageWidthM) {
-      const vars = { width: fmt(entrance.widthM, 2), covered: fmt(coverageWidthM, 1), miss: fmt(entrance.uncoveredM, 2) };
+      const vars = { width: fmt(entrance.widthM, 2), covered: widthText(coverageWidthM), miss: fmt(entrance.uncoveredM, 2) };
       if (entrance.status === "too_wide") return t("entranceTooWide", vars);
       if (entrance.status === "tight") return t("entranceTight", vars);
       return t("entranceCovered", vars);
@@ -3868,8 +3873,8 @@ ${shareSource}
       els.faceLineMetric.innerHTML = fl.distanceM === null ? t("none") : fmt(fl.distanceM, 2) + "<small>m</small>";
       els.horizontalFovMetric.innerHTML = fmt(o.horizontalFovDeg, 2) + "<small>deg</small>";
       els.verticalFovMetric.innerHTML = fmt(o.verticalFovDeg, 2) + "<small>deg</small>";
-      els.fullWidthMetric.innerHTML = fmt(o.coverageWidthM, 1) + "<small>m</small>";
-      els.effectiveWidthMetric.innerHTML = fmt(o.effectiveWidthM, 1) + "<small>m</small>";
+      els.fullWidthMetric.innerHTML = widthText(o.coverageWidthM) + "<small>m</small>";
+      els.effectiveWidthMetric.innerHTML = widthText(o.effectiveWidthM) + "<small>m</small>";
       els.horizontalPpmMetric.innerHTML = fmt(o.pixelsPerMetre, 0) + "<small>px/m</small>";
       els.verticalPpmMetric.innerHTML = fmt(verticalPpm, 0) + "<small>px/m</small>";
     }
@@ -4360,7 +4365,8 @@ ${shareSource}
         ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        haloText(ctx, t("entranceLabel") + " " + fmt(r.entrance.widthM, 1, " m"), ox, S(0, 0)[1] + 12);
+        const entranceX = Math.abs(offset) < 0.05 || fisheye ? ox : S((offset < 0 ? 1 : -1) * entranceHalf / 2, 0)[0];
+        haloText(ctx, t("entranceLabel") + " " + fmt(r.entrance.widthM, 1, " m"), entranceX, S(0, 0)[1] + 12);
       }
 
       // Aim line from the camera to the middle of the entrance.
@@ -4371,6 +4377,23 @@ ${shareSource}
         const aim = S(0, 0);
         ctx.beginPath(); ctx.moveTo(cam[0], cam[1]); ctx.lineTo(aim[0], aim[1]); ctx.stroke();
         ctx.setLineDash([]);
+        // How far the camera turns: the angle at the middle of the entrance between the centre line and the aim line.
+        if (Math.abs(offset) >= 0.05) {
+          const along = Math.PI / 2;
+          const toCamera = Math.atan2(cam[1] - aim[1], cam[0] - aim[0]);
+          const radius = 34;
+          ctx.strokeStyle = COL.accent;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(aim[0], aim[1], radius, Math.min(along, toCamera), Math.max(along, toCamera));
+          ctx.stroke();
+          const middle = (along + toCamera) / 2;
+          ctx.font = "700 12px JetBrains Mono, monospace";
+          ctx.fillStyle = COL.accent;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          plateText(ctx, fmt(r.pan.deg, 1) + "°", aim[0] + Math.cos(middle) * (radius + 18), aim[1] + Math.sin(middle) * (radius + 18));
+        }
       }
 
       // The aim point, which the verdict is judged at, and the walkable ends; an end that warns is ringed.
@@ -4487,7 +4510,7 @@ ${shareSource}
       ctx.textBaseline = "bottom";
       ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
       const hint = t(state.solveMode === "distance" ? "planDragSideways" : "planDragAnywhere");
-      const width = fisheye ? t("planEffectiveOnly", { effective: fmt(o.effectiveWidthM, 1) }) : t("planWidths", { width: fmt(o.coverageWidthM, 1), effective: fmt(o.effectiveWidthM, 1) });
+      const width = fisheye ? t("planEffectiveOnly", { effective: widthText(o.effectiveWidthM) }) : t("planWidths", { width: widthText(o.coverageWidthM), effective: widthText(o.effectiveWidthM) });
       haloText(ctx, width, 8, h - 24);
       haloText(ctx, hint, 8, h - 8);
     }
@@ -4830,7 +4853,7 @@ ${shareSource}
       updateRangeBar(p);
       updateMetrics(p, verticalPpm);
       els.sideCanvas.setAttribute("aria-label", t("sideAria", { height: fmt(heightM, 1), distance: fmt(distanceM, 2), angle: fmt(r.feet.angleDeg, 1), status: STATUS_LABEL[r.feet.status] }));
-      els.topCanvas.setAttribute("aria-label", state.topView === "top" ? t("topAria", { width: fmt(r.optics.coverageWidthM, 1) }) : t("cameraAria", { tilt: fmt(r.tilt.value, 1) }));
+      els.topCanvas.setAttribute("aria-label", state.topView === "top" ? t("topAria", { width: widthText(r.optics.coverageWidthM) }) : t("cameraAria", { tilt: fmt(r.tilt.value, 1) }));
       const orbitOn = state.sideMode === "orbit" && !state.simFailed;
       els.sideCanvas.hidden = orbitOn;
       els.orbitCanvas.hidden = els.orbitNote.hidden = !orbitOn;
