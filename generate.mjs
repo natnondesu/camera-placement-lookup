@@ -733,9 +733,41 @@ function buildHtml() {
       border-right: 1px solid var(--border);
     }
 
-    .verdict-lead > .warn-line,
-    .verdict-lead > .entrance-line {
+    /* One reserved place for the card's notes: a warning that comes and goes swaps in here instead of pushing the page. */
+    .verdict-notes {
+      display: grid;
+      align-content: start;
+      gap: 6px;
+      min-height: 136px;
+    }
+
+    .verdict-notes > .warn-line,
+    .verdict-notes > .entrance-line {
       margin-top: 0;
+    }
+
+    .notes-none {
+      margin: 0;
+      padding: 8px 0;
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+
+    .notes-more {
+      justify-self: start;
+      min-height: 26px;
+      padding: 0 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-2);
+      color: var(--ink-soft);
+      font: 650 12px Inter, "Noto Sans Thai", sans-serif;
+      cursor: pointer;
+    }
+
+    .notes-more:hover {
+      border-color: var(--border-strong);
+      color: var(--ink);
     }
 
     .verdict-kicker {
@@ -780,6 +812,7 @@ function buildHtml() {
     .verdict-sub {
       margin: 0;
       max-width: 64ch;
+      min-height: calc(13px * 1.48 * 2);
       color: var(--muted);
       font-size: 13px;
       line-height: 1.48;
@@ -2215,8 +2248,10 @@ function buildHtml() {
       font-weight: 500;
     }
 
+    /* The pinned answer keeps one height while the placement changes: two lines of advice, one scrolling row of chips. */
     .answer-sub {
       margin: 0;
+      min-height: calc(12.5px * 1.4 * 2);
       color: var(--muted);
       font-size: 12.5px;
       line-height: 1.4;
@@ -2224,9 +2259,19 @@ function buildHtml() {
 
     .answer-chips {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       gap: 6px;
       margin-top: 12px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .answer-chips::-webkit-scrollbar {
+      display: none;
+    }
+
+    .answer-chips > .answer-chip {
+      flex: none;
     }
 
     .answer-chip {
@@ -2930,10 +2975,14 @@ ${sheetCss}
                 <div class="verdict-kicker"><span class="dot"></span><span id="overallLabel" data-i18n="placementVerdict">Placement verdict</span></div>
                 <h1 id="verdictHeadline">Placement is best</h1>
                 <p class="verdict-sub" id="verdictSub"></p>
-                <p class="warn-line" id="heightWarn" hidden></p>
-                <p class="warn-line" id="densityWarn" hidden></p>
-                <p class="warn-line edge-warn" id="edgeWarn" role="note" hidden></p>
-                <p class="entrance-line" id="entranceLine" data-state="covered" hidden></p>
+                <div class="verdict-notes" id="verdictNotes">
+                  <p class="warn-line edge-warn" id="edgeWarn" role="note" hidden></p>
+                  <p class="warn-line" id="densityWarn" hidden></p>
+                  <p class="warn-line" id="heightWarn" hidden></p>
+                  <p class="entrance-line" id="entranceLine" data-state="covered" hidden></p>
+                  <p class="notes-none" id="notesNone" data-i18n="notesNone" hidden>Nothing to flag for this placement.</p>
+                  <button type="button" class="notes-more" id="notesMore" hidden></button>
+                </div>
                 <div class="verdict-actions">
                   <button type="button" class="button" id="copyReadings">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5.5A1.5 1.5 0 0 0 14.5 4h-9A1.5 1.5 0 0 0 4 5.5v9A1.5 1.5 0 0 0 5.5 16H8"></path></svg>
@@ -3188,6 +3237,7 @@ ${shareSource}
         solveFor: "Solve for", manual: "Manual", distance: "Distance", height: "Height",
         mountingHeight: "Mounting height", solved: "solved", countingDistance: "Counting line distance",
         recommendedDistance: "recommended distance", useRecommended: "Use recommended distance",
+        notesNone: "Nothing to flag for this placement.", notesMore: "+{n} more", notesMoreAria: "Show the next note, {i} of {n}",
         offsetFromCentre: "From the centre line", centreButton: "Centre",
         sideModeSide: "Side", sideModeOrbit: "Orbit", sideReadingsAria: "Current side-view readings",
         alongFloor: "{distance} m to the middle",
@@ -3285,6 +3335,7 @@ ${shareSource}
         solveFor: "คำนวณ", manual: "กำหนดเอง", distance: "ระยะ", height: "ความสูง",
         mountingHeight: "ความสูงติดตั้ง", solved: "คำนวณให้", countingDistance: "ระยะเส้นนับ",
         recommendedDistance: "ระยะที่แนะนำ", useRecommended: "ใช้ระยะที่แนะนำ",
+        notesNone: "ตำแหน่งนี้ไม่มีข้อควรระวัง", notesMore: "อีก {n} ข้อ", notesMoreAria: "ดูข้อถัดไป {i} จาก {n}",
         offsetFromCentre: "ห่างจากแนวกึ่งกลาง", centreButton: "กึ่งกลาง",
         sideModeSide: "ด้านข้าง", sideModeOrbit: "หมุนดู", sideReadingsAria: "ค่าที่อ่านได้จากมุมมองด้านข้าง",
         alongFloor: "ถึงกลางทางเข้า {distance} m",
@@ -3488,7 +3539,8 @@ ${shareSource}
       jumpToDiagram: byId("jumpToDiagram"),
       dual: document.querySelector(".dual"), simWrap: byId("simWrap"), simFallback: byId("simFallback"),
       orbitCanvas: byId("orbitCanvas"), orbitNote: byId("orbitNote"), sideModeSeg: byId("sideModeSeg"), edgeWarn: byId("edgeWarn"),
-      offsetInput: byId("offsetInput"), offsetRange: byId("offsetRange"), offsetCaption: byId("offsetCaption"), offsetCentre: byId("offsetCentre")
+      offsetInput: byId("offsetInput"), offsetRange: byId("offsetRange"), offsetCaption: byId("offsetCaption"), offsetCentre: byId("offsetCentre"),
+      notesNone: byId("notesNone"), notesMore: byId("notesMore")
     };
 
     // Three.js and the 2D overlay need plain sRGB, not the theme's oklch().
@@ -3553,6 +3605,8 @@ ${shareSource}
       planDragging: false,
       sideMode: "side",
       planFrozen: null,
+      notesKey: "",
+      noteIndex: 0,
       dragging: false
     };
 
@@ -3795,6 +3849,24 @@ ${shareSource}
       return edge.framed
         ? { lead: t("edgeLead", { side: side, angle: angleMarkup(angle) }), body: t("edgeBody") }
         : { lead: t("edgeCutLead", { side: side }), body: t("edgeCutBody") };
+    }
+
+    // The card's notes share one reserved slot, most important first; "+N more" steps through the rest.
+    function showNotes(candidates) {
+      const notes = candidates.filter((c) => c[1]).map((c) => c[0]);
+      const key = notes.map((el) => el.id).join(",");
+      if (key !== state.notesKey) {
+        state.notesKey = key;
+        state.noteIndex = 0;
+      }
+      const shown = notes.length === 0 ? -1 : state.noteIndex % notes.length;
+      candidates.forEach((c) => { c[0].hidden = notes.indexOf(c[0]) === -1 || notes.indexOf(c[0]) !== shown; });
+      els.notesNone.hidden = notes.length > 0;
+      els.notesMore.hidden = notes.length < 2;
+      if (notes.length > 1) {
+        els.notesMore.textContent = t("notesMore", { n: notes.length - 1 });
+        els.notesMore.setAttribute("aria-label", t("notesMoreAria", { i: ((shown + 1) % notes.length) + 1, n: notes.length }));
+      }
     }
 
     function edgeCopy(p) {
@@ -4815,16 +4887,18 @@ ${shareSource}
       const outside = r.warnings.indexOf("height_outside_range") >= 0;
       const lowDensity = r.warnings.includes("low_pixel_density");
       els.edgeWarn.innerHTML = edgeHtml(p);
-      els.edgeWarn.hidden = r.countingLine.edge === null;
-      els.densityWarn.hidden = !lowDensity;
       els.densityWarn.textContent = lowDensity ? t("densityWarn", { ppm: fmt(r.optics.pixelsPerMetre, 0), min: profile.minPixelsPerMetre.counting }) : "";
-      els.heightWarn.hidden = !outside;
       els.heightWarn.textContent = outside ? t("heightWarn", { height: fmt(heightM, 1), scene: sceneName(profile), min: fmt(profile.heightRangeM.min, 1), max: fmt(profile.heightRangeM.max, 1) }) : "";
-      els.entranceLine.hidden = r.entrance === null;
       if (r.entrance !== null) {
         els.entranceLine.dataset.state = r.entrance.status;
         els.entranceLine.textContent = entranceCopy(r.entrance, r.optics.coverageWidthM);
       }
+      showNotes([
+        [els.edgeWarn, r.countingLine.edge !== null],
+        [els.densityWarn, lowDensity],
+        [els.heightWarn, outside],
+        [els.entranceLine, r.entrance !== null]
+      ]);
       els.recommendedDistance.textContent = fmt(r.countingLine.recommendedDistanceM, 2, " m");
       // Only Manual mode leaves the line where the installer put it, so only there can the button act.
       const onTarget = Math.abs(r.countingLine.recommendedDistanceM - distanceM) < 0.01;
@@ -5132,6 +5206,10 @@ ${shareSource}
     whileTyping(els.focalInput, (value, typing) => { setFieldValue(els.focalInput, els.focalRange, value, 1, typing); update(); });
     els.resolutionSelect.addEventListener("change", update);
     els.snapButton.addEventListener("click", () => setDistance(solvedDistance()));
+    els.notesMore.addEventListener("click", () => {
+      state.noteIndex += 1;
+      update();
+    });
     whileTyping(els.offsetInput, setOffset);
     els.offsetRange.addEventListener("input", (event) => setOffset(event.target.value));
     els.offsetCentre.addEventListener("click", () => setOffset(0));
