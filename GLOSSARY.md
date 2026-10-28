@@ -51,15 +51,27 @@ The assumed height of a person, set per scene profile. A person at the counting 
 How far the camera itself is aimed downward. Not a property of a person's position.
 
 **Recommended tilt**:
-The tilt the tool suggests: aimed at half the human height of a person standing at the counting line. The face line is checked at that aim, not chased. The installer may override it.
+The tilt the tool suggests: aimed at half the human height of a person standing at the counting line in the middle of the entrance. The face line is checked at that aim, not chased. The installer may override it.
 
 **Entrance width**:
-The on-site width of the door or entrance people pass through, 5 m unless entered, checked against the width the camera covers at the counting line. Fully covered within the effective coverage, tight beyond it but still in view, too wide past the view. Never changes the verdict.
+The on-site width of the door or entrance people pass through, 5 m unless entered, checked against the width the camera covers at the counting line. Fully covered within the effective coverage, tight beyond it but still in view, too wide past the view. That check never changes the verdict; the walkable width inside the entrance does.
 _Avoid_: Door size, opening
 
 **Effective coverage**:
 The part of the image where detection is reliable: the middle 80% of a normal lens's width, or the inner 80% of a fisheye's image radius.
 _Avoid_: Usable area, safe zone
+
+**Offset**:
+How far the camera sits sideways from the entrance centre line, to the left or right as the camera faces the entrance. An off-centre camera turns to aim at the middle of the entrance; a ceiling fisheye just moves.
+_Avoid_: Shift, lateral position
+
+**Walkable width**:
+The part of the entrance people walk through: the entrance width less 0.35 m clear of each frame. The feet angle is judged across it. Without an entrance width, only the middle of the entrance is judged.
+_Avoid_: Usable width, clear width
+
+**Deciding point**:
+The point of the walkable width whose feet angle sets the verdict: the middle of the entrance, the nearest walkable point or the farthest. The one with the worst status decides; between equal statuses, the one closest to leaving the Best band.
+_Avoid_: Worst point, critical point
 
 **Camera model**:
 A specific camera's sensor, lens range and resolutions, used to work out what is in frame. Independent of any scene profile.
@@ -113,7 +125,7 @@ How well one angle fits its bands: Best, Acceptable, or Out of range. A feet sta
 _Avoid_: Tier, ideal, pass/fail
 
 **Verdict**:
-The single overall status of a placement: the feet status at the counting line, or Out of range if the whole person at the counting line is not in frame. The face line never fails a placement.
+The single overall status of a placement: the feet status at the deciding point of the counting line, or Out of range if a whole person anywhere across the walkable width is not in frame. The face line never fails a placement.
 _Avoid_: Overall status, pass/fail
 
 **Lookup table**:
@@ -121,7 +133,7 @@ For one scene profile, the recommended distance, angles and face line distance a
 _Avoid_: Rule table, golden table
 
 **Share link**:
-A link that holds a whole placement (scene, camera, zoom, height, line, entrance, site and location), the rules version and the verdict when it was made. Nothing is stored anywhere else; opening the link restores the placement and says if today's rules give a different verdict.
+A link that holds a whole placement (scene, camera, zoom, height, line, entrance, offset, site and location), the rules version and the verdict when it was made. Nothing is stored anywhere else; opening the link restores the placement and says if today's rules give a different verdict.
 _Avoid_: Saved placement, permalink
 
 **Site sheet**:

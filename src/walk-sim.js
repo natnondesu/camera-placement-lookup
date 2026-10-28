@@ -115,6 +115,12 @@ export function createWalkSim(THREE, ui) {
 
   let props = new THREE.Group();
   scene.add(props);
+  // Layer 1 holds what only the orbit view shows: the camera itself, its view cone and its aim.
+  const HELPER_LAYER = 1;
+  let helpers = new THREE.Group();
+  scene.add(helpers);
+  let orbit = null;
+  let orbitActive = false;
   let countingStrip = null;
   let input = null;
   let layoutKey = "";
@@ -135,6 +141,8 @@ export function createWalkSim(THREE, ui) {
   const pick = (list) => list[Math.floor(random() * list.length)];
   const counts = { in: 0, out: 0, faces: 0, passers: 0 };
   const isFisheye = () => input !== null && input.lens === "fisheye";
+  // The scene's x runs opposite to the engine's: looking along +z, the camera's right is -x. So it sits at -offset.
+  const cameraX = () => (input ? -input.offsetM : 0);
 
   const material = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.85 });
 
@@ -220,7 +228,7 @@ export function createWalkSim(THREE, ui) {
     });
     props = new THREE.Group();
     const lay = layout(p);
-    const stripWidth = Math.max(8, Math.min(p.coverageWidthM, 40) * 1.4);
+    const stripWidth = Math.max(8, Math.min(p.coverageWidthM, 40) * 1.4) + 2 * Math.abs(p.offsetM);
     countingStrip = lineStrip(p.distanceM, stripWidth, p.colors.count, 0.85);
     props.add(countingStrip);
     if (p.faceLineDistanceM !== null && Math.abs(p.faceLineDistanceM - p.distanceM) > 0.02) {
@@ -361,7 +369,7 @@ export function createWalkSim(THREE, ui) {
   const toPoint = new THREE.Vector3();
   function toScreen(x, y, z, w, h) {
     if (isFisheye()) {
-      const f = input.fisheyeProjection({ x, y: y - input.heightM, z });
+      const f = input.fisheyeProjection({ x: x - cameraX(), y: y - input.heightM, z });
       return { x: ((f.u + 1) / 2) * w, y: ((1 - f.v) / 2) * h, behind: !f.inside };
     }
     projected.set(x, y, z).project(camera);
@@ -370,7 +378,7 @@ export function createWalkSim(THREE, ui) {
 
   // Pixel density at a point, from the console's lens model.
   function densityAt(x, y, z) {
-    const offset = { x, y: y - input.heightM, z };
+    const offset = { x: x - cameraX(), y: y - input.heightM, z };
     const distance = Math.hypot(offset.x, offset.y, offset.z);
     let offAxisDeg;
     if (isFisheye()) {
@@ -555,17 +563,91 @@ export function createWalkSim(THREE, ui) {
     ctx.textAlign = "left";
   }
 
+  function rebuildHelpers(p) {
+    scene.remove(helpers);
+    helpers.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) o.material.dispose();
+    });
+    helpers = new THREE.Group();
+    const origin = new THREE.Vector3(-p.offsetM, p.heightM, 0);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.2, 0.36), material(p.colors.camera));
+    body.position.copy(origin);
+    body.quaternion.copy(camera.quaternion);
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, p.heightM, 8), material("#59616e"));
+    mast.position.set(origin.x, p.heightM / 2, 0);
+    helpers.add(body, mast);
+    const lines = new THREE.LineBasicMaterial({ color: p.colors.camera, transparent: true, opacity: 0.75 });
+    if (p.lens === "fisheye") {
+      // The effective cone of a ceiling fisheye, drawn where it meets the floor.
+      const radius = p.heightM * Math.tan(((p.fovDeg / 2) * EFFECTIVE_SHARE * Math.PI) / 180);
+      const ring = Array.from({ length: 65 }, (_, i) => {
+        const a = (i / 64) * Math.PI * 2;
+        return new THREE.Vector3(origin.x + Math.cos(a) * radius, 0.02, Math.sin(a) * radius);
+      });
+      helpers.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ring), lines));
+      const spokes = [0, 1, 2, 3].flatMap((i) => [origin, ring[i * 16]]);
+      helpers.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(spokes), lines));
+    } else {
+      // Frustum corners, each carried down to the floor or out 12 m.
+      camera.updateMatrixWorld();
+      const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([x, y]) => {
+        const dir = new THREE.Vector3(x, y, 0.5).unproject(camera).sub(origin).normalize();
+        const reach = dir.y < -0.02 ? Math.min(p.heightM / -dir.y, 12) : 8;
+        return origin.clone().addScaledVector(dir, reach);
+      });
+      const edges = corners.flatMap((c, i) => [origin, c, c, corners[(i + 1) % 4]]);
+      helpers.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(edges), lines));
+      const aim = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([origin, new THREE.Vector3(0, p.humanHeightM / 2, p.distanceM)]),
+        new THREE.LineDashedMaterial({ color: p.colors.camera, dashSize: 0.15, gapSize: 0.1 }),
+      );
+      aim.computeLineDistances();
+      helpers.add(aim);
+    }
+    helpers.traverse((o) => o.layers.set(HELPER_LAYER));
+    scene.add(helpers);
+  }
+
+  function renderOrbit() {
+    if (!orbit || !orbitActive || !input) return;
+    orbit.controls.update();
+    // The orbit view sees the scene itself; the fisheye pass is only for the camera's own image.
+    orbit.renderer.render(scene, orbit.view);
+  }
+
+  function aimOrbit(p, first) {
+    const target = new THREE.Vector3(-p.offsetM / 2, 0.8, p.distanceM / 2);
+    if (first) {
+      orbit.view.position.set(target.x + p.distanceM * 0.7 + 4, p.heightM + 3, target.z - (p.distanceM * 1.1 + 5));
+    } else {
+      orbit.view.position.add(target.clone().sub(orbit.controls.target));
+    }
+    orbit.controls.target.copy(target);
+  }
+
+  function sizeOrbit() {
+    if (!orbit) return;
+    const canvas = orbit.renderer.domElement;
+    const width = canvas.clientWidth, height = canvas.clientHeight;
+    if (!width || !height) return;
+    orbit.renderer.setSize(width, height, false);
+    orbit.view.aspect = width / height;
+    orbit.view.updateProjectionMatrix();
+  }
+
   function render() {
     if (!input) return;
     if (countingStrip) countingStrip.material.opacity = Math.max(0.85, countingStrip.material.opacity - 0.02);
     if (isFisheye()) {
-      cubeCamera.position.set(0, input.heightM, 0);
+      cubeCamera.position.set(cameraX(), input.heightM, 0);
       cubeCamera.update(renderer, scene);
       renderer.render(fisheyeScene, screenCamera);
     } else {
       renderer.render(scene, camera);
     }
     drawOverlay();
+    renderOrbit();
     ui.counts.in.textContent = String(counts.in);
     ui.counts.out.textContent = String(counts.out);
     ui.counts.faces.textContent = String(counts.faces);
@@ -573,7 +655,7 @@ export function createWalkSim(THREE, ui) {
   }
 
   function frame(time) {
-    if (!active || !walking) return;
+    if (!(active || orbitActive) || !walking) return;
     const dt = lastTime ? Math.min(0.05, (time - lastTime) / 1000) : 0;
     lastTime = time;
     step(dt);
@@ -583,7 +665,7 @@ export function createWalkSim(THREE, ui) {
 
   function start() {
     lastTime = 0;
-    if (active && walking) requestAnimationFrame(frame);
+    if ((active || orbitActive) && walking) requestAnimationFrame(frame);
     else render();
   }
 
@@ -614,8 +696,9 @@ export function createWalkSim(THREE, ui) {
     start();
   });
   window.addEventListener("resize", () => {
-    if (!active) return;
-    resize();
+    if (!active && !orbitActive) return;
+    if (active) resize();
+    sizeOrbit();
     render();
   });
   syncWalking();
@@ -651,17 +734,42 @@ export function createWalkSim(THREE, ui) {
 
   return {
     snapshot,
+    // The orbit view: the same scene from outside, built the first time it is shown.
+    setOrbit(canvas, OrbitControls, next) {
+      if (next && !orbit) {
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+        renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+        const view = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+        view.layers.enable(HELPER_LAYER);
+        const controls = new OrbitControls(view, canvas);
+        controls.enableDamping = false;
+        controls.maxPolarAngle = Math.PI * 0.49;
+        controls.addEventListener("change", () => { if (!walking) requestAnimationFrame(renderOrbit); });
+        orbit = { renderer, view, controls };
+        if (input) aimOrbit(input, true);
+      }
+      const wasActive = orbitActive;
+      orbitActive = next;
+      if (orbitActive) {
+        sizeOrbit();
+        if (!wasActive) start();
+      }
+    },
     setPlacement(placement) {
       const first = input === null;
       input = placement;
       camera.fov = Math.min(placement.vFovDeg, 170);
       camera.aspect = placement.aspect;
-      camera.position.set(0, placement.heightM, 0);
-      camera.rotation.set((-placement.tiltDeg * Math.PI) / 180, Math.PI, 0);
+      camera.position.set(-placement.offsetM, placement.heightM, 0);
+      // Turned to the middle of the entrance, then tilted down.
+      camera.rotation.set((-placement.tiltDeg * Math.PI) / 180, Math.atan2(-placement.offsetM, -placement.distanceM), 0);
       camera.updateProjectionMatrix();
       if (placement.lens === "fisheye") fisheyeMaterial.uniforms.halfFov.value = (placement.fovDeg * Math.PI) / 360;
       rebuildProps(placement);
       poseStanding(placement);
+      camera.updateMatrixWorld();
+      rebuildHelpers(placement);
+      if (orbit) aimOrbit(placement, false);
       syncPassersRow();
       const key = [placement.scene, placement.lens, placement.distanceM.toFixed(1), placement.entranceWidthM || 0, (placement.faceLineDistanceM || 0).toFixed(1)].join("|");
       if (first || key !== layoutKey) respawnAll(placement);

@@ -1109,6 +1109,37 @@ function buildHtml() {
       min-height: 476px;
     }
 
+    .slice-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px 10px;
+      padding: 10px 14px 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    #orbitCanvas {
+      display: block;
+      width: 100%;
+      height: 476px;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    .orbit-note {
+      padding: 8px 14px 12px;
+    }
+
+    #topCanvas.grab {
+      cursor: grab;
+    }
+
+    #topCanvas.dragging {
+      cursor: grabbing;
+    }
+
     #diagram {
       display: block;
       width: 100%;
@@ -1787,6 +1818,10 @@ function buildHtml() {
 
       #topCanvas {
         min-height: 330px;
+      }
+
+      #orbitCanvas {
+        height: 330px;
       }
     }
 
@@ -2925,7 +2960,13 @@ ${sheetCss}
             <div class="dual sim-mode">
               <section class="stage" aria-label="Side-view placement and distance range">
                 <div class="stage-head">
-                  <div class="stage-title"><h2 data-i18n="sideView">Side view</h2><span class="stage-badge" id="stageBadge"></span></div>
+                  <div class="stage-title">
+                    <h2 data-i18n="sideView">Side view</h2><span class="stage-badge" id="stageBadge"></span>
+                    <div class="solve-seg view-seg" role="group" aria-label="Side panel" data-i18n-attr="aria-label:sideView" id="sideModeSeg">
+                      <button type="button" data-sidemode="side" aria-pressed="true" data-i18n="sideModeSide">Side</button>
+                      <button type="button" data-sidemode="orbit" aria-pressed="false" data-i18n="sideModeOrbit">Orbit</button>
+                    </div>
+                  </div>
                   <div class="stage-readings" aria-label="Current side-view readings">
                     <span class="reading-chip best" id="sideFeetReading"></span>
                     <span class="reading-chip face" id="sideFaceReading"></span>
@@ -2933,7 +2974,16 @@ ${sheetCss}
                   </div>
                 </div>
                 <div class="diagram-wrap">
+                  <div class="slice-bar" id="sliceBar" hidden>
+                    <span data-i18n="sliceThrough">Slice through</span>
+                    <div class="solve-seg view-seg" role="group" aria-label="Side view slice" data-i18n-attr="aria-label:sliceThrough">
+                      <button type="button" data-slice="deciding" aria-pressed="true" data-i18n="sliceDeciding">Deciding point</button>
+                      <button type="button" data-slice="aim" aria-pressed="false" data-i18n="sliceAim">Aim point</button>
+                    </div>
+                  </div>
                   <canvas id="sideCanvas" width="980" height="560" role="img" aria-label="Side elevation diagram" style="touch-action: none"></canvas>
+                  <canvas id="orbitCanvas" role="img" aria-label="The scene from outside: the entrance, the counting line and the camera's view. Drag to orbit." data-i18n-attr="aria-label:orbitAria" hidden></canvas>
+                  <p class="field-hint orbit-note" id="orbitNote" data-i18n="orbitNote" hidden>Drag to orbit, scroll or pinch to zoom. The view cone ends where it meets the floor.</p>
                 </div>
                 <div class="rangebar" aria-label="Distance range">
                   <div class="rangebar-head">
@@ -3127,10 +3177,19 @@ ${shareSource}
         solveFor: "Solve for", manual: "Manual", distance: "Distance", height: "Height",
         mountingHeight: "Mounting height", solved: "solved", countingDistance: "Counting line distance",
         recommendedDistance: "recommended distance", useRecommended: "Use recommended distance",
-        offsetFromCentre: "From the centre line", centreButton: "Centre", leftTick: "left", rightTick: "right",
+        offsetFromCentre: "From the centre line", centreButton: "Centre",
+        sideModeSide: "Side", sideModeOrbit: "Orbit", sliceThrough: "Slice through", sliceDeciding: "Deciding point", sliceAim: "Aim point",
+        sliceCaption: "Through {point}, {where}", whereCentre: "on the centre line", whereLeft: "{distance} m left of centre", whereRight: "{distance} m right of centre",
+        alongFloor: "{distance} m along the floor",
+        orbitNote: "Drag to orbit, scroll or pinch to zoom. The view cone ends where it meets the floor.",
+        orbitAria: "The scene from outside: the entrance, the counting line and the camera's view. Drag to orbit.",
+        planCentreLine: "entrance centre line", planToLine: "{distance} m to counting line", planRight: "{distance} m right of centre", planLeft: "{distance} m left of centre",
+        planCamera: "camera, {height} m up", planDragSideways: "drag the camera sideways; the distance is solved", planDragAnywhere: "drag the camera",
+        planWidths: "view {width} m wide at the line, effective {effective} m", planEffectiveOnly: "effective {effective} m at the line", leftTick: "left", rightTick: "right",
         offsetAria: "Camera offset from the entrance centre line in meters, positive to the right",
         offsetCentred: "On the entrance centre line. The camera aims at the middle of the entrance.",
         offsetSide: "{distance} m {side} of the entrance centre line, as the camera faces it. It turns {pan} deg to aim at the middle.",
+        offsetSideFisheye: "{distance} m {side} of the entrance centre line. A ceiling fisheye looks straight down, so it does not turn.",
         sideLeft: "left", sideRight: "right",
         pointAim: "the middle of the entrance", pointNear: "the nearest walkable point", pointFar: "the farthest walkable point",
         countDecides: "Judged across the walkable {width} m: {point} decides at {angle} deg.",
@@ -3215,10 +3274,19 @@ ${shareSource}
         solveFor: "คำนวณ", manual: "กำหนดเอง", distance: "ระยะ", height: "ความสูง",
         mountingHeight: "ความสูงติดตั้ง", solved: "คำนวณให้", countingDistance: "ระยะเส้นนับ",
         recommendedDistance: "ระยะที่แนะนำ", useRecommended: "ใช้ระยะที่แนะนำ",
-        offsetFromCentre: "ห่างจากแนวกึ่งกลาง", centreButton: "กึ่งกลาง", leftTick: "ซ้าย", rightTick: "ขวา",
+        offsetFromCentre: "ห่างจากแนวกึ่งกลาง", centreButton: "กึ่งกลาง",
+        sideModeSide: "ด้านข้าง", sideModeOrbit: "หมุนดู", sliceThrough: "ตัดผ่าน", sliceDeciding: "จุดที่ตัดสิน", sliceAim: "จุดเล็ง",
+        sliceCaption: "ตัดผ่าน{point} {where}", whereCentre: "บนแนวกึ่งกลาง", whereLeft: "ซ้ายของกึ่งกลาง {distance} m", whereRight: "ขวาของกึ่งกลาง {distance} m",
+        alongFloor: "ตามพื้น {distance} m",
+        orbitNote: "ลากเพื่อหมุนดู เลื่อนหรือถ่างนิ้วเพื่อซูม กรวยภาพจบตรงที่แตะพื้น",
+        orbitAria: "ฉากจากด้านนอก: ทางเข้า เส้นนับ และมุมมองของกล้อง ลากเพื่อหมุนดู",
+        planCentreLine: "แนวกึ่งกลางทางเข้า", planToLine: "ห่างเส้นนับ {distance} m", planRight: "ขวาของกึ่งกลาง {distance} m", planLeft: "ซ้ายของกึ่งกลาง {distance} m",
+        planCamera: "กล้อง สูง {height} m", planDragSideways: "ลากกล้องไปด้านข้างได้ ระยะคำนวณให้", planDragAnywhere: "ลากกล้องได้",
+        planWidths: "ภาพกว้าง {width} m ที่เส้นนับ ใช้งานได้ {effective} m", planEffectiveOnly: "ใช้งานได้ {effective} m ที่เส้นนับ", leftTick: "ซ้าย", rightTick: "ขวา",
         offsetAria: "ระยะกล้องจากแนวกึ่งกลางทางเข้า เป็นเมตร ค่าบวกคือทางขวา",
         offsetCentred: "อยู่บนแนวกึ่งกลางทางเข้า กล้องเล็งไปที่กลางทางเข้า",
         offsetSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า (มองจากกล้อง) กล้องหัน {pan} องศาเพื่อเล็งกลางทางเข้า",
+        offsetSideFisheye: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า ฟิชอายติดเพดานมองลงตรงๆ จึงไม่ต้องหัน",
         sideLeft: "ซ้าย", sideRight: "ขวา",
         pointAim: "กลางทางเข้า", pointNear: "จุดเดินได้ที่ใกล้ที่สุด", pointFar: "จุดเดินได้ที่ไกลที่สุด",
         countDecides: "ตัดสินตลอดความกว้างที่เดินได้ {width} m: {point} เป็นตัวตัดสินที่ {angle} องศา",
@@ -3408,6 +3476,7 @@ ${shareSource}
       statusbar: byId("statusbar"), sbOverall: byId("sbOverall"), sbFeet: byId("sbFeet"), sbFace: byId("sbFace"), sbDistance: byId("sbDistance"),
       jumpToDiagram: byId("jumpToDiagram"),
       dual: document.querySelector(".dual"), simWrap: byId("simWrap"), simFallback: byId("simFallback"),
+      orbitCanvas: byId("orbitCanvas"), orbitNote: byId("orbitNote"), sliceBar: byId("sliceBar"), sideModeSeg: byId("sideModeSeg"),
       offsetInput: byId("offsetInput"), offsetRange: byId("offsetRange"), offsetCaption: byId("offsetCaption"), offsetCentre: byId("offsetCentre")
     };
 
@@ -3440,6 +3509,7 @@ ${shareSource}
         faceLineDistanceM: r.faceLine.distanceM,
         faceLineVisible: r.faceLine.visible,
         entranceWidthM: state.entranceM,
+        offsetM: state.offsetM,
         coverageWidthM: r.optics.coverageWidthM,
         humanHeightM: p.profile.humanHeightM,
         facePointM: p.profile.facePointM,
@@ -3447,7 +3517,7 @@ ${shareSource}
         fovDeg: r.optics.horizontalFovDeg,
         pixelDensity: (distance, offAxisDeg) => pixelDensity(p.camera, distance, offAxisDeg),
         fisheyeProjection: (offset) => fisheyeProjection(offset, r.optics.horizontalFovDeg),
-        colors: { count: SIM_COLORS[r.feet.status], out: SIM_COLORS.out, face: SIM_COLORS.face, bad: SIM_COLORS.bad },
+        colors: { count: SIM_COLORS[r.feet.status], out: SIM_COLORS.out, face: SIM_COLORS.face, bad: SIM_COLORS.bad, camera: SIM_COLORS.out },
         text: {
           countingLine: t("simCountingLine"), faceLine: t("simFaceLine"), face: t("simFace"),
           in: t("simIn"), out: t("simOut"), outsideFrame: t("simOutsideFrame"), effective: t("simEffective")
@@ -3468,6 +3538,10 @@ ${shareSource}
       tableSelectedHeightKey: null,
       announceTimer: null,
       sideGeom: null,
+      planView: null,
+      planDragging: false,
+      sideMode: "side",
+      sideSlice: "deciding",
       dragging: false
     };
 
@@ -3693,6 +3767,7 @@ ${shareSource}
 
     function offsetCopy(p) {
       if (state.offsetM === 0) return t("offsetCentred");
+      if (p.result.optics.lens === "fisheye") return t("offsetSideFisheye", { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "sideRight" : "sideLeft") });
       return t("offsetSide", { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "sideRight" : "sideLeft"), pan: fmt(p.result.pan.deg, 1) });
     }
 
@@ -3848,21 +3923,31 @@ ${shareSource}
       if (!fit) return;
       const ctx = fit.ctx, w = fit.w, h = fit.h;
       ctx.clearRect(0, 0, w, h);
-      const r = p.result, profile = p.profile, heightM = p.heightM, distanceM = p.distanceM;
+      const r = p.result, profile = p.profile, heightM = p.heightM;
+      const line = r.countingLine;
+      // The slice runs from below the camera through one point of the counting line: the deciding one, or the aim point.
+      const sliceKey = state.sideSlice === "aim" ? "aim" : r.feet.point;
+      const slice = line.points[sliceKey];
+      // Only the camera's own vertical plane, through the aim point, shows its vertical view truthfully.
+      const inPlane = sliceKey === "aim" || Math.abs(slice.xM) < 1e-9;
+      // A fisheye's view is the same in every vertical slice, so its edge ray is true anywhere.
+      const showView = inPlane || r.optics.lens === "fisheye";
+      const distanceM = slice.floorDistanceM;
       const fl = r.faceLine;
+      const faceReach = fl.distanceM === null ? null : Math.hypot(line.offsetM, fl.distanceM);
       const padL = 60, padR = 70, padB = 58, padT = 40;
       const groundY = h - padB;
       const win = feetDistanceWindow(profile, heightM);
-      const maxX = Math.max(distanceM * 1.25, win.acceptableMax * 1.15, (fl.distanceM || 0) * 1.12, 6);
+      const maxX = Math.max(distanceM * 1.25, win.acceptableMax * 1.15, (inPlane ? faceReach || 0 : 0) * 1.12, 6);
       const maxY = Math.max(heightM * 1.25, profile.humanHeightM, 4);
       const sx = (w - padL - padR) / maxX;
       const sy = (groundY - padT) / maxY;
       const xFor = (m) => padL + m * sx;
       const yFor = (m) => groundY - m * sy;
       const camX = xFor(0), camY = yFor(heightM), subX = xFor(distanceM);
-      state.sideGeom = { padL: padL, sx: sx, groundY: groundY, top: yFor(profile.humanHeightM) - 24, subX: subX };
-      const feetColor = r.feet.status === "best" ? COL.best : r.feet.status === "acceptable" ? COL.ok : COL.bad;
-      const personColor = r.countingLine.framed ? feetColor : COL.bad;
+      state.sideGeom = { padL: padL, sx: sx, groundY: groundY, top: yFor(profile.humanHeightM) - 24, subX: subX, lateral: Math.abs(slice.xM - line.offsetM) };
+      const feetColor = slice.status === "best" ? COL.best : slice.status === "acceptable" ? COL.ok : COL.bad;
+      const personColor = slice.framed ? feetColor : COL.bad;
 
       ctx.strokeStyle = COL.grid;
       ctx.lineWidth = 1;
@@ -3946,6 +4031,7 @@ ${shareSource}
       if (feetBands.best.min > feetBands.acceptable.min) wedge(feetBands.best.min, feetBands.acceptable.min, colorWithAlpha(COL.ok, "0.10"), colorWithAlpha(COL.ok, "0.35"));
       wedge(feetBands.best.max, feetBands.best.min, colorWithAlpha(COL.best, "0.16"), colorWithAlpha(COL.best, "0.55"));
 
+      if (showView) {
       const upper = ray(aimDown - half), center = ray(aimDown), lower = ray(aimDown + half);
       ctx.strokeStyle = colorWithAlpha(COL.accent, "0.70");
       ctx.lineWidth = 1.25;
@@ -3966,6 +4052,7 @@ ${shareSource}
       ctx.moveTo(camX, camY);
       ctx.lineTo(center.x, center.y);
       ctx.stroke();
+      }
 
       const bandSegment = (start, end, color, width) => {
         const x1 = xFor(Math.max(0, start)), x2 = xFor(Math.min(maxX, end));
@@ -3983,13 +4070,13 @@ ${shareSource}
       bandSegment(win.acceptableMin, win.acceptableMax, colorWithAlpha(COL.ok, "0.55"), 5);
       bandSegment(win.bestMin, win.bestMax, COL.best, 6);
 
-      const faceLineX = fl.distanceM === null ? null : xFor(fl.distanceM);
+      const faceLineX = !inPlane || faceReach === null ? null : xFor(faceReach);
       const crowded = faceLineX !== null && !fl.coincides && Math.abs(faceLineX - subX) < 110;
       // When the lines are close, each title grows away from the other instead of centring over its figure.
       const faceRight = faceLineX !== null && faceLineX > subX;
       const nearlyTouching = crowded && Math.abs(faceLineX - subX) < 40;
       // Face line: its own person, where the face angle is best.
-      if (fl.distanceM !== null) {
+      if (faceLineX !== null) {
         const faceX = faceLineX;
         const faceY = yFor(profile.facePointM);
         ctx.globalAlpha = fl.visible ? 1 : 0.45;
@@ -4019,7 +4106,7 @@ ${shareSource}
           ctx.font = "600 11px JetBrains Mono, monospace";
           ctx.textAlign = "center";
           ctx.textBaseline = "top";
-          haloText(ctx, fmt(fl.distanceM, 2, " m"), faceX, groundY + 22);
+          haloText(ctx, fmt(faceReach, 2, " m"), faceX, groundY + 22);
         }
         ctx.globalAlpha = 1;
         ctx.fillStyle = COL.face;
@@ -4041,13 +4128,13 @@ ${shareSource}
       ctx.textAlign = "right";
       ctx.textBaseline = "bottom";
       ctx.fillStyle = feetColor;
-      haloText(ctx, t("canvasFeetAngle", { angle: fmt(r.feet.angleDeg, 1) }), subX - 12, groundY - 6);
+      haloText(ctx, t("canvasFeetAngle", { angle: fmt(slice.feetAngleDeg, 1) }), subX - 12, groundY - 6);
 
       // When the face line is the counting line, its face angle label already sits at the face point.
       drawPerson(ctx, subX, groundY, yFor, personColor, profile, !crowded && !(fl.distanceM !== null && fl.coincides));
 
       const aimHeightM = heightM - Math.tan(aimDown) * distanceM;
-      if (aimHeightM >= 0 && aimHeightM <= maxY) {
+      if (inPlane && aimHeightM >= 0 && aimHeightM <= maxY) {
         const aimY = yFor(aimHeightM);
         ctx.fillStyle = COL.accent;
         ctx.beginPath();
@@ -4080,7 +4167,15 @@ ${shareSource}
       ctx.font = "600 12px JetBrains Mono, monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      haloText(ctx, fmt(distanceM, 2, " m"), (camX + subX) / 2, groundY + 34);
+      haloText(ctx, Math.abs(distanceM - p.distanceM) < 0.005 ? fmt(distanceM, 2, " m") : t("alongFloor", { distance: fmt(distanceM, 2) }), (camX + subX) / 2, groundY + 34);
+      if (line.judged.length > 1 || line.offsetM !== 0) {
+        const where = Math.abs(slice.xM) < 0.005 ? t("whereCentre") : t(slice.xM > 0 ? "whereRight" : "whereLeft", { distance: fmt(Math.abs(slice.xM), 2) });
+        ctx.font = "600 11.5px Inter, 'Noto Sans Thai', sans-serif";
+        ctx.fillStyle = COL.muted;
+        ctx.textAlign = "right";
+        ctx.textBaseline = "top";
+        haloText(ctx, t("sliceCaption", { point: t({ aim: "pointAim", near: "pointNear", far: "pointFar" }[sliceKey]), where: where }), w - 12, 12);
+      }
 
       ctx.font = "700 13px Inter, 'Noto Sans Thai', sans-serif";
       ctx.textBaseline = "bottom";
@@ -4090,129 +4185,320 @@ ${shareSource}
       haloText(ctx, t("countingLine"), crowded ? subX + (faceRight ? 6 : -6) : subX, Math.max(22, yFor(profile.humanHeightM) - 14));
     }
 
+    // Plan of the entrance: the counting line coloured by the feet angle at each point, the judged points, the camera
+    // where it sits (drag it), its view and the two distances that place it.
     function drawTop(p) {
-      if (p.result.optics.lens === "fisheye") { drawTopFisheye(p); return; }
       const fit = fitCanvas(els.topCanvas);
       if (!fit) return;
       const ctx = fit.ctx, w = fit.w, h = fit.h;
       ctx.clearRect(0, 0, w, h);
-      const o = p.result.optics;
-      const camX = w / 2, camY = 34, padB = 50;
-      const half = toRad(o.horizontalFovDeg / 2);
-      const reach = h - camY - padB;
-      const maxSubjectPx = reach * 0.82;
-      const fitSubjectPx = Math.tan(half) > 0 ? (w * 0.42) / Math.tan(half) : maxSubjectPx;
-      const subjectPx = Math.max(100, Math.min(maxSubjectPx, fitSubjectPx));
-      const subjectY = camY + subjectPx;
-      const halfWidthPx = Math.tan(half) * subjectPx;
-      const leftX = camX - halfWidthPx, rightX = camX + halfWidthPx;
-      const r = p.result;
-      const feetColor = r.feet.status === "best" ? COL.best : r.feet.status === "acceptable" ? COL.ok : COL.bad;
-      const bottomY = h - padB;
-      const bottomHalfWidth = Math.tan(half) * (bottomY - camY);
-      const gradient = ctx.createLinearGradient(camX, camY, camX, bottomY);
-      gradient.addColorStop(0, colorWithAlpha(feetColor, "0.30"));
-      gradient.addColorStop(1, colorWithAlpha(feetColor, "0.04"));
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.moveTo(camX, camY);
-      ctx.lineTo(camX - bottomHalfWidth, bottomY);
-      ctx.lineTo(camX + bottomHalfWidth, bottomY);
-      ctx.closePath();
-      ctx.fill();
-      ctx.strokeStyle = feetColor;
-      ctx.lineWidth = 1.5;
-      ctx.globalAlpha = 0.82;
-      ctx.beginPath();
-      ctx.moveTo(camX, camY);
-      ctx.lineTo(camX - bottomHalfWidth, bottomY);
-      ctx.moveTo(camX, camY);
-      ctx.lineTo(camX + bottomHalfWidth, bottomY);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-      ctx.strokeStyle = COL.faint;
-      ctx.setLineDash([4, 4]);
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(camX, camY);
-      ctx.lineTo(camX, bottomY);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.strokeStyle = COL.ink;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(leftX, subjectY);
-      ctx.lineTo(rightX, subjectY);
-      ctx.stroke();
-      ctx.strokeStyle = COL.best;
-      ctx.setLineDash([6, 4]);
-      ctx.beginPath();
-      ctx.moveTo(camX - halfWidthPx * 0.8, subjectY);
-      ctx.lineTo(camX + halfWidthPx * 0.8, subjectY);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      const r = p.result, o = r.optics, line = r.countingLine;
+      const fisheye = o.lens === "fisheye";
+      const offset = state.offsetM, d = p.distanceM;
+      const entranceHalf = r.entrance === null ? null : r.entrance.widthM / 2;
+      const shownHalf = entranceHalf === null ? 2.5 : entranceHalf;
+      const faceD = r.faceLine.distanceM !== null && !r.faceLine.coincides ? r.faceLine.distanceM : null;
 
-      // The entrance to scale against what the camera covers; any part outside the view is red.
-      if (r.entrance !== null) {
-        const pxPerMetre = (halfWidthPx * 2) / o.coverageWidthM;
-        const entranceHalfPx = Math.min(w / 2 - 6, (r.entrance.widthM / 2) * pxPerMetre);
-        const entranceY = subjectY - 14;
-        const statusColor = r.entrance.status === "covered" ? COL.best : r.entrance.status === "tight" ? COL.ok : COL.bad;
-        const inView = Math.min(entranceHalfPx, halfWidthPx);
-        ctx.lineCap = "butt";
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = statusColor;
-        ctx.beginPath();
-        ctx.moveTo(camX - inView, entranceY);
-        ctx.lineTo(camX + inView, entranceY);
-        ctx.stroke();
-        if (entranceHalfPx > halfWidthPx) {
-          ctx.strokeStyle = COL.bad;
-          ctx.setLineDash([4, 3]);
-          ctx.beginPath();
-          ctx.moveTo(camX - entranceHalfPx, entranceY);
-          ctx.lineTo(camX - halfWidthPx, entranceY);
-          ctx.moveTo(camX + halfWidthPx, entranceY);
-          ctx.lineTo(camX + entranceHalfPx, entranceY);
-          ctx.stroke();
-          ctx.setLineDash([]);
+      // Fit the entrance, the camera and a margin; the entrance sits near the top, the camera below it.
+      const xSpan = Math.max(shownHalf + 1.6, Math.abs(offset) + 1.4);
+      const yMin = Math.min(-1.6, faceD !== null ? d - faceD - 0.8 : -1.6);
+      const yMax = d + 1.9;
+      const pad = 26, padB = 34;
+      const scale = Math.min((w - 2 * pad) / (2 * xSpan), (h - pad - padB) / (yMax - yMin));
+      const ox = w / 2;
+      const oy = pad - yMin * scale;
+      const S = (x, y) => [ox + x * scale, oy + y * scale];
+      state.planView = { ox: ox, oy: oy, scale: scale };
+
+      // A one-metre grid.
+      ctx.strokeStyle = colorWithAlpha(COL.grid, "0.55");
+      ctx.lineWidth = 1;
+      for (let gx = -Math.ceil(w / scale); gx <= Math.ceil(w / scale); gx += 1) {
+        const x = ox + gx * scale;
+        if (x < 0 || x > w) continue;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      }
+      for (let gy = Math.floor(yMin) - 1; gy <= Math.ceil(yMax) + 1; gy += 1) {
+        const y = oy + gy * scale;
+        if (y < 0 || y > h) continue;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      }
+
+      // Walls: the door frames beyond the line for an open door, the side walls of a corridor.
+      if (entranceHalf !== null) {
+        ctx.fillStyle = colorWithAlpha(COL.muted, "0.45");
+        if (p.profile.id === "corridor") {
+          const top = S(0, yMin - 1)[1], bottom = S(0, yMax + 1)[1];
+          ctx.fillRect(S(-entranceHalf, 0)[0] - 0.16 * scale, top, 0.16 * scale, bottom - top);
+          ctx.fillRect(S(entranceHalf, 0)[0], top, 0.16 * scale, bottom - top);
+        } else {
+          const wallY = S(0, -0.35)[1] - 0.16 * scale;
+          ctx.fillRect(0, wallY, S(-entranceHalf, 0)[0], 0.16 * scale);
+          ctx.fillRect(S(entranceHalf, 0)[0], wallY, w, 0.16 * scale);
         }
+      }
+
+      const cam = S(offset, d);
+      const aimAngle = Math.atan2(-d, -offset);
+      const farRay = 4 * (w + h);
+      // A view edge: through where it meets the counting line, or, if it never does, at the view's angle.
+      const edge = (xOnLine, sign, share) => {
+        if (Number.isFinite(xOnLine)) {
+          const target = S(xOnLine, 0);
+          const a = Math.atan2(target[1] - cam[1], target[0] - cam[0]);
+          return [cam[0] + Math.cos(a) * farRay, cam[1] + Math.sin(a) * farRay];
+        }
+        const a = aimAngle + sign * Math.atan(share * Math.tan(toRad(o.horizontalFovDeg / 2)));
+        return [cam[0] + Math.cos(a) * farRay, cam[1] + Math.sin(a) * farRay];
+      };
+      if (fisheye) {
+        const radius = p.heightM * Math.tan(toRad((o.horizontalFovDeg / 2) * 0.8)) * scale;
+        ctx.fillStyle = colorWithAlpha(COL.accent, "0.08");
+        ctx.beginPath(); ctx.arc(cam[0], cam[1], radius, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = colorWithAlpha(COL.best, "0.75");
+        ctx.setLineDash([6, 5]); ctx.lineWidth = 1.25; ctx.stroke(); ctx.setLineDash([]);
+      } else {
+        const left = edge(o.inView.leftM, 1, 1), right = edge(o.inView.rightM, -1, 1);
+        ctx.fillStyle = colorWithAlpha(COL.accent, "0.08");
+        ctx.beginPath(); ctx.moveTo(cam[0], cam[1]); ctx.lineTo(left[0], left[1]); ctx.lineTo(right[0], right[1]); ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = colorWithAlpha(COL.accent, "0.5");
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(left[0], left[1]); ctx.lineTo(cam[0], cam[1]); ctx.lineTo(right[0], right[1]); ctx.stroke();
+        const effLeft = edge(o.inEffective.leftM, 1, 0.8), effRight = edge(o.inEffective.rightM, -1, 0.8);
+        ctx.strokeStyle = colorWithAlpha(COL.best, "0.7");
+        ctx.setLineDash([6, 5]);
+        ctx.beginPath(); ctx.moveTo(effLeft[0], effLeft[1]); ctx.lineTo(cam[0], cam[1]); ctx.lineTo(effRight[0], effRight[1]); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Entrance centre line.
+      ctx.strokeStyle = colorWithAlpha(COL.ink, "0.28");
+      ctx.setLineDash([4, 6]);
+      ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, h); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = COL.faint;
+      ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      haloText(ctx, t("planCentreLine"), ox, 6);
+
+      // Face line, dashed, along the same stretch.
+      if (faceD !== null) {
+        const fy = S(0, d - faceD)[1];
+        ctx.strokeStyle = colorWithAlpha(COL.face, r.faceLine.visible ? "0.9" : "0.4");
+        ctx.lineWidth = 2;
+        ctx.setLineDash([7, 5]);
+        ctx.beginPath(); ctx.moveTo(S(-shownHalf, 0)[0], fy); ctx.lineTo(S(shownHalf, 0)[0], fy); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = COL.face;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        haloText(ctx, t("faceLineLower"), S(shownHalf, 0)[0] + 8, fy);
+      }
+
+      // The counting line, coloured by the feet angle at each point; dimmed outside the walkable width.
+      const steps = 90;
+      const statusColor = { best: COL.best, acceptable: COL.ok, out_of_range: COL.bad };
+      const walk = line.walkable;
+      const judgedAll = line.judged.length > 1;
+      ctx.lineWidth = 5;
+      ctx.lineCap = "butt";
+      for (let i = 0; i < steps; i += 1) {
+        const xa = -shownHalf + (i / steps) * 2 * shownHalf, xb = -shownHalf + ((i + 1) / steps) * 2 * shownHalf;
+        const mid = (xa + xb) / 2;
+        const status = judgeFeet(feetAngle(p.heightM, Math.hypot(mid - offset, d)), p.profile);
+        const inside = !judgedAll || (mid >= walk.leftM - 1e-6 && mid <= walk.rightM + 1e-6);
+        ctx.strokeStyle = statusColor[status];
+        ctx.globalAlpha = inside ? 1 : 0.35;
+        ctx.beginPath(); ctx.moveTo(S(xa, 0)[0], S(0, 0)[1]); ctx.lineTo(S(xb, 0)[0], S(0, 0)[1]); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = COL.ink;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.font = "600 11.5px Inter, 'Noto Sans Thai', sans-serif";
+      haloText(ctx, t("countingLineLower"), S(shownHalf, 0)[0] + 8, S(0, 0)[1]);
+      if (judgedAll) {
+        ctx.strokeStyle = COL.ink;
         ctx.lineWidth = 1.5;
-        ctx.strokeStyle = statusColor;
-        ctx.beginPath();
-        ctx.moveTo(camX - entranceHalfPx, entranceY - 7);
-        ctx.lineTo(camX - entranceHalfPx, entranceY + 7);
-        ctx.moveTo(camX + entranceHalfPx, entranceY - 7);
-        ctx.lineTo(camX + entranceHalfPx, entranceY + 7);
-        ctx.stroke();
-        ctx.fillStyle = statusColor;
+        [walk.leftM, walk.rightM].forEach((x) => {
+          const q = S(x, 0);
+          ctx.beginPath(); ctx.moveTo(q[0], q[1] - 9); ctx.lineTo(q[0], q[1] + 9); ctx.stroke();
+        });
+      }
+      if (entranceHalf !== null) {
+        const entryColor = r.entrance.status === "covered" ? COL.best : r.entrance.status === "tight" ? COL.ok : COL.bad;
+        ctx.fillStyle = entryColor;
         ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "bottom";
-        ctx.fillText(t("entranceLabel") + " " + fmt(r.entrance.widthM, 1, " m"), camX, entranceY - 8);
+        haloText(ctx, t("entranceLabel") + " " + fmt(r.entrance.widthM, 1, " m"), ox, S(0, -0.35)[1] - 0.16 * scale - 4);
       }
-      ctx.fillStyle = COL.ink;
-      ctx.beginPath();
-      ctx.arc(camX, subjectY, 4, 0, Math.PI * 2);
-      ctx.fill();
+
+      // Aim line from the camera to the middle of the entrance.
+      if (!fisheye) {
+        ctx.strokeStyle = colorWithAlpha(COL.accent, "0.8");
+        ctx.setLineDash([3, 4]);
+        ctx.lineWidth = 1.2;
+        const aim = S(0, 0);
+        ctx.beginPath(); ctx.moveTo(cam[0], cam[1]); ctx.lineTo(aim[0], aim[1]); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Judged points with their feet angles; the deciding one is larger.
+      const keys = judgedAll ? ["aim", "near", "far"] : ["aim"];
+      const placed = [];
+      keys.forEach((key) => {
+        const pt = line.points[key];
+        const q = S(pt.xM, 0);
+        if (placed.some((x) => Math.abs(x - q[0]) < 4)) return;
+        placed.push(q[0]);
+        const deciding = key === r.feet.point;
+        ctx.beginPath();
+        ctx.arc(q[0], q[1], deciding ? 7 : 5, 0, Math.PI * 2);
+        ctx.fillStyle = statusColor[pt.status];
+        ctx.fill();
+        ctx.strokeStyle = COL.surface;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        const text = fmt(pt.feetAngleDeg, 1) + "°";
+        ctx.font = "700 12px JetBrains Mono, monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillStyle = statusColor[pt.status];
+        haloText(ctx, text, q[0], q[1] - 11);
+      });
+
+      // Dimensions: straight back to the counting line, and sideways to the centre line.
+      const dimension = (a, b, label, beside) => {
+        ctx.strokeStyle = COL.ink;
+        ctx.fillStyle = COL.ink;
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+        const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
+        [[a, 1], [b, -1]].forEach((end) => {
+          const q = end[0], dir = end[1];
+          ctx.beginPath();
+          ctx.moveTo(q[0], q[1]); ctx.lineTo(q[0] + dir * 7 * Math.cos(ang - 0.4), q[1] + dir * 7 * Math.sin(ang - 0.4));
+          ctx.moveTo(q[0], q[1]); ctx.lineTo(q[0] + dir * 7 * Math.cos(ang + 0.4), q[1] + dir * 7 * Math.sin(ang + 0.4));
+          ctx.stroke();
+        });
+        ctx.font = "700 11.5px JetBrains Mono, monospace";
+        const tw = ctx.measureText(label).width + 12;
+        const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+        let bx = beside ? mx + 8 : mx - tw / 2;
+        if (beside && bx + tw > w - 4) bx = mx - tw - 8;
+        bx = clamp(bx, 4, w - tw - 4);
+        const by = beside ? my - 10 : my + 5;
+        ctx.fillStyle = colorWithAlpha(COL.surface, "0.92");
+        ctx.fillRect(bx, by, tw, 20);
+        ctx.strokeStyle = colorWithAlpha(COL.ink, "0.3");
+        ctx.strokeRect(bx + 0.5, by + 0.5, tw - 1, 19);
+        ctx.fillStyle = COL.ink;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, bx + 6, by + 10.5);
+      };
+      const onLine = S(offset, 0);
+      dimension([cam[0], cam[1] - 14], [onLine[0], onLine[1] + 5], t("planToLine", { distance: fmt(d, 2) }), true);
+      const sideways = Math.abs(offset) >= 0.05;
+      if (sideways) {
+        const yDim = cam[1] + 24;
+        ctx.strokeStyle = colorWithAlpha(COL.ink, "0.35");
+        ctx.setLineDash([2, 3]);
+        ctx.beginPath(); ctx.moveTo(cam[0], cam[1] + 12); ctx.lineTo(cam[0], yDim + 4); ctx.stroke();
+        ctx.setLineDash([]);
+        dimension([ox, yDim], [cam[0], yDim], t(offset > 0 ? "planRight" : "planLeft", { distance: fmt(Math.abs(offset), 2) }), false);
+      }
+
+      // The camera, turned toward the aim point, inside a ring that shows it can be dragged.
+      ctx.save();
+      ctx.translate(cam[0], cam[1]);
+      ctx.rotate(fisheye ? 0 : aimAngle + Math.PI / 2);
       ctx.fillStyle = COL.accent;
-      roundRect(ctx, camX - 13, camY - 8, 26, 14, 4);
-      ctx.fill();
-      ctx.fillStyle = COL.muted;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "bottom";
-      ctx.font = "11px JetBrains Mono, monospace";
-      ctx.fillText(t("cameraBelow"), camX, camY - 12);
-      ctx.fillStyle = COL.ink;
-      ctx.font = "700 12px JetBrains Mono, monospace";
-      ctx.textBaseline = "top";
-      ctx.fillText(fmt(o.coverageWidthM, 1, " m"), camX, subjectY + 8);
-      ctx.fillStyle = COL.best;
-      ctx.fillText(fmt(o.effectiveWidthM, 1, " m") + " (80%)", camX, subjectY + 25);
+      ctx.strokeStyle = COL.surface;
+      ctx.lineWidth = 2;
+      if (fisheye) {
+        ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      } else {
+        roundRect(ctx, -11, -8, 22, 16, 4); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = COL.surface;
+        ctx.fillRect(-4, -13, 8, 6);
+      }
+      ctx.restore();
+      ctx.beginPath();
+      ctx.arc(cam[0], cam[1], 20, 0, Math.PI * 2);
+      ctx.strokeStyle = colorWithAlpha(COL.accent, state.planDragging ? "0.95" : "0.4");
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
       ctx.fillStyle = COL.muted;
       ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
-      ctx.fillText(t("countingLineLower"), camX, Math.min(bottomY - 18, subjectY + 47));
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      haloText(ctx, t("planCamera", { height: fmt(p.heightM, 1) }), cam[0], cam[1] + (sideways ? 52 : 26));
+
+      ctx.fillStyle = COL.faint;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "bottom";
+      ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
+      const hint = t(state.solveMode === "distance" ? "planDragSideways" : "planDragAnywhere");
+      const width = fisheye ? t("planEffectiveOnly", { effective: fmt(o.effectiveWidthM, 1) }) : t("planWidths", { width: fmt(o.coverageWidthM, 1), effective: fmt(o.effectiveWidthM, 1) });
+      haloText(ctx, width + "  ·  " + hint, 8, h - 8);
     }
+
+    // Dragging the camera on the plan moves it sideways, and nearer or farther unless the distance is solved.
+    function planPoint(event) {
+      const rect = els.topCanvas.getBoundingClientRect();
+      return [event.clientX - rect.left, event.clientY - rect.top];
+    }
+
+    function onCameraHandle(point) {
+      const view = state.planView;
+      if (!view || state.topView !== "top") return false;
+      const cx = view.ox + state.offsetM * view.scale, cy = view.oy + Number(els.distanceInput.value) * view.scale;
+      return Math.hypot(point[0] - cx, point[1] - cy) <= 28;
+    }
+
+    function dragCamera(point) {
+      const view = state.planView;
+      const x = (point[0] - view.ox) / view.scale;
+      const limit = Number(els.offsetInput.max);
+      state.offsetM = setFieldValue(els.offsetInput, els.offsetRange, Math.abs(x) < 0.12 ? 0 : clamp(Math.round(x * 20) / 20, -limit, limit), 2);
+      if (state.solveMode !== "distance") {
+        const y = (point[1] - view.oy) / view.scale;
+        const distanceM = setFieldValue(els.distanceInput, els.distanceRange, Math.round(y * 100) / 100, 2);
+        if (state.solveMode === "height") setFieldValue(els.heightInput, els.heightRange, solvedHeight(distanceM), 1);
+      }
+      resolveSolved();
+      update();
+    }
+
+    els.topCanvas.addEventListener("pointerdown", (event) => {
+      const point = planPoint(event);
+      if (!onCameraHandle(point)) return;
+      state.planDragging = true;
+      els.topCanvas.classList.add("dragging");
+      els.topCanvas.setPointerCapture(event.pointerId);
+    });
+    els.topCanvas.addEventListener("pointermove", (event) => {
+      const point = planPoint(event);
+      if (state.planDragging) { dragCamera(point); return; }
+      els.topCanvas.classList.toggle("grab", onCameraHandle(point));
+    });
+    const endPlanDrag = () => {
+      if (!state.planDragging) return;
+      state.planDragging = false;
+      els.topCanvas.classList.remove("dragging");
+      update();
+    };
+    els.topCanvas.addEventListener("pointerup", endPlanDrag);
+    els.topCanvas.addEventListener("pointercancel", endPlanDrag);
+    // A touch on the camera drags it instead of scrolling the page; anywhere else still scrolls.
+    els.topCanvas.addEventListener("touchstart", (event) => {
+      const touch = event.touches[0];
+      const rect = els.topCanvas.getBoundingClientRect();
+      if (touch && onCameraHandle([touch.clientX - rect.left, touch.clientY - rect.top])) event.preventDefault();
+    }, { passive: false });
 
     // What the camera sees: the frame at the current tilt, with both lines and a person on each.
     function drawCameraView(p) {
@@ -4284,73 +4570,6 @@ ${shareSource}
       ctx.textBaseline = "top";
       const note = r.faceLine.reason === "outside_frame" ? t("faceAbove") : r.countingLine.framed ? t("framedNote") : t("cutOffNote");
       ctx.fillText(note, w / 2, fy + fh + 12);
-    }
-
-    // Plan of a ceiling fisheye: the camera in the middle, its effective circle, the lines and the entrance.
-    function drawTopFisheye(p) {
-      const fit = fitCanvas(els.topCanvas);
-      if (!fit) return;
-      const ctx = fit.ctx, w = fit.w, h = fit.h;
-      ctx.clearRect(0, 0, w, h);
-      const r = p.result, o = r.optics, heightM = p.heightM;
-      const effectiveRadiusM = heightM * Math.tan(toRad((o.horizontalFovDeg / 2) * 0.8));
-      const cx = w / 2, cy = h / 2 + 20;
-      const s = (Math.min(w, h - 60) / 2 - 16) / effectiveRadiusM;
-      const feetColor = r.feet.status === "best" ? COL.best : r.feet.status === "acceptable" ? COL.ok : COL.bad;
-      ctx.fillStyle = colorWithAlpha(COL.accent, "0.10");
-      ctx.beginPath();
-      ctx.arc(cx, cy, effectiveRadiusM * s, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = COL.best;
-      ctx.setLineDash([6, 4]);
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.setLineDash([]);
-      const chord = (distance, widthM, color, lineWidth) => {
-        const y = cy - distance * s;
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lineWidth;
-        ctx.beginPath();
-        ctx.moveTo(cx - (widthM / 2) * s, y);
-        ctx.lineTo(cx + (widthM / 2) * s, y);
-        ctx.stroke();
-        return y;
-      };
-      const countY = chord(p.distanceM, o.effectiveWidthM, feetColor, 3);
-      if (r.faceLine.distanceM !== null && !r.faceLine.coincides) {
-        const fl = r.faceLine.distanceM;
-        chord(fl, 2 * Math.sqrt(Math.max(0, effectiveRadiusM * effectiveRadiusM - fl * fl)), COL.face, 2);
-      }
-      if (r.entrance !== null) {
-        const statusColor = r.entrance.status === "covered" ? COL.best : r.entrance.status === "tight" ? COL.ok : COL.bad;
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = statusColor;
-        ctx.beginPath();
-        ctx.moveTo(cx - (r.entrance.widthM / 2) * s, countY - 12);
-        ctx.lineTo(cx + (r.entrance.widthM / 2) * s, countY - 12);
-        ctx.stroke();
-        ctx.fillStyle = statusColor;
-        ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "bottom";
-        ctx.fillText(t("entranceLabel") + " " + fmt(r.entrance.widthM, 1, " m"), cx, countY - 18);
-      }
-      ctx.fillStyle = COL.accent;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 7, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = COL.muted;
-      ctx.font = "11px JetBrains Mono, monospace";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      ctx.fillText(t("cameraBelow"), cx, cy + 10);
-      ctx.fillStyle = COL.ink;
-      ctx.font = "700 12px JetBrains Mono, monospace";
-      ctx.textBaseline = "top";
-      ctx.fillText(fmt(o.effectiveWidthM, 1, " m") + " " + t("effectiveShort"), cx, 10);
-      ctx.fillStyle = COL.best;
-      ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
-      ctx.fillText(t("effectiveCircle"), cx, 28);
     }
 
     // A ceiling fisheye image: floor lines curve, people stand out from the centre.
@@ -4562,18 +4781,27 @@ ${shareSource}
       updateMetrics(p, verticalPpm);
       els.sideCanvas.setAttribute("aria-label", t("sideAria", { height: fmt(heightM, 1), distance: fmt(distanceM, 2), angle: fmt(r.feet.angleDeg, 1), status: STATUS_LABEL[r.feet.status] }));
       els.topCanvas.setAttribute("aria-label", state.topView === "top" ? t("topAria", { width: fmt(r.optics.coverageWidthM, 1) }) : t("cameraAria", { tilt: fmt(r.tilt.value, 1) }));
-      drawSide(p);
+      const orbitOn = state.sideMode === "orbit" && !state.simFailed;
+      els.sideCanvas.hidden = orbitOn;
+      els.orbitCanvas.hidden = els.orbitNote.hidden = !orbitOn;
+      els.sideModeSeg.hidden = state.simFailed;
+      els.sliceBar.hidden = orbitOn || !(r.countingLine.judged.length > 1 || state.offsetM !== 0);
+      document.querySelectorAll("[data-sidemode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.sidemode === state.sideMode)));
+      document.querySelectorAll("[data-slice]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.slice === state.sideSlice)));
+      if (!orbitOn) drawSide(p);
       // The camera view is the 3D scene; the flat drawing stands in only when three.js could not load.
       const simOn = state.topView === "camera" && !state.simFailed;
       els.topCanvas.hidden = simOn;
       els.simWrap.hidden = !simOn;
       els.simFallback.hidden = !(state.topView === "camera" && state.simFailed);
-      els.dual.classList.toggle("sim-mode", simOn);
+      // The plan is dragged on, so it gets the wide column too.
+      els.dual.classList.toggle("sim-mode", simOn || state.topView === "top");
       if (state.topView === "top") drawTop(p);
       if (state.topView === "camera" && state.simFailed) drawCameraView(p);
       if (window.walkSim) {
         window.walkSim.setPlacement(simInput(p));
         window.walkSim.setActive(simOn && !els.visualizerView.hidden);
+        if (window.OrbitControlsClass) window.walkSim.setOrbit(els.orbitCanvas, window.OrbitControlsClass, orbitOn && !els.visualizerView.hidden);
       }
       if (!els.tableView.hidden) renderTable(p);
 
@@ -4674,7 +4902,10 @@ ${shareSource}
       els.visualizerTab.tabIndex = isTable ? -1 : 0;
       els.tableTab.tabIndex = isTable ? 0 : -1;
       if (isTable) {
-        if (window.walkSim) window.walkSim.setActive(false);
+        if (window.walkSim) {
+          window.walkSim.setActive(false);
+          if (window.OrbitControlsClass) window.walkSim.setOrbit(els.orbitCanvas, window.OrbitControlsClass, false);
+        }
         renderTable(currentPlacement());
       } else {
         requestAnimationFrame(update);
@@ -4775,6 +5006,14 @@ ${shareSource}
       if (button) setScene(button.dataset.scene);
     });
     document.querySelectorAll("[data-solve]").forEach((button) => button.addEventListener("click", () => setSolveMode(button.dataset.solve)));
+    document.querySelectorAll("[data-sidemode]").forEach((button) => button.addEventListener("click", () => {
+      state.sideMode = button.dataset.sidemode;
+      update();
+    }));
+    document.querySelectorAll("[data-slice]").forEach((button) => button.addEventListener("click", () => {
+      state.sideSlice = button.dataset.slice;
+      update();
+    }));
     document.querySelectorAll("[data-topview]").forEach((button) => button.addEventListener("click", () => {
       state.topView = button.dataset.topview;
       document.querySelectorAll("[data-topview]").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
@@ -4863,9 +5102,11 @@ ${shareSource}
       const g = state.sideGeom;
       return g && state.solveMode !== "distance" && pt.y >= g.top && pt.y <= g.groundY + 14 && Math.abs(pt.x - g.subX) < 26;
     }
+    // The slice may run at an angle to the counting line, so its floor distance converts back to the line's distance.
     function dragTo(pt) {
       const g = state.sideGeom;
-      setDistance((pt.x - g.padL) / g.sx);
+      const reach = (pt.x - g.padL) / g.sx;
+      setDistance(Math.sqrt(Math.max(0.0001, reach * reach - g.lateral * g.lateral)));
     }
     els.sideCanvas.addEventListener("pointerdown", (event) => {
       const pt = sidePoint(event);
@@ -4931,10 +5172,18 @@ ${sheetSource}
     setSolveMode(state.solveMode);
     restoreSharedPlacement();
   </script>
+  <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
   <script type="module">
 ${simSource}
     try {
-      const THREE = await import("https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js");
+      const THREE = await import("three");
+      // The orbit view is an extra; without its controls the side view simply has no Orbit mode.
+      try {
+        window.OrbitControlsClass = (await import("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js")).OrbitControls;
+      } catch (error) {
+        document.getElementById("sideModeSeg").hidden = true;
+        console.error("Orbit controls could not load", error);
+      }
       window.walkSim = createWalkSim(THREE, {
         canvas: document.getElementById("simCanvas"),
         overlay: document.getElementById("simOverlay"),

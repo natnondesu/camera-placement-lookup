@@ -13,12 +13,15 @@ const SHEET_TEXT = {
     shCameraGone: "The camera in this link ({camera}) is no longer in the catalogue; showing {current} instead.",
     shSheetTitle: "Camera placement", shPrepared: "Prepared", shRules: "Rules", shScene: "Scene", shCamera: "Camera",
     shFov: "{h}° × {v}° at {f} mm", shDatasheet: "(datasheet)",
-    shVerdict_best: "<b>Placement is best.</b> Feet angle {angle}° at the counting line, inside the best band {min}–{max}°.",
-    shVerdict_acceptable: "<b>Placement is acceptable.</b> Feet angle {angle}° at the counting line, outside the best band {min}–{max}° but within {amin}–{amax}°.",
+    shVerdict_best: "<b>Placement is best.</b> Feet angle {angle}° {where}, inside the best band {min}–{max}°.",
+    shVerdict_acceptable: "<b>Placement is acceptable.</b> Feet angle {angle}° {where}, outside the best band {min}–{max}° but within {amin}–{amax}°.",
+    shWhere_line: "at the counting line", shWhere_aim: "at the middle of the entrance", shWhere_near: "at the nearest walkable point", shWhere_far: "at the farthest walkable point",
     shVerdict_out_of_range: "<b>Placement is out of range.</b> {reason}",
     shMount: "Mount the camera above the floor", shMountHint: "Measure to the centre of the lens.",
     shLine: "Mark the counting line out from the point below the camera", shLineHint: "Straight out, across the full entrance.",
     shTilt: "Tilt the camera down", shTiltHint: "It aims at {aim} m on a person standing on the line.",
+    shMountHintOffset: "To the lens centre, {distance} m {side} of the entrance centre line; turn it {pan}° to the middle.",
+    shSideLeft: "left", shSideRight: "right",
     shTiltFisheye: "Point the camera straight down", shTiltFisheyeHint: "Ceiling fisheye: the lens faces the floor.",
     shZoomWide: "Set the zoom to the widest end", shZoomTele: "Set the zoom to the longest end", shZoom: "Set the zoom",
     shLensFixed: "Fixed lens", shFisheyeLens: "Fisheye lens, no zoom to set", shStream: "Main stream {w} × {h}.",
@@ -26,6 +29,8 @@ const SHEET_TEXT = {
     shKeyCount: "counting line", shKeyFace: "face line", shFaceLineLabel: "face line",
     shThReading: "Reading", shThValue: "Value", shThMeaning: "Meaning",
     shRowCount: "feet {angle}°, best band {near}–{far} m from the camera, {ppm} px/m",
+    shRowCountOk: "feet {angle}°, no Best distance from here; acceptable {near}–{far} m from the camera, {ppm} px/m",
+    shRowCountNone: "feet {angle}°, no distance works across the walkable width from here, {ppm} px/m",
     shRowFace: "face {angle}°, {ppm} px/m at the face.", shFaceFloor: "Below the {min} px/m face floor; demographics only, never fails the placement.",
     shRowEntrance: "inside the effective {eff} m of the {cover} m the camera covers",
     shFaceWarn: "Faces are {ppm} px/m at the face line, under the {min} px/m floor: demographics may be unreliable. Zoom in a little or mount lower if demographics matter here.",
@@ -46,12 +51,15 @@ const SHEET_TEXT = {
     shCameraGone: "ไม่พบกล้องในลิงก์ ({camera}) ในรายการแล้ว แสดง {current} แทน",
     shSheetTitle: "ตำแหน่งติดตั้งกล้อง", shPrepared: "จัดทำ", shRules: "กฎ", shScene: "ลักษณะพื้นที่", shCamera: "กล้อง",
     shFov: "มุมรับภาพ {h}° × {v}° ที่ {f} mm", shDatasheet: "(ตามสเปก)",
-    shVerdict_best: "<b>ตำแหน่งนี้ดีที่สุด</b> มุมเท้าที่เส้นนับ {angle}° อยู่ในช่วงดีที่สุด {min}–{max}°",
-    shVerdict_acceptable: "<b>ตำแหน่งนี้พอใช้</b> มุมเท้าที่เส้นนับ {angle}° อยู่นอกช่วงดีที่สุด {min}–{max}° แต่อยู่ในช่วง {amin}–{amax}°",
+    shVerdict_best: "<b>ตำแหน่งนี้ดีที่สุด</b> มุมเท้า{where} {angle}° อยู่ในช่วงดีที่สุด {min}–{max}°",
+    shVerdict_acceptable: "<b>ตำแหน่งนี้พอใช้</b> มุมเท้า{where} {angle}° อยู่นอกช่วงดีที่สุด {min}–{max}° แต่อยู่ในช่วง {amin}–{amax}°",
+    shWhere_line: "ที่เส้นนับ", shWhere_aim: "ที่กลางทางเข้า", shWhere_near: "ที่จุดเดินได้ใกล้สุด", shWhere_far: "ที่จุดเดินได้ไกลสุด",
     shVerdict_out_of_range: "<b>ตำแหน่งนี้เกินเกณฑ์</b> {reason}",
     shMount: "ติดตั้งกล้องสูงจากพื้น", shMountHint: "วัดถึงกึ่งกลางเลนส์",
     shLine: "ทำเครื่องหมายเส้นนับ ห่างจากจุดใต้กล้อง", shLineHint: "ตรงออกไป และยาวตลอดความกว้างทางเข้า",
     shTilt: "ก้มกล้องลง", shTiltHint: "เล็งที่ความสูง {aim} m ของคนที่ยืนบนเส้นนับ",
+    shMountHintOffset: "วัดถึงกึ่งกลางเลนส์ ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า หันกล้อง {pan}° เข้าหากลางทางเข้า",
+    shSideLeft: "ซ้าย", shSideRight: "ขวา",
     shTiltFisheye: "หันกล้องลงตรงๆ", shTiltFisheyeHint: "ฟิชอายติดเพดาน เลนส์หันลงพื้น",
     shZoomWide: "ตั้งซูมที่ระยะกว้างสุด", shZoomTele: "ตั้งซูมที่ระยะไกลสุด", shZoom: "ตั้งซูม",
     shLensFixed: "เลนส์ตายตัว", shFisheyeLens: "เลนส์ฟิชอาย ไม่ต้องตั้งซูม", shStream: "สตรีมหลัก {w} × {h}",
@@ -59,6 +67,8 @@ const SHEET_TEXT = {
     shKeyCount: "เส้นนับ", shKeyFace: "เส้นจับใบหน้า", shFaceLineLabel: "เส้นจับใบหน้า",
     shThReading: "รายการ", shThValue: "ค่า", shThMeaning: "ความหมาย",
     shRowCount: "มุมเท้า {angle}° ช่วงดีที่สุด {near}–{far} m จากกล้อง {ppm} px/m",
+    shRowCountOk: "มุมเท้า {angle}° จากตำแหน่งนี้ไม่มีระยะที่ดีที่สุด ช่วงพอใช้ {near}–{far} m จากกล้อง {ppm} px/m",
+    shRowCountNone: "มุมเท้า {angle}° จากตำแหน่งนี้ไม่มีระยะที่ใช้ได้ตลอดความกว้างที่เดินได้ {ppm} px/m",
     shRowFace: "มุมใบหน้า {angle}° ที่ใบหน้า {ppm} px/m", shFaceFloor: "ต่ำกว่าเกณฑ์ใบหน้า {min} px/m ใช้เก็บข้อมูลเพศ/อายุเท่านั้น ไม่ทำให้ตำแหน่งไม่ผ่าน",
     shRowEntrance: "อยู่ในช่วงใช้งานได้ {eff} m จาก {cover} m ที่กล้องมองเห็น",
     shFaceWarn: "ที่เส้นจับใบหน้ามีเพียง {ppm} px/m ต่ำกว่าเกณฑ์ {min} px/m ข้อมูลเพศ/อายุอาจไม่แม่นยำ ซูมเข้าเล็กน้อยหรือติดตั้งให้ต่ำลงหากต้องการข้อมูลนี้",
@@ -320,13 +330,15 @@ function sheetSteps(p) {
   const fisheye = preset.lens === "fisheye";
   const focal = Number(els.focalInput.value);
   const stream = t("shStream", { w: p.resolution.w, h: p.resolution.h });
-  const aimM = p.heightM - Math.tan(toRad(r.tilt.value)) * p.distanceM;
+  const aimReachM = r.countingLine.points.aim.floorDistanceM;
+  const aimM = p.heightM - Math.tan(toRad(r.tilt.value)) * aimReachM;
   let zoomText = t("shZoom");
   if (preset.focalMinMm === preset.focalMaxMm) zoomText = t("shLensFixed");
   else if (Math.abs(focal - preset.focalMinMm) < 0.05) zoomText = t("shZoomWide");
   else if (Math.abs(focal - preset.focalMaxMm) < 0.05) zoomText = t("shZoomTele");
   const steps = [
-    [t("shMount"), t("shMountHint"), fmt(p.heightM, 1), "m"],
+    [t("shMount"), state.offsetM === 0 ? t("shMountHint")
+      : t("shMountHintOffset", { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "shSideRight" : "shSideLeft"), pan: deg(r.pan.deg) }), fmt(p.heightM, 1), "m"],
     [t("shLine"), t("shLineHint"), fmt(p.distanceM, 2), "m"],
     fisheye
       ? [t("shTiltFisheye"), t("shTiltFisheyeHint"), "90", "°"]
@@ -343,9 +355,11 @@ function sideElevationSvg(p) {
   const r = p.result;
   const profile = p.profile;
   const H = p.heightM;
-  const D = p.distanceM;
+  // Drawn in the camera's own vertical plane, which runs to the middle of the entrance; off-centre that is farther than the line.
+  const aim = r.countingLine.points.aim;
+  const D = aim.floorDistanceM;
   const fisheye = r.optics.lens === "fisheye";
-  const faceD = r.faceLine.distanceM !== null && !r.faceLine.coincides ? r.faceLine.distanceM : null;
+  const faceD = r.faceLine.distanceM !== null && !r.faceLine.coincides ? Math.hypot(state.offsetM, r.faceLine.distanceM) : null;
   const win = feetDistanceWindow(profile, H);
   const maxX = Math.max(D, faceD || 0, win.bestMax) * 1.1;
   const left = 44;
@@ -355,7 +369,7 @@ function sideElevationSvg(p) {
   const Y = (m) => (floor - m * s).toFixed(1);
   const camX = left;
   const camY = Y(H);
-  const feet = statusClass(r.feet.status);
+  const feet = statusClass(aim.status);
   const person = (x, cls) => {
     const tall = profile.humanHeightM * s;
     const head = Math.max(3.5, tall * 0.08);
@@ -389,7 +403,7 @@ function sideElevationSvg(p) {
     parts.push('<text class="se-num se-blue" x="' + (camX + 46) + '" y="' + (Number(camY) + 18) + '">' + deg(r.tilt.value) + "°</text>");
   }
   parts.push(person(X(D), feet));
-  parts.push('<text class="se-num se-' + feet + '" x="' + (Number(X(D)) - 14) + '" y="' + (floor - 6) + '" text-anchor="end">' + deg(r.feet.angleDeg) + "°</text>");
+  parts.push('<text class="se-num se-' + feet + '" x="' + (Number(X(D)) - 14) + '" y="' + (floor - 6) + '" text-anchor="end">' + deg(aim.feetAngleDeg) + "°</text>");
   parts.push('<line class="se-dim" x1="22" y1="' + camY + '" x2="22" y2="' + floor + '" marker-start="url(#seArrow)" marker-end="url(#seArrow)"></line>');
   const midY = ((Number(camY) + floor) / 2).toFixed(1);
   parts.push('<text class="se-num se-ink" x="15" y="' + midY + '" text-anchor="middle" transform="rotate(-90 15 ' + midY + ')">' + fmt(H, 1) + " m</text>");
@@ -416,7 +430,11 @@ function sheetReadings(p) {
   const faceTag = !fl.visible ? "muted" : fl.tooSmall ? "ok" : "best";
   const rows = [
     [t("countingLine"), fmt(p.distanceM, 2, " m"), statusClass(r.feet.status), STATUS_LABEL[r.feet.status],
-      t("shRowCount", { angle: deg(r.feet.angleDeg), near: fmt(win.bestMin, 2), far: fmt(win.bestMax, 2), ppm: fmt(r.optics.pixelsPerMetre, 0) }), ""],
+      Number.isFinite(win.bestMin)
+        ? t("shRowCount", { angle: deg(r.feet.angleDeg), near: fmt(win.bestMin, 2), far: fmt(win.bestMax, 2), ppm: fmt(r.optics.pixelsPerMetre, 0) })
+        : Number.isFinite(win.acceptableMin)
+          ? t("shRowCountOk", { angle: deg(r.feet.angleDeg), near: fmt(win.acceptableMin, 2), far: fmt(win.acceptableMax, 2), ppm: fmt(r.optics.pixelsPerMetre, 0) })
+          : t("shRowCountNone", { angle: deg(r.feet.angleDeg), ppm: fmt(r.optics.pixelsPerMetre, 0) }), ""],
     [t("faceLine"), fl.distanceM === null ? t("none") : fmt(fl.distanceM, 2, " m"), faceTag, face.label,
       fl.angleDeg === null ? face.note
         : t("shRowFace", { angle: deg(fl.angleDeg), ppm: fmt(fl.pixelsPerMetre, 0) }) + " " + (fl.visible && fl.tooSmall ? t("shFaceFloor", { min: profile.minPixelsPerMetre.face }) : face.note), "face-name"]
@@ -459,6 +477,7 @@ function renderSheet(p) {
   const fa = profile.feetAngleDeg;
   const verdictLine = t("shVerdict_" + r.verdict, {
     angle: deg(r.feet.angleDeg), min: fa.best.min, max: fa.best.max, amin: fa.acceptable.min, amax: fa.acceptable.max,
+    where: t(r.countingLine.judged.length > 1 || state.offsetM !== 0 ? "shWhere_" + r.feet.point : "shWhere_line"),
     reason: escapeHtml(verdictCopy(p))
   });
   const prepared = new Date().toLocaleDateString(lang === "th" ? "th-TH" : "en-GB", { day: "numeric", month: "short", year: "numeric" });

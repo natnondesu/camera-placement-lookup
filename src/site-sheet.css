@@ -274,7 +274,7 @@
       padding: 34px 46px 28px;
       display: flex;
       flex-direction: column;
-      gap: 11px;
+      gap: 10px;
       background: var(--paper);
       color: var(--p-ink);
       font-size: 12.5px;
@@ -358,9 +358,10 @@
       font: 600 12px "JetBrains Mono", ui-monospace, monospace;
     }
 
+    /* A long verdict wraps beside its pill, not under it, so the sheet keeps to one page. */
     .sheet .sh-verdict {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: auto 1fr;
       align-items: center;
       gap: 14px;
     }
@@ -503,7 +504,7 @@
     .sheet figure.draw svg {
       display: block;
       width: 100%;
-      height: 176px;
+      height: 164px;
     }
 
     .sheet figure.cam {
@@ -514,7 +515,7 @@
     .sheet figure.cam img {
       display: block;
       width: 100%;
-      height: 176px;
+      height: 164px;
       object-fit: contain;
       border-radius: 6px;
       background: oklch(0.13 0.012 256);
