@@ -423,7 +423,7 @@ test("csv export has a header and one line per row", () => {
   assert.match(lines[0], /^height_m,recommended_distance_m,/);
 });
 
-// ---------- Off-centre camera, judged across the walkable width ----------
+// ---------- Off-centre camera: judged in the middle of the entrance, its walkable ends warn ----------
 
 test("the walkable width keeps 0.35 m clear of each door frame", () => {
   assert.deepEqual(walkableSpan(5), { leftM: -2.15, rightM: 2.15 });
@@ -434,35 +434,33 @@ test("the walkable width keeps 0.35 m clear of each door frame", () => {
 test("a centred camera with no entrance width is judged at the middle, as before", () => {
   const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: wideCamera });
   close(result.feet.angleDeg, feetAngle(4, 4.6), 1e-9);
-  assert.equal(result.feet.point, "aim");
-  close(result.countingLine.points.far.floorDistanceM, 4.6, 1e-9);
+  assert.equal(result.countingLine.edge, null);
 });
 
-test("a centred camera over a 5 m entrance is decided at the edge of the walkable width", () => {
-  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: wideCamera, entranceWidthM: 5 });
-  assert.equal(result.feet.point, "far");
-  close(result.feet.angleDeg, feetAngle(4, Math.hypot(2.15, 4.6)), 1e-9);
-  assert.equal(result.verdict, "best");
-});
-
-test("an off-centre camera is decided at whichever walkable point is worst", () => {
-  // Nearest point straight ahead at 4 m (45 deg); farthest at the left edge, 5.22 m away (37.5 deg)
+test("off-centre, the verdict is the feet angle at the middle of the entrance", () => {
+  // The middle is 4.18 m away along the floor from a camera 1.2 m off-centre and 4 m back: 43.8 deg
   const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4, offsetM: 1.2, camera: wideCamera, entranceWidthM: 5 });
-  const { near, far } = result.countingLine.points;
-  close(near.xM, 1.2, 1e-9);
-  assert.equal(near.status, "acceptable");
-  close(far.xM, -2.15, 1e-9);
-  assert.equal(far.status, "out_of_range");
-  assert.equal(result.feet.point, "far");
-  assert.equal(result.verdict, "out_of_range");
+  close(result.feet.angleDeg, feetAngle(4, Math.hypot(1.2, 4)), 1e-9);
+  assert.equal(result.feet.status, "acceptable");
+  assert.equal(result.verdict, "acceptable");
 });
 
-test("between two Best points the one nearer a band edge decides", () => {
-  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.4, camera: wideCamera, entranceWidthM: 5 });
-  assert.equal(result.countingLine.points.aim.status, "best");
-  assert.equal(result.countingLine.points.far.status, "best");
-  // 42.3 deg at the middle is 0.7 deg inside the band; 39.2 deg at the edge is 1.2 deg inside
-  assert.equal(result.feet.point, "aim");
+test("an end of the walkable width outside the bands warns without changing the verdict", () => {
+  // The left end, 3.35 m sideways from the camera, is 5.22 m away: 37.5 deg, below Open door's bands
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4, offsetM: 1.2, camera: wideCamera, entranceWidthM: 5 });
+  const { edge } = result.countingLine;
+  assert.equal(edge.side, "left");
+  close(edge.xM, -2.15, 1e-9);
+  assert.equal(edge.status, "out_of_range");
+  assert.ok(result.warnings.includes("walkable_edge"));
+  assert.equal(result.verdict, "acceptable");
+});
+
+test("a centred camera over a 5 m entrance at the recommended distance has no edge warning", () => {
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: wideCamera, entranceWidthM: 5 });
+  assert.equal(result.countingLine.edge, null);
+  assert.ok(!result.warnings.includes("walkable_edge"));
+  assert.equal(result.verdict, "best");
 });
 
 test("an off-centre camera pans to the entrance centre and tilts for the floor distance to it", () => {
@@ -479,14 +477,13 @@ test("a ceiling fisheye is never panned", () => {
   assert.equal(result.tilt.value, 90);
 });
 
-test("a person at the far edge of the walkable width must be wholly in frame", () => {
-  // Panned 12 deg, the counting line slopes across the image; about 19 deg of vertical view loses the far edge
-  const narrow = evaluatePlacement({ profile: corridor, heightM: 4, distanceM: 4.6, offsetM: 1, camera: narrowCamera, entranceWidthM: 6 });
-  const wide = evaluatePlacement({ profile: corridor, heightM: 4, distanceM: 4.6, offsetM: 1, camera: wideCamera, entranceWidthM: 6 });
-  assert.equal(narrow.countingLine.points.far.status, "acceptable");
-  assert.equal(narrow.countingLine.points.far.framed, false);
-  assert.equal(narrow.verdict, "out_of_range");
-  assert.equal(wide.verdict, "acceptable");
+test("a person cut off at an end of the walkable width warns, and the middle still decides", () => {
+  // Panned 12 deg, the counting line slopes across the image; about 19 deg of vertical view loses the far end
+  const result = evaluatePlacement({ profile: corridor, heightM: 4, distanceM: 4.6, offsetM: 1, camera: narrowCamera, entranceWidthM: 6 });
+  assert.equal(result.countingLine.edge.framed, false);
+  assert.ok(result.warnings.includes("walkable_edge"));
+  assert.equal(result.countingLine.framed, true);
+  assert.equal(result.verdict, result.feet.status);
 });
 
 test("an off-centre camera covers a shifted stretch of the counting line", () => {
@@ -497,48 +494,28 @@ test("an off-centre camera covers a shifted stretch of the counting line", () =>
   assert.notEqual(shifted.entrance.status, "covered");
 });
 
-test("solving the distance keeps today's answer when the whole walkable width is Best", () => {
-  const solved = solveDistance({ profile: openDoor, heightM: 4, entranceWidthM: 5 });
-  assert.equal(solved.distanceM, recommendedDistance(4, openDoor));
-  assert.equal(solved.judgedBy, "best");
-});
-
-test("solving the distance with no entrance width is the target distance", () => {
+test("solving the distance centred is the target distance", () => {
   assert.equal(solveDistance({ profile: corridor, heightM: 8.5 }).distanceM, recommendedDistance(8.5, corridor));
+  assert.equal(solveDistance({ profile: openDoor, heightM: 4 }).judgedBy, "best");
 });
 
-test("solving the distance off-centre lands inside the Best window", () => {
-  const solved = solveDistance({ profile: openDoor, heightM: 4, offsetM: 0.6, entranceWidthM: 5 });
-  assert.equal(solved.judgedBy, "best");
+test("solving the distance off-centre puts the middle of the entrance on the target angle", () => {
+  const solved = solveDistance({ profile: openDoor, heightM: 4, offsetM: 1.2 });
+  close(Math.hypot(1.2, solved.distanceM), recommendedDistance(4, openDoor), 0.01);
   assert.ok(solved.distanceM >= solved.best.minM && solved.distanceM <= solved.best.maxM);
-  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: solved.distanceM, offsetM: 0.6, camera: wideCamera, entranceWidthM: 5 });
-  assert.equal(result.verdict, "best");
 });
 
-test("an off-centre camera with no Best distance falls back to the Acceptable window", () => {
-  const solved = solveDistance({ profile: openDoor, heightM: 4, offsetM: 1.2, entranceWidthM: 5 });
-  assert.equal(solved.best, null);
-  assert.equal(solved.judgedBy, "acceptable");
-  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: solved.distanceM, offsetM: 1.2, camera: wideCamera, entranceWidthM: 5 });
-  assert.equal(result.verdict, "acceptable");
-});
-
-test("an entrance too wide for one camera at that height has no distance that works", () => {
-  const solved = solveDistance({ profile: openDoor, heightM: 4, entranceWidthM: 12 });
+test("too far off-centre for any acceptable feet angle there is no distance that works", () => {
+  // Even straight across, the middle is 5 m away from a 2 m mount: 21.8 deg
+  const solved = solveDistance({ profile: openDoor, heightM: 2, offsetM: 5 });
   assert.equal(solved.best, null);
   assert.equal(solved.acceptable, null);
   assert.equal(solved.judgedBy, null);
 });
 
-test("solving the height with no entrance width is the target angle over the distance", () => {
+test("solving the height is the target angle over the floor distance to the middle", () => {
   close(solveHeight({ profile: openDoor, distanceM: 4.6 }).heightM, 4.6 * Math.tan((41 * Math.PI) / 180), 0.01);
-});
-
-test("solving the height off-centre makes every walkable point Best", () => {
-  const solved = solveHeight({ profile: openDoor, distanceM: 4.6, offsetM: 1, entranceWidthM: 4 });
-  assert.equal(solved.judgedBy, "best");
-  const result = evaluatePlacement({ profile: openDoor, heightM: solved.heightM, distanceM: 4.6, offsetM: 1, camera: wideCamera, entranceWidthM: 4 });
-  assert.equal(result.feet.status, "best");
+  close(solveHeight({ profile: openDoor, distanceM: 4, offsetM: 3 }).heightM, 5 * Math.tan((41 * Math.PI) / 180), 0.01);
 });
 
 test("an off-centre face line is found along the middle of the entrance", () => {

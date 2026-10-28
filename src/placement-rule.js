@@ -192,12 +192,12 @@ function effectiveWidth(camera, heightM, distanceM) {
   return coverageWidth(camera, heightM, distanceM) * EFFECTIVE_COVERAGE;
 }
 
-// People keep clear of the door frames, so the verdict is judged across the walkable width inside them.
+// People keep clear of the door frames, so the ends of the walkable width sit this far inside them.
 export const FRAME_CLEARANCE_M = 0.35;
 
 /**
- * The stretch of the counting line that decides the verdict, measured from the entrance centre line,
- * positive to the camera's right as it faces the entrance. Without an entrance width, only the middle.
+ * The stretch of the counting line people walk along, measured from the entrance centre line, positive to the
+ * camera's right as it faces the entrance. Its ends are checked for a warning; without an entrance width, there are none.
  * @param {number | undefined} entranceWidthM
  * @returns {{ leftM: number, rightM: number }}
  */
@@ -262,30 +262,29 @@ function framedAt(pose, point, vFovDeg) {
 
 const STATUS_RANK = { best: 0, acceptable: 1, out_of_range: 2 };
 
-// How far inside the Best band an angle sits, after the same rounding the judgement uses; negative outside it.
-function bestMargin(angleDeg, profile) {
+// How far an angle falls outside the feet bands, after the judgement's rounding; 0 inside them.
+function bandMiss(angleDeg, profile) {
   const angle = round1(angleDeg);
-  const { best } = profile.feetAngleDeg;
-  return Math.min(angle - best.min, best.max - angle);
+  const { acceptable } = profile.feetAngleDeg;
+  return Math.max(0, acceptable.min - angle, angle - acceptable.max);
 }
 
-// The worst judged point decides; between equal statuses, the one closest to leaving the Best band.
-function decidingPoint(points, keys, profile) {
-  return keys.reduce((worst, key) => {
-    const a = points[key];
-    const b = points[worst];
-    if (STATUS_RANK[a.status] !== STATUS_RANK[b.status]) return STATUS_RANK[a.status] > STATUS_RANK[b.status] ? key : worst;
-    return bestMargin(a.feetAngleDeg, profile) < bestMargin(b.feetAngleDeg, profile) ? key : worst;
+/**
+ * The end of the walkable width that needs a warning: outside the feet bands, or a person there not wholly in frame.
+ * It never changes the verdict, which is judged in the middle of the entrance. Cut off outranks a bad angle.
+ */
+function walkableEdge(points, span, profile) {
+  if (span.leftM === span.rightM) return null;
+  const flagged = [points.near, points.far].filter((pt) => pt.xM !== 0 && (pt.status === "out_of_range" || !pt.framed));
+  if (flagged.length === 0) return null;
+  const worst = flagged.reduce((a, b) => {
+    if (a.framed !== b.framed) return a.framed ? b : a;
+    return bandMiss(b.feetAngleDeg, profile) > bandMiss(a.feetAngleDeg, profile) ? b : a;
   });
+  return { ...worst, side: worst.xM > 0 ? "right" : "left" };
 }
 
-function feetAcross(profile, heightM, distanceM, offsetM, span) {
-  const xs = linePoints(offsetM, span);
-  const status = (x) => judgeFeet(feetAngle(heightM, Math.hypot(x - offsetM, distanceM)), profile);
-  return [status(xs.near), status(xs.far)].reduce((w, s) => (STATUS_RANK[s] > STATUS_RANK[w] ? s : w));
-}
-
-// Searched to the centimetre; the judgement is monotone in distance and in height, so each window is one stretch.
+// Searched to the centimetre; the feet angle only falls with distance and rises with height, so each window is one stretch.
 function windowsOf(values, statusAt) {
   const windows = { best: null, acceptable: null };
   for (const value of values) {
@@ -311,32 +310,30 @@ function pickInside(target, windows) {
 }
 
 /**
- * The counting line distance for a mount height, judged across the walkable width: inside the stretch where every
- * walkable point is Best (else Acceptable), as close as it gets to the target angle at the entrance centre.
- * @param {{ profile: SceneProfile, heightM: number, offsetM?: number, entranceWidthM?: number }} placement
+ * The counting line distance for a mount height that puts the middle of the entrance on the target angle, with the
+ * distances where it is Best and Acceptable. Off-centre the middle is farther away than the line, so the line comes closer.
+ * @param {{ profile: SceneProfile, heightM: number, offsetM?: number }} placement
  * @returns {{ distanceM: number, best: {minM:number,maxM:number} | null, acceptable: {minM:number,maxM:number} | null, judgedBy: "best" | "acceptable" | null }}
  */
-export function solveDistance({ profile, heightM, offsetM = 0, entranceWidthM }) {
-  const span = walkableSpan(entranceWidthM);
+export function solveDistance({ profile, heightM, offsetM = 0 }) {
   const reachAtTarget = heightM / Math.tan(toRad(profile.feetAngleDeg.target));
   const atTarget = round2(Math.sqrt(Math.max(0.0001, reachAtTarget * reachAtTarget - offsetM * offsetM)));
   const farthest = heightM / Math.tan(toRad(profile.feetAngleDeg.acceptable.min)) + 0.5;
-  const windows = windowsOf(centimetres(0.01, Math.max(0.5, farthest)), (d) => feetAcross(profile, heightM, d, offsetM, span));
+  const windows = windowsOf(centimetres(0.01, Math.max(0.5, farthest)), (d) => judgeFeet(feetAngle(heightM, Math.hypot(offsetM, d)), profile));
   const { value, judgedBy } = pickInside(atTarget, windows);
   return { distanceM: value, best: windows.best, acceptable: windows.acceptable, judgedBy };
 }
 
 /**
- * The mount height for a counting line distance, judged the same way, aiming at the target angle at the entrance centre.
- * @param {{ profile: SceneProfile, distanceM: number, offsetM?: number, entranceWidthM?: number }} placement
+ * The mount height for a counting line distance that puts the middle of the entrance on the target angle.
+ * @param {{ profile: SceneProfile, distanceM: number, offsetM?: number }} placement
  * @returns {{ heightM: number, best: {minM:number,maxM:number} | null, acceptable: {minM:number,maxM:number} | null, judgedBy: "best" | "acceptable" | null }}
  */
-export function solveHeight({ profile, distanceM, offsetM = 0, entranceWidthM }) {
-  const span = walkableSpan(entranceWidthM);
-  const atTarget = round2(Math.hypot(offsetM, distanceM) * Math.tan(toRad(profile.feetAngleDeg.target)));
-  const farReach = Math.hypot(Math.max(Math.abs(span.leftM - offsetM), Math.abs(span.rightM - offsetM)), distanceM);
-  const tallest = farReach * Math.tan(toRad(profile.feetAngleDeg.acceptable.max)) + 0.5;
-  const windows = windowsOf(centimetres(0.01, tallest), (h) => feetAcross(profile, h, distanceM, offsetM, span));
+export function solveHeight({ profile, distanceM, offsetM = 0 }) {
+  const reach = Math.hypot(offsetM, distanceM);
+  const atTarget = round2(reach * Math.tan(toRad(profile.feetAngleDeg.target)));
+  const tallest = reach * Math.tan(toRad(profile.feetAngleDeg.acceptable.max)) + 0.5;
+  const windows = windowsOf(centimetres(0.01, tallest), (h) => judgeFeet(feetAngle(h, reach), profile));
   const { value, judgedBy } = pickInside(atTarget, windows);
   return { heightM: value, best: windows.best, acceptable: windows.acceptable, judgedBy };
 }
@@ -401,7 +398,8 @@ function lineInView(camera, heightM, distanceM, offsetM, tiltDeg, share) {
 
 /**
  * Judges one placement: a camera at heightM, its counting line distanceM in front of it, offsetM to the right of the
- * entrance centre line. The feet angle is judged across the walkable width and the worst point decides.
+ * entrance centre line. The verdict is the feet angle in the middle of the entrance; the ends of the walkable width
+ * only warn.
  * @param {{ profile: SceneProfile, heightM: number, distanceM: number, camera: CameraOptics,
  *           tiltDeg?: number, entranceWidthM?: number, offsetM?: number }} placement
  */
@@ -416,7 +414,7 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
   const pose = cameraPose({ heightM, distanceM, offsetM, tiltDeg: tilt, fisheye });
 
   const span = walkableSpan(entranceWidthM);
-  const solved = solveDistance({ profile, heightM, offsetM, entranceWidthM });
+  const solved = solveDistance({ profile, heightM, offsetM });
   const xs = linePoints(offsetM, span);
   const points = Object.fromEntries(Object.entries(xs).map(([key, x]) => {
     const floorDistanceM = Math.hypot(x - offsetM, distanceM);
@@ -424,11 +422,9 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
     const framed = framedAt(pose, { x, y: 0, z: 0 }, vFovDeg) && framedAt(pose, { x, y: profile.humanHeightM, z: 0 }, vFovDeg);
     return [key, { xM: x, floorDistanceM, feetAngleDeg: angle, status: judgeFeet(angle, profile), framed }];
   }));
-  // The middle comes first, so it is the one named when the nearest point is the middle itself.
-  const judged = span.leftM === span.rightM ? ["aim"] : ["aim", "near", "far"];
-  const deciding = decidingPoint(points, judged, profile);
-  const feet = points[deciding];
-  const framed = judged.every((key) => points[key].framed);
+  const feet = points.aim;
+  const framed = feet.framed;
+  const edge = walkableEdge(points, span, profile);
 
   const faceAngleDeg = faceAngle(heightM, aimReachM, profile.facePointM);
   const headAngleDeg = downwardAngle(heightM, profile.humanHeightM, aimReachM);
@@ -439,11 +435,11 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
   const { min, max } = profile.heightRangeM;
 
   return {
-    feet: { angleDeg: feet.feetAngleDeg, status: feet.status, point: deciding },
+    feet: { angleDeg: feet.feetAngleDeg, status: feet.status },
     face: { angleDeg: faceAngleDeg, status: judgeFace(faceAngleDeg, profile) },
     countingLine: {
       distanceM, offsetM, recommendedDistanceM: solved.distanceM, window: { best: solved.best, acceptable: solved.acceptable, judgedBy: solved.judgedBy },
-      framed, headAngleDeg, walkable: span, points, judged,
+      framed, headAngleDeg, walkable: span, points, edge,
     },
     faceLine: judgeFaceLine({ profile, camera, heightM, distanceM, offsetM, pose, vFovDeg }),
     tilt: { value: tilt, recommended },
@@ -459,6 +455,7 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
     warnings: [
       (heightM < min || heightM > max) && "height_outside_range",
       pixelsPerMetre < profile.minPixelsPerMetre.counting && "low_pixel_density",
+      edge !== null && "walkable_edge",
     ].filter(Boolean),
   };
 }

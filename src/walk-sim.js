@@ -563,11 +563,58 @@ export function createWalkSim(THREE, ui) {
     ctx.textAlign = "left";
   }
 
+  // A measurement tag that always faces the orbit view and stays readable over the scene.
+  function labelSprite(text, color) {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const font = "600 44px 'JetBrains Mono', ui-monospace, monospace";
+    ctx.font = font;
+    const width = Math.ceil(ctx.measureText(text).width) + 40;
+    canvas.width = width;
+    canvas.height = 72;
+    ctx.font = font;
+    ctx.fillStyle = "rgba(12, 15, 20, 0.86)";
+    ctx.beginPath();
+    ctx.roundRect(2, 2, width - 4, 68, 14);
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = "#eef2f8";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, 20, 38);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true }));
+    const tall = 0.46;
+    sprite.scale.set((tall * width) / 72, tall, 1);
+    sprite.renderOrder = 10;
+    return sprite;
+  }
+
+  // A dimension: a line with end ticks and its measurement in the middle.
+  function dimension(a, b, text, color, tick) {
+    const group = new THREE.Group();
+    const points = [a, b, a.clone().add(tick), a.clone().sub(tick), b.clone().add(tick), b.clone().sub(tick)];
+    const lines = new THREE.LineSegments(
+      new THREE.BufferGeometry().setFromPoints(points),
+      new THREE.LineBasicMaterial({ color: "#eef2f8", transparent: true, opacity: 0.8, depthTest: false }),
+    );
+    lines.renderOrder = 9;
+    const label = labelSprite(text, color);
+    label.position.copy(a.clone().add(b).multiplyScalar(0.5));
+    group.add(lines, label);
+    return group;
+  }
+
   function rebuildHelpers(p) {
     scene.remove(helpers);
     helpers.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
-      if (o.material) o.material.dispose();
+      if (o.material) {
+        if (o.material.map) o.material.map.dispose();
+        o.material.dispose();
+      }
     });
     helpers = new THREE.Group();
     const origin = new THREE.Vector3(-p.offsetM, p.heightM, 0);
@@ -604,6 +651,21 @@ export function createWalkSim(THREE, ui) {
       );
       aim.computeLineDistances();
       helpers.add(aim);
+    }
+    // The measurements that place the camera: mast height, straight out to the counting line, and sideways to the centre line.
+    const foot = new THREE.Vector3(origin.x, 0.03, 0);
+    const across = new THREE.Vector3(0.12, 0, 0);
+    const along = new THREE.Vector3(0, 0, 0.12);
+    helpers.add(dimension(new THREE.Vector3(origin.x + 0.3, 0, 0), new THREE.Vector3(origin.x + 0.3, p.heightM, 0), p.heightM.toFixed(1) + " m", p.colors.camera, along));
+    helpers.add(dimension(foot, new THREE.Vector3(origin.x, 0.03, p.distanceM), p.distanceM.toFixed(2) + " m", p.colors.count, across));
+    if (Math.abs(p.offsetM) >= 0.05) {
+      helpers.add(dimension(foot, new THREE.Vector3(0, 0.03, 0), Math.abs(p.offsetM).toFixed(2) + " m", p.colors.camera, along));
+      const centre = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.02, -1), new THREE.Vector3(0, 0.02, p.distanceM + 2)]),
+        new THREE.LineDashedMaterial({ color: "#eef2f8", dashSize: 0.2, gapSize: 0.15, transparent: true, opacity: 0.45 }),
+      );
+      centre.computeLineDistances();
+      helpers.add(centre);
     }
     helpers.traverse((o) => o.layers.set(HELPER_LAYER));
     scene.add(helpers);

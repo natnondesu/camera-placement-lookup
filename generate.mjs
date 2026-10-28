@@ -1026,12 +1026,23 @@ function buildHtml() {
       min-width: 0;
     }
 
-    .stage-readings {
+    /* One quiet line of readings under the drawing; the verdict card above carries the statuses. */
+    .side-readings {
       display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 8px;
       flex-wrap: wrap;
+      gap: 4px 18px;
+      margin: 0;
+      padding: 10px 16px 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .side-readings .reading-chip {
+      min-height: 0;
+      border: 0;
+      background: none;
+      padding: 0;
+      color: var(--muted);
+      font-weight: 600;
     }
 
     .reading-chip {
@@ -1107,17 +1118,6 @@ function buildHtml() {
 
     #topCanvas {
       min-height: 476px;
-    }
-
-    .slice-bar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 6px 10px;
-      padding: 10px 14px 0;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 650;
     }
 
     #orbitCanvas {
@@ -1797,10 +1797,6 @@ function buildHtml() {
       .stage-head {
         align-items: flex-start;
         flex-direction: column;
-      }
-
-      .stage-readings {
-        justify-content: flex-start;
       }
 
       .diagram-wrap,
@@ -2915,6 +2911,7 @@ ${sheetCss}
                 <p class="verdict-sub" id="verdictSub"></p>
                 <p class="warn-line" id="heightWarn" hidden></p>
                 <p class="warn-line" id="densityWarn" hidden></p>
+                <p class="warn-line" id="edgeWarn" hidden></p>
                 <p class="entrance-line" id="entranceLine" data-state="covered" hidden></p>
                 <div class="verdict-actions">
                   <button type="button" class="button" id="copyReadings">
@@ -2967,23 +2964,16 @@ ${sheetCss}
                       <button type="button" data-sidemode="orbit" aria-pressed="false" data-i18n="sideModeOrbit">Orbit</button>
                     </div>
                   </div>
-                  <div class="stage-readings" aria-label="Current side-view readings">
-                    <span class="reading-chip best" id="sideFeetReading"></span>
-                    <span class="reading-chip face" id="sideFaceReading"></span>
-                    <span class="reading-chip" id="sideTiltReading"></span>
-                  </div>
                 </div>
                 <div class="diagram-wrap">
-                  <div class="slice-bar" id="sliceBar" hidden>
-                    <span data-i18n="sliceThrough">Slice through</span>
-                    <div class="solve-seg view-seg" role="group" aria-label="Side view slice" data-i18n-attr="aria-label:sliceThrough">
-                      <button type="button" data-slice="deciding" aria-pressed="true" data-i18n="sliceDeciding">Deciding point</button>
-                      <button type="button" data-slice="aim" aria-pressed="false" data-i18n="sliceAim">Aim point</button>
-                    </div>
-                  </div>
                   <canvas id="sideCanvas" width="980" height="560" role="img" aria-label="Side elevation diagram" style="touch-action: none"></canvas>
                   <canvas id="orbitCanvas" role="img" aria-label="The scene from outside: the entrance, the counting line and the camera's view. Drag to orbit." data-i18n-attr="aria-label:orbitAria" hidden></canvas>
                   <p class="field-hint orbit-note" id="orbitNote" data-i18n="orbitNote" hidden>Drag to orbit, scroll or pinch to zoom. The view cone ends where it meets the floor.</p>
+                  <p class="side-readings" aria-label="Current side-view readings" data-i18n-attr="aria-label:sideReadingsAria">
+                    <span class="reading-chip best" id="sideFeetReading"></span>
+                    <span class="reading-chip face" id="sideFaceReading"></span>
+                    <span class="reading-chip" id="sideTiltReading"></span>
+                  </p>
                 </div>
                 <div class="rangebar" aria-label="Distance range">
                   <div class="rangebar-head">
@@ -3178,9 +3168,8 @@ ${shareSource}
         mountingHeight: "Mounting height", solved: "solved", countingDistance: "Counting line distance",
         recommendedDistance: "recommended distance", useRecommended: "Use recommended distance",
         offsetFromCentre: "From the centre line", centreButton: "Centre",
-        sideModeSide: "Side", sideModeOrbit: "Orbit", sliceThrough: "Slice through", sliceDeciding: "Deciding point", sliceAim: "Aim point",
-        sliceCaption: "Through {point}, {where}", whereCentre: "on the centre line", whereLeft: "{distance} m left of centre", whereRight: "{distance} m right of centre",
-        alongFloor: "{distance} m along the floor",
+        sideModeSide: "Side", sideModeOrbit: "Orbit", sideReadingsAria: "Current side-view readings",
+        alongFloor: "{distance} m to the middle",
         orbitNote: "Drag to orbit, scroll or pinch to zoom. The view cone ends where it meets the floor.",
         orbitAria: "The scene from outside: the entrance, the counting line and the camera's view. Drag to orbit.",
         planCentreLine: "entrance centre line", planToLine: "{distance} m to counting line", planRight: "{distance} m right of centre", planLeft: "{distance} m left of centre",
@@ -3191,9 +3180,9 @@ ${shareSource}
         offsetSide: "{distance} m {side} of the entrance centre line, as the camera faces it. It turns {pan} deg to aim at the middle.",
         offsetSideFisheye: "{distance} m {side} of the entrance centre line. A ceiling fisheye looks straight down, so it does not turn.",
         sideLeft: "left", sideRight: "right",
-        pointAim: "the middle of the entrance", pointNear: "the nearest walkable point", pointFar: "the farthest walkable point",
-        countDecides: "Judged across the walkable {width} m: {point} decides at {angle} deg.",
-        noDistance: "No distance gives an Acceptable feet angle across the walkable width from here. Mount higher, move the camera toward the centre line, or split the entrance between two cameras.",
+        edgeWarn: "The {side} end of the walkable width is at {angle} deg, outside the bands: people walking there may be missed. Move the camera toward the centre line or mount it higher.",
+        edgeCut: "A person at the {side} end of the walkable width is not wholly in frame: people walking there may be missed. Move the camera toward the centre line or zoom out.",
+        noDistance: "From this far off-centre no distance gives an Acceptable feet angle in the middle of the entrance. Move the camera toward the centre line or mount it higher.",
         faceOffCentre: "No face-Best spot along the middle of the entrance from this far off-centre. Move the camera toward the centre line.",
         entranceWidth: "Entrance width", none: "none",
         entranceHint: "Optional. Width of the door or entrance people pass through, checked against what the camera covers at the counting line.",
@@ -3237,8 +3226,8 @@ ${shareSource}
         entranceTooWide: "Entrance {width} m is wider than the {covered} m the camera covers at the counting line; {miss} m is out of view. Mount higher, use a shorter focal length, or add a camera.",
         entranceTight: "Entrance {width} m fits the {covered} m view, but its edges fall in the outer 20% of the frame where detection is weaker.",
         entranceCovered: "Entrance {width} m is fully in view: the camera covers {covered} m at the counting line.",
-        sideFeet: "Feet: {status}, {angle} deg", sideFace: "Face line: {distance}, {state}",
-        sideTilt: "Tilt: {tilt} deg {mode} / FOV {fov} deg", tiltManual: "manual", tiltRecommended: "recommended", tiltFisheye: "ceiling fisheye",
+        sideFeet: "Feet {angle} deg, {status}", sideFace: "Face line {distance}, {state}",
+        sideTilt: "Tilt {tilt} deg {mode} · view {fov} deg", tiltManual: "manual", tiltRecommended: "recommended", tiltFisheye: "ceiling fisheye",
         canvasCamera: "Camera", canvasHead: "head", canvasFace: "face", canvasFeetAngle: "feet {angle} deg", canvasFaceAngle: "face {angle} deg",
         canvasAim: "{height} m aim", cameraBelow: "camera", entranceLabel: "entrance", effectiveShort: "effective",
         effectiveCircle: "effective 80% circle",
@@ -3275,9 +3264,8 @@ ${shareSource}
         mountingHeight: "ความสูงติดตั้ง", solved: "คำนวณให้", countingDistance: "ระยะเส้นนับ",
         recommendedDistance: "ระยะที่แนะนำ", useRecommended: "ใช้ระยะที่แนะนำ",
         offsetFromCentre: "ห่างจากแนวกึ่งกลาง", centreButton: "กึ่งกลาง",
-        sideModeSide: "ด้านข้าง", sideModeOrbit: "หมุนดู", sliceThrough: "ตัดผ่าน", sliceDeciding: "จุดที่ตัดสิน", sliceAim: "จุดเล็ง",
-        sliceCaption: "ตัดผ่าน{point} {where}", whereCentre: "บนแนวกึ่งกลาง", whereLeft: "ซ้ายของกึ่งกลาง {distance} m", whereRight: "ขวาของกึ่งกลาง {distance} m",
-        alongFloor: "ตามพื้น {distance} m",
+        sideModeSide: "ด้านข้าง", sideModeOrbit: "หมุนดู", sideReadingsAria: "ค่าที่อ่านได้จากมุมมองด้านข้าง",
+        alongFloor: "ถึงกลางทางเข้า {distance} m",
         orbitNote: "ลากเพื่อหมุนดู เลื่อนหรือถ่างนิ้วเพื่อซูม กรวยภาพจบตรงที่แตะพื้น",
         orbitAria: "ฉากจากด้านนอก: ทางเข้า เส้นนับ และมุมมองของกล้อง ลากเพื่อหมุนดู",
         planCentreLine: "แนวกึ่งกลางทางเข้า", planToLine: "ห่างเส้นนับ {distance} m", planRight: "ขวาของกึ่งกลาง {distance} m", planLeft: "ซ้ายของกึ่งกลาง {distance} m",
@@ -3288,9 +3276,9 @@ ${shareSource}
         offsetSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า (มองจากกล้อง) กล้องหัน {pan} องศาเพื่อเล็งกลางทางเข้า",
         offsetSideFisheye: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า ฟิชอายติดเพดานมองลงตรงๆ จึงไม่ต้องหัน",
         sideLeft: "ซ้าย", sideRight: "ขวา",
-        pointAim: "กลางทางเข้า", pointNear: "จุดเดินได้ที่ใกล้ที่สุด", pointFar: "จุดเดินได้ที่ไกลที่สุด",
-        countDecides: "ตัดสินตลอดความกว้างที่เดินได้ {width} m: {point} เป็นตัวตัดสินที่ {angle} องศา",
-        noDistance: "จากตำแหน่งนี้ไม่มีระยะไหนให้มุมเท้าพอใช้ได้ตลอดความกว้างที่เดินได้ ติดกล้องให้สูงขึ้น ขยับกล้องเข้าหาแนวกึ่งกลาง หรือแบ่งทางเข้าให้กล้องสองตัว",
+        edgeWarn: "ปลายด้าน{side}ของช่วงที่เดินได้มีมุม {angle} องศา อยู่นอกเกณฑ์ คนที่เดินตรงนั้นอาจนับไม่ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น",
+        edgeCut: "คนที่ยืนปลายด้าน{side}ของช่วงที่เดินได้อยู่ในภาพไม่ครบตัว อาจนับไม่ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือซูมออก",
+        noDistance: "กล้องห่างจากกึ่งกลางมากจนไม่มีระยะไหนให้มุมเท้าที่กลางทางเข้าพอใช้ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น",
         faceOffCentre: "กล้องห่างจากกึ่งกลางมากเกินไป จึงไม่มีจุดที่มุมหน้าดีที่สุดตามแนวกลางทางเข้า ขยับกล้องเข้าหาแนวกึ่งกลาง",
         entranceWidth: "ความกว้างทางเข้า", none: "ไม่มี",
         entranceHint: "ไม่บังคับ ความกว้างของประตูหรือทางเข้าที่คนเดินผ่าน ใช้ตรวจว่ากล้องมองเห็นครบที่เส้นนับหรือไม่",
@@ -3334,8 +3322,8 @@ ${shareSource}
         entranceTooWide: "ทางเข้า {width} m กว้างกว่าที่กล้องมองเห็นที่เส้นนับ ({covered} m) ขาดไป {miss} m ติดตั้งให้สูงขึ้น ใช้ความยาวโฟกัสสั้นลง หรือเพิ่มกล้อง",
         entranceTight: "ทางเข้า {width} m อยู่ในภาพ ({covered} m) แต่ขอบทางเข้าอยู่ในช่วง 20% ริมภาพซึ่งตรวจจับได้ไม่ดี",
         entranceCovered: "ทางเข้า {width} m อยู่ในภาพครบ กล้องมองเห็นกว้าง {covered} m ที่เส้นนับ",
-        sideFeet: "เท้า: {status}, {angle} deg", sideFace: "เส้นจับใบหน้า: {distance}, {state}",
-        sideTilt: "มุมก้ม: {tilt} deg {mode} / FOV {fov} deg", tiltManual: "กำหนดเอง", tiltRecommended: "ค่าแนะนำ", tiltFisheye: "ฟิชอายติดเพดาน",
+        sideFeet: "เท้า {angle} deg, {status}", sideFace: "เส้นจับใบหน้า {distance}, {state}",
+        sideTilt: "มุมก้ม {tilt} deg {mode} · มุมภาพ {fov} deg", tiltManual: "กำหนดเอง", tiltRecommended: "ค่าแนะนำ", tiltFisheye: "ฟิชอายติดเพดาน",
         canvasCamera: "กล้อง", canvasHead: "ศีรษะ", canvasFace: "ใบหน้า", canvasFeetAngle: "เท้า {angle} deg", canvasFaceAngle: "ใบหน้า {angle} deg",
         canvasAim: "จุดเล็ง {height} m", cameraBelow: "กล้อง", entranceLabel: "ทางเข้า", effectiveShort: "ใช้งานได้",
         effectiveCircle: "วงใช้งานได้ 80%",
@@ -3476,7 +3464,7 @@ ${shareSource}
       statusbar: byId("statusbar"), sbOverall: byId("sbOverall"), sbFeet: byId("sbFeet"), sbFace: byId("sbFace"), sbDistance: byId("sbDistance"),
       jumpToDiagram: byId("jumpToDiagram"),
       dual: document.querySelector(".dual"), simWrap: byId("simWrap"), simFallback: byId("simFallback"),
-      orbitCanvas: byId("orbitCanvas"), orbitNote: byId("orbitNote"), sliceBar: byId("sliceBar"), sideModeSeg: byId("sideModeSeg"),
+      orbitCanvas: byId("orbitCanvas"), orbitNote: byId("orbitNote"), sideModeSeg: byId("sideModeSeg"), edgeWarn: byId("edgeWarn"),
       offsetInput: byId("offsetInput"), offsetRange: byId("offsetRange"), offsetCaption: byId("offsetCaption"), offsetCentre: byId("offsetCentre")
     };
 
@@ -3541,7 +3529,7 @@ ${shareSource}
       planView: null,
       planDragging: false,
       sideMode: "side",
-      sideSlice: "deciding",
+      planFrozen: null,
       dragging: false
     };
 
@@ -3599,13 +3587,13 @@ ${shareSource}
       return state.entranceM === null ? undefined : state.entranceM;
     }
 
-    // The solved distance or height is judged across the walkable width, from wherever the camera sits sideways.
+    // The solved distance or height puts the middle of the entrance on the target angle, wherever the camera sits sideways.
     function solvedDistance() {
-      return solveDistance({ profile: currentProfile(), heightM: Number(els.heightInput.value), offsetM: state.offsetM, entranceWidthM: judgedEntrance() }).distanceM;
+      return solveDistance({ profile: currentProfile(), heightM: Number(els.heightInput.value), offsetM: state.offsetM }).distanceM;
     }
 
     function solvedHeight(distanceM) {
-      return solveHeight({ profile: currentProfile(), distanceM: distanceM, offsetM: state.offsetM, entranceWidthM: judgedEntrance() }).heightM;
+      return solveHeight({ profile: currentProfile(), distanceM: distanceM, offsetM: state.offsetM }).heightM;
     }
 
     function resolveSolved() {
@@ -3752,7 +3740,6 @@ ${shareSource}
     function setEntrance(value) {
       const width = parseFloat(value);
       state.entranceM = value === "" || Number.isNaN(width) || width <= 0 ? null : width;
-      resolveSolved();
       update();
     }
 
@@ -3771,12 +3758,12 @@ ${shareSource}
       return t("offsetSide", { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "sideRight" : "sideLeft"), pan: fmt(p.result.pan.deg, 1) });
     }
 
-    function decidingCopy(p) {
-      const line = p.result.countingLine;
-      if (line.judged.length === 1) return "";
-      const width = line.walkable.rightM - line.walkable.leftM;
-      const point = t({ aim: "pointAim", near: "pointNear", far: "pointFar" }[p.result.feet.point]);
-      return t("countDecides", { width: fmt(width, 2), point: point, angle: fmt(p.result.feet.angleDeg, 1) });
+
+    function edgeCopy(p) {
+      const edge = p.result.countingLine.edge;
+      if (edge === null) return "";
+      const side = t(edge.side === "right" ? "sideRight" : "sideLeft");
+      return edge.framed ? t("edgeWarn", { side: side, angle: fmt(edge.feetAngleDeg, 1) }) : t("edgeCut", { side: side });
     }
 
     function entranceCopy(entrance, coverageWidthM) {
@@ -3925,20 +3912,15 @@ ${shareSource}
       ctx.clearRect(0, 0, w, h);
       const r = p.result, profile = p.profile, heightM = p.heightM;
       const line = r.countingLine;
-      // The slice runs from below the camera through one point of the counting line: the deciding one, or the aim point.
-      const sliceKey = state.sideSlice === "aim" ? "aim" : r.feet.point;
-      const slice = line.points[sliceKey];
-      // Only the camera's own vertical plane, through the aim point, shows its vertical view truthfully.
-      const inPlane = sliceKey === "aim" || Math.abs(slice.xM) < 1e-9;
-      // A fisheye's view is the same in every vertical slice, so its edge ray is true anywhere.
-      const showView = inPlane || r.optics.lens === "fisheye";
+      // The camera's own vertical plane, from below it to the middle of the entrance; off-centre that is farther than the line.
+      const slice = line.points.aim;
       const distanceM = slice.floorDistanceM;
       const fl = r.faceLine;
       const faceReach = fl.distanceM === null ? null : Math.hypot(line.offsetM, fl.distanceM);
       const padL = 60, padR = 70, padB = 58, padT = 40;
       const groundY = h - padB;
       const win = feetDistanceWindow(profile, heightM);
-      const maxX = Math.max(distanceM * 1.25, win.acceptableMax * 1.15, (inPlane ? faceReach || 0 : 0) * 1.12, 6);
+      const maxX = Math.max(distanceM * 1.25, win.acceptableMax * 1.15, (faceReach || 0) * 1.12, 6);
       const maxY = Math.max(heightM * 1.25, profile.humanHeightM, 4);
       const sx = (w - padL - padR) / maxX;
       const sy = (groundY - padT) / maxY;
@@ -4031,7 +4013,6 @@ ${shareSource}
       if (feetBands.best.min > feetBands.acceptable.min) wedge(feetBands.best.min, feetBands.acceptable.min, colorWithAlpha(COL.ok, "0.10"), colorWithAlpha(COL.ok, "0.35"));
       wedge(feetBands.best.max, feetBands.best.min, colorWithAlpha(COL.best, "0.16"), colorWithAlpha(COL.best, "0.55"));
 
-      if (showView) {
       const upper = ray(aimDown - half), center = ray(aimDown), lower = ray(aimDown + half);
       ctx.strokeStyle = colorWithAlpha(COL.accent, "0.70");
       ctx.lineWidth = 1.25;
@@ -4052,7 +4033,6 @@ ${shareSource}
       ctx.moveTo(camX, camY);
       ctx.lineTo(center.x, center.y);
       ctx.stroke();
-      }
 
       const bandSegment = (start, end, color, width) => {
         const x1 = xFor(Math.max(0, start)), x2 = xFor(Math.min(maxX, end));
@@ -4070,7 +4050,7 @@ ${shareSource}
       bandSegment(win.acceptableMin, win.acceptableMax, colorWithAlpha(COL.ok, "0.55"), 5);
       bandSegment(win.bestMin, win.bestMax, COL.best, 6);
 
-      const faceLineX = !inPlane || faceReach === null ? null : xFor(faceReach);
+      const faceLineX = faceReach === null ? null : xFor(faceReach);
       const crowded = faceLineX !== null && !fl.coincides && Math.abs(faceLineX - subX) < 110;
       // When the lines are close, each title grows away from the other instead of centring over its figure.
       const faceRight = faceLineX !== null && faceLineX > subX;
@@ -4134,7 +4114,7 @@ ${shareSource}
       drawPerson(ctx, subX, groundY, yFor, personColor, profile, !crowded && !(fl.distanceM !== null && fl.coincides));
 
       const aimHeightM = heightM - Math.tan(aimDown) * distanceM;
-      if (inPlane && aimHeightM >= 0 && aimHeightM <= maxY) {
+      if (aimHeightM >= 0 && aimHeightM <= maxY) {
         const aimY = yFor(aimHeightM);
         ctx.fillStyle = COL.accent;
         ctx.beginPath();
@@ -4167,15 +4147,10 @@ ${shareSource}
       ctx.font = "600 12px JetBrains Mono, monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      haloText(ctx, Math.abs(distanceM - p.distanceM) < 0.005 ? fmt(distanceM, 2, " m") : t("alongFloor", { distance: fmt(distanceM, 2) }), (camX + subX) / 2, groundY + 34);
-      if (line.judged.length > 1 || line.offsetM !== 0) {
-        const where = Math.abs(slice.xM) < 0.005 ? t("whereCentre") : t(slice.xM > 0 ? "whereRight" : "whereLeft", { distance: fmt(Math.abs(slice.xM), 2) });
-        ctx.font = "600 11.5px Inter, 'Noto Sans Thai', sans-serif";
-        ctx.fillStyle = COL.muted;
-        ctx.textAlign = "right";
-        ctx.textBaseline = "top";
-        haloText(ctx, t("sliceCaption", { point: t({ aim: "pointAim", near: "pointNear", far: "pointFar" }[sliceKey]), where: where }), w - 12, 12);
-      }
+      // Off-centre the drawing runs to the middle of the entrance, which is farther than the counting line.
+      const floorText = Math.abs(distanceM - p.distanceM) < 0.005 ? fmt(distanceM, 2, " m") : t("alongFloor", { distance: fmt(distanceM, 2) });
+      const floorHalf = ctx.measureText(floorText).width / 2 + 4;
+      haloText(ctx, floorText, clamp((camX + subX) / 2, floorHalf, w - floorHalf), groundY + 34);
 
       ctx.font = "700 13px Inter, 'Noto Sans Thai', sans-serif";
       ctx.textBaseline = "bottom";
@@ -4204,9 +4179,11 @@ ${shareSource}
       const yMin = Math.min(-1.6, faceD !== null ? d - faceD - 0.8 : -1.6);
       const yMax = d + 1.9;
       const pad = 26, padB = 34;
-      const scale = Math.min((w - 2 * pad) / (2 * xSpan), (h - pad - padB) / (yMax - yMin));
-      const ox = w / 2;
-      const oy = pad - yMin * scale;
+      // While the camera is dragged the plan holds still under the pointer; it re-fits once the camera is let go.
+      const frozen = state.planDragging ? state.planFrozen : null;
+      const scale = frozen ? frozen.scale : Math.min((w - 2 * pad) / (2 * xSpan), (h - pad - padB) / (yMax - yMin));
+      const ox = frozen ? frozen.ox : w / 2;
+      const oy = frozen ? frozen.oy : pad - yMin * scale;
       const S = (x, y) => [ox + x * scale, oy + y * scale];
       state.planView = { ox: ox, oy: oy, scale: scale };
 
@@ -4300,14 +4277,14 @@ ${shareSource}
       const steps = 90;
       const statusColor = { best: COL.best, acceptable: COL.ok, out_of_range: COL.bad };
       const walk = line.walkable;
-      const judgedAll = line.judged.length > 1;
+      const hasEnds = line.walkable.leftM !== line.walkable.rightM;
       ctx.lineWidth = 5;
       ctx.lineCap = "butt";
       for (let i = 0; i < steps; i += 1) {
         const xa = -shownHalf + (i / steps) * 2 * shownHalf, xb = -shownHalf + ((i + 1) / steps) * 2 * shownHalf;
         const mid = (xa + xb) / 2;
         const status = judgeFeet(feetAngle(p.heightM, Math.hypot(mid - offset, d)), p.profile);
-        const inside = !judgedAll || (mid >= walk.leftM - 1e-6 && mid <= walk.rightM + 1e-6);
+        const inside = !hasEnds || (mid >= walk.leftM - 1e-6 && mid <= walk.rightM + 1e-6);
         ctx.strokeStyle = statusColor[status];
         ctx.globalAlpha = inside ? 1 : 0.35;
         ctx.beginPath(); ctx.moveTo(S(xa, 0)[0], S(0, 0)[1]); ctx.lineTo(S(xb, 0)[0], S(0, 0)[1]); ctx.stroke();
@@ -4318,7 +4295,7 @@ ${shareSource}
       ctx.textBaseline = "middle";
       ctx.font = "600 11.5px Inter, 'Noto Sans Thai', sans-serif";
       haloText(ctx, t("countingLineLower"), S(shownHalf, 0)[0] + 8, S(0, 0)[1]);
-      if (judgedAll) {
+      if (hasEnds) {
         ctx.strokeStyle = COL.ink;
         ctx.lineWidth = 1.5;
         [walk.leftM, walk.rightM].forEach((x) => {
@@ -4345,22 +4322,30 @@ ${shareSource}
         ctx.setLineDash([]);
       }
 
-      // Judged points with their feet angles; the deciding one is larger.
-      const keys = judgedAll ? ["aim", "near", "far"] : ["aim"];
+      // The aim point, which the verdict is judged at, and the walkable ends; an end that warns is ringed.
+      const keys = hasEnds ? ["aim", "near", "far"] : ["aim"];
       const placed = [];
       keys.forEach((key) => {
         const pt = line.points[key];
         const q = S(pt.xM, 0);
         if (placed.some((x) => Math.abs(x - q[0]) < 4)) return;
         placed.push(q[0]);
-        const deciding = key === r.feet.point;
+        const isAim = key === "aim";
+        const warned = line.edge !== null && !isAim && Math.abs(pt.xM - line.edge.xM) < 1e-9;
         ctx.beginPath();
-        ctx.arc(q[0], q[1], deciding ? 7 : 5, 0, Math.PI * 2);
+        ctx.arc(q[0], q[1], isAim ? 7 : 5, 0, Math.PI * 2);
         ctx.fillStyle = statusColor[pt.status];
         ctx.fill();
         ctx.strokeStyle = COL.surface;
         ctx.lineWidth = 2;
         ctx.stroke();
+        if (warned) {
+          ctx.beginPath();
+          ctx.arc(q[0], q[1], 10, 0, Math.PI * 2);
+          ctx.strokeStyle = COL.bad;
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
         const text = fmt(pt.feetAngleDeg, 1) + "°";
         ctx.font = "700 12px JetBrains Mono, monospace";
         ctx.textAlign = "center";
@@ -4477,6 +4462,7 @@ ${shareSource}
       const point = planPoint(event);
       if (!onCameraHandle(point)) return;
       state.planDragging = true;
+      state.planFrozen = { ox: state.planView.ox, oy: state.planView.oy, scale: state.planView.scale };
       els.topCanvas.classList.add("dragging");
       els.topCanvas.setPointerCapture(event.pointerId);
     });
@@ -4488,6 +4474,7 @@ ${shareSource}
     const endPlanDrag = () => {
       if (!state.planDragging) return;
       state.planDragging = false;
+      state.planFrozen = null;
       els.topCanvas.classList.remove("dragging");
       update();
     };
@@ -4743,6 +4730,8 @@ ${shareSource}
       els.verdictSub.textContent = verdictCopy(p);
       const outside = r.warnings.indexOf("height_outside_range") >= 0;
       const lowDensity = r.warnings.includes("low_pixel_density");
+      els.edgeWarn.textContent = edgeCopy(p);
+      els.edgeWarn.hidden = r.countingLine.edge === null;
       els.densityWarn.hidden = !lowDensity;
       els.densityWarn.textContent = lowDensity ? t("densityWarn", { ppm: fmt(r.optics.pixelsPerMetre, 0), min: profile.minPixelsPerMetre.counting }) : "";
       els.heightWarn.hidden = !outside;
@@ -4763,7 +4752,7 @@ ${shareSource}
       updateStatusElement(els.feetStatus, r.feet.status, STATUS_LABEL[r.feet.status]);
       els.feetAngle.innerHTML = fmt(r.feet.angleDeg, 2) + "<small>deg</small>";
       els.feetBands.innerHTML = profile.feetAngleDeg.best.min + "-" + profile.feetAngleDeg.best.max + " <small>" + t("bandBest") + "</small> / " + profile.feetAngleDeg.acceptable.min + "-" + profile.feetAngleDeg.acceptable.max + " <small>" + t("bandOk") + "</small>";
-      els.countNote.textContent = [r.countingLine.framed ? t("countFramed", { target: profile.feetAngleDeg.target }) : t("countCut"), decidingCopy(p)].filter(Boolean).join(" ");
+      els.countNote.textContent = r.countingLine.framed ? t("countFramed", { target: profile.feetAngleDeg.target }) : t("countCut");
       updateStatusElement(els.faceStatus, visibleClass, face.label);
       els.faceLineDistance.innerHTML = r.faceLine.distanceM === null ? t("none") : fmt(r.faceLine.distanceM, 2) + "<small>m</small>";
       els.faceAngle.innerHTML = r.faceLine.angleDeg === null ? t("none") : fmt(r.faceLine.angleDeg, 1) + "<small>deg</small>";
@@ -4785,9 +4774,7 @@ ${shareSource}
       els.sideCanvas.hidden = orbitOn;
       els.orbitCanvas.hidden = els.orbitNote.hidden = !orbitOn;
       els.sideModeSeg.hidden = state.simFailed;
-      els.sliceBar.hidden = orbitOn || !(r.countingLine.judged.length > 1 || state.offsetM !== 0);
       document.querySelectorAll("[data-sidemode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.sidemode === state.sideMode)));
-      document.querySelectorAll("[data-slice]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.slice === state.sideSlice)));
       if (!orbitOn) drawSide(p);
       // The camera view is the 3D scene; the flat drawing stands in only when three.js could not load.
       const simOn = state.topView === "camera" && !state.simFailed;
@@ -5008,10 +4995,6 @@ ${shareSource}
     document.querySelectorAll("[data-solve]").forEach((button) => button.addEventListener("click", () => setSolveMode(button.dataset.solve)));
     document.querySelectorAll("[data-sidemode]").forEach((button) => button.addEventListener("click", () => {
       state.sideMode = button.dataset.sidemode;
-      update();
-    }));
-    document.querySelectorAll("[data-slice]").forEach((button) => button.addEventListener("click", () => {
-      state.sideSlice = button.dataset.slice;
       update();
     }));
     document.querySelectorAll("[data-topview]").forEach((button) => button.addEventListener("click", () => {

@@ -15,7 +15,7 @@ const SHEET_TEXT = {
     shFov: "{h}° × {v}° at {f} mm", shDatasheet: "(datasheet)",
     shVerdict_best: "<b>Placement is best.</b> Feet angle {angle}° {where}, inside the best band {min}–{max}°.",
     shVerdict_acceptable: "<b>Placement is acceptable.</b> Feet angle {angle}° {where}, outside the best band {min}–{max}° but within {amin}–{amax}°.",
-    shWhere_line: "at the counting line", shWhere_aim: "at the middle of the entrance", shWhere_near: "at the nearest walkable point", shWhere_far: "at the farthest walkable point",
+    shWhere_line: "at the counting line", shWhere_aim: "at the middle of the entrance",
     shVerdict_out_of_range: "<b>Placement is out of range.</b> {reason}",
     shMount: "Mount the camera above the floor", shMountHint: "Measure to the centre of the lens.",
     shLine: "Mark the counting line out from the point below the camera", shLineHint: "Straight out, across the full entrance.",
@@ -53,7 +53,7 @@ const SHEET_TEXT = {
     shFov: "มุมรับภาพ {h}° × {v}° ที่ {f} mm", shDatasheet: "(ตามสเปก)",
     shVerdict_best: "<b>ตำแหน่งนี้ดีที่สุด</b> มุมเท้า{where} {angle}° อยู่ในช่วงดีที่สุด {min}–{max}°",
     shVerdict_acceptable: "<b>ตำแหน่งนี้พอใช้</b> มุมเท้า{where} {angle}° อยู่นอกช่วงดีที่สุด {min}–{max}° แต่อยู่ในช่วง {amin}–{amax}°",
-    shWhere_line: "ที่เส้นนับ", shWhere_aim: "ที่กลางทางเข้า", shWhere_near: "ที่จุดเดินได้ใกล้สุด", shWhere_far: "ที่จุดเดินได้ไกลสุด",
+    shWhere_line: "ที่เส้นนับ", shWhere_aim: "ที่กลางทางเข้า",
     shVerdict_out_of_range: "<b>ตำแหน่งนี้เกินเกณฑ์</b> {reason}",
     shMount: "ติดตั้งกล้องสูงจากพื้น", shMountHint: "วัดถึงกึ่งกลางเลนส์",
     shLine: "ทำเครื่องหมายเส้นนับ ห่างจากจุดใต้กล้อง", shLineHint: "ตรงออกไป และยาวตลอดความกว้างทางเข้า",
@@ -459,6 +459,7 @@ function sheetWarnings(p) {
   if (r.warnings.includes("height_outside_range")) {
     lines.push(t("heightWarn", { height: fmt(p.heightM, 1), scene: sceneName(profile), min: fmt(profile.heightRangeM.min, 1), max: fmt(profile.heightRangeM.max, 1) }));
   }
+  if (r.countingLine.edge !== null) lines.push(edgeCopy(p));
   if (r.warnings.includes("low_pixel_density")) lines.push(t("densityWarn", { ppm: fmt(r.optics.pixelsPerMetre, 0), min: profile.minPixelsPerMetre.counting }));
   if (r.faceLine.visible && r.faceLine.tooSmall) lines.push(t("shFaceWarn", { ppm: fmt(r.faceLine.pixelsPerMetre, 0), min: profile.minPixelsPerMetre.face }));
   if (r.entrance !== null && r.entrance.status !== "covered") lines.push(entranceCopy(r.entrance, r.optics.coverageWidthM));
@@ -477,7 +478,7 @@ function renderSheet(p) {
   const fa = profile.feetAngleDeg;
   const verdictLine = t("shVerdict_" + r.verdict, {
     angle: deg(r.feet.angleDeg), min: fa.best.min, max: fa.best.max, amin: fa.acceptable.min, amax: fa.acceptable.max,
-    where: t(r.countingLine.judged.length > 1 || state.offsetM !== 0 ? "shWhere_" + r.feet.point : "shWhere_line"),
+    where: t(state.offsetM !== 0 ? "shWhere_aim" : "shWhere_line"),
     reason: escapeHtml(verdictCopy(p))
   });
   const prepared = new Date().toLocaleDateString(lang === "th" ? "th-TH" : "en-GB", { day: "numeric", month: "short", year: "numeric" });
