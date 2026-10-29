@@ -2369,6 +2369,19 @@ function buildHtml() {
       height: 32px;
     }
 
+    .stand-seg button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stand-dot {
+      width: 10px;
+      height: 3px;
+      border-radius: 2px;
+      flex: none;
+    }
+
     .person-label {
       min-width: 9ch;
       text-align: center;
@@ -3402,6 +3415,10 @@ ${pwaCss}
                         <span class="person-label" id="simPersonLabel" aria-live="polite"></span>
                         <button type="button" class="icon-button" id="simPersonNext" aria-label="Next person" data-i18n-attr="aria-label:personNext"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 6 6 6-6 6"></path></svg></button>
                       </span>
+                      <span class="solve-seg stand-seg" id="simStand" role="group" aria-label="Where the person stands" data-i18n-attr="aria-label:standGroup" hidden>
+                        <button type="button" data-stand="count" aria-pressed="true"><i class="stand-dot" id="simStandCountDot"></i><span data-i18n="standCount">Counting line</span></button>
+                        <button type="button" data-stand="face" aria-pressed="false"><i class="stand-dot" id="simStandFaceDot"></i><span data-i18n="standFace">Face line</span></button>
+                      </span>
                       <span class="sim-counts" id="simCounts" hidden>
                         <span><span data-i18n="in">In</span> <b id="simIn">0</b></span>
                         <span><span data-i18n="out">Out</span> <b id="simOut">0</b></span>
@@ -3591,6 +3608,8 @@ ${shareSource}
         in: "In", out: "Out", faces: "Faces", passers: "Passers-by, not counted", crossTraffic: "Cross traffic",
         crossTitle: "People also walk left to right across the view, without crossing the counting line",
         walkPeople: "Walk people", reset: "Reset", pause: "Pause", resume: "Resume", fromCentre: "{m} m from centre",
+        standGroup: "Where the person stands", standCount: "Counting line", standFace: "Face line",
+        simStillNoteFace: "One person standing on the face line, as this camera sees them: the view demographics gets. Walk people to watch the counting.",
         expandView: "Expand the view", collapseView: "Back to the page",
         simAria: "Simulated camera view with people walking past. Drag the standing person, or use the arrow keys, to move them along the counting line.",
         personOf: "Person {i} of {n}", personGroup: "Person standing on the line", personPrev: "Previous person", personNext: "Next person",
@@ -3693,6 +3712,8 @@ ${shareSource}
         in: "เข้า", out: "ออก", faces: "ใบหน้า", passers: "คนเดินผ่าน (ไม่นับ)", crossTraffic: "คนเดินตัดผ่าน",
         crossTitle: "ให้มีคนเดินซ้ายไปขวาผ่านภาพด้วย โดยไม่ข้ามเส้นนับ",
         walkPeople: "ให้คนเดิน", reset: "เริ่มใหม่", pause: "หยุดชั่วคราว", resume: "เดินต่อ", fromCentre: "ห่างจากกึ่งกลาง {m} m",
+        standGroup: "ตำแหน่งที่คนยืน", standCount: "เส้นนับ", standFace: "เส้นจับใบหน้า",
+        simStillNoteFace: "คนหนึ่งคนยืนบนเส้นจับใบหน้า ตามที่กล้องนี้มองเห็น คือภาพที่ใช้วิเคราะห์ข้อมูลประชากร กด ให้คนเดิน เพื่อดูการนับ",
         expandView: "ขยายภาพ", collapseView: "กลับสู่หน้าเดิม",
         simAria: "ภาพจำลองจากกล้องพร้อมคนเดินผ่าน ลากคนที่ยืนอยู่ หรือใช้ปุ่มลูกศร เพื่อเลื่อนไปตามเส้นนับ",
         personOf: "คนที่ {i} จาก {n}", personGroup: "คนที่ยืนบนเส้น", personPrev: "คนก่อนหน้า", personNext: "คนถัดไป",
@@ -3916,7 +3937,8 @@ ${shareSource}
           countingLine: t("simCountingLine"), faceLine: t("simFaceLine"), face: t("simFace"),
           in: t("simIn"), out: t("simOut"), outsideFrame: t("simOutsideFrame"), effective: t("simEffective"),
           faceViewPx: t("faceViewPx"), faceViewBest: t("faceViewBest"), faceViewNone: t("faceViewNone"),
-          pause: t("pause"), resume: t("resume"), personOf: t("personOf"), fromCentre: t("fromCentre")
+          pause: t("pause"), resume: t("resume"), personOf: t("personOf"), fromCentre: t("fromCentre"),
+          stillCount: t("simStillNote"), stillFace: t("simStillNoteFace")
         }
       };
     }
@@ -5720,6 +5742,12 @@ ${peopleSource}
         walkButton: document.getElementById("simWalk"),
         walkOnly: ["simCounts", "simCross", "simReset", "simPause", "simNote"].map((id) => document.getElementById(id)),
         pauseButton: document.getElementById("simPause"),
+        stillNote: document.getElementById("simStillNote"),
+        stand: {
+          row: document.getElementById("simStand"),
+          buttons: Array.from(document.querySelectorAll("[data-stand]")),
+          dots: { count: document.getElementById("simStandCountDot"), face: document.getElementById("simStandFaceDot") }
+        },
         person: { row: document.getElementById("simPerson"), label: document.getElementById("simPersonLabel"), prev: document.getElementById("simPersonPrev"), next: document.getElementById("simPersonNext") },
         // The avatars are large and optional: the box figures stand in until they arrive, and for good if they fail.
         loadPeople: () => Promise.all([import("${FBX_URL}"), import("${SKELETON_URL}")])

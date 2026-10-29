@@ -223,6 +223,10 @@ export function createWalkSim(THREE, ui) {
 
   // Where along the counting line the standing person is, in scene x; kept inside the walkable width.
   let standX = 0;
+  // Which line they stand on: the counting line, or the face line when it is a separate line.
+  let standLine = "count";
+  const faceLineApart = (p) => p.faceLineDistanceM !== null && Math.abs(p.faceLineDistanceM - p.distanceM) > 0.02;
+  const standZ = (p) => (standLine === "face" && faceLineApart(p) ? p.faceLineDistanceM : p.distanceM);
   const standReach = (p) => {
     const lay = layout(p);
     return Math.max(0, (lay.doorZ !== null ? lay.doorHalf : lay.corridorHalf) - 0.35);
@@ -232,7 +236,7 @@ export function createWalkSim(THREE, ui) {
     const g = standing.body.group;
     const reach = standReach(p);
     standX = Math.max(-reach, Math.min(reach, standX));
-    g.position.set(standX, 0, p.distanceM);
+    g.position.set(standX, 0, standZ(p));
     g.rotation.y = Math.PI;
     g.scale.setScalar(p.humanHeightM / MODEL_HEIGHT_M);
   }
@@ -244,6 +248,14 @@ export function createWalkSim(THREE, ui) {
     ui.walkOnly.forEach((el) => { el.hidden = !walking; });
     ui.stillOnly.forEach((el) => { el.hidden = walking; });
     ui.person.row.hidden = walking || !avatars;
+    ui.stand.row.hidden = walking || !input || !faceLineApart(input);
+    if (input) {
+      const on = faceLineApart(input) ? standLine : "count";
+      ui.stand.buttons.forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.stand === on)));
+      ui.stand.dots.count.style.background = input.colors.count;
+      ui.stand.dots.face.style.background = input.colors.face;
+      ui.stillNote.textContent = on === "face" ? input.text.stillFace : input.text.stillCount;
+    }
     ui.pauseButton.setAttribute("aria-pressed", String(paused));
     if (input) {
       ui.pauseButton.textContent = paused ? input.text.resume : input.text.pause;
@@ -999,7 +1011,7 @@ export function createWalkSim(THREE, ui) {
     const h = parseFloat(ui.overlay.style.height) || 0;
     const midY = (MODEL_HEIGHT_M * standing.body.group.scale.x) / 2;
     const miss = (x) => {
-      const s = toScreen(x, midY, input.distanceM, w, h);
+      const s = toScreen(x, midY, standZ(input), w, h);
       return s.behind ? Infinity : (s.x - point.x) ** 2 + (s.y - point.y) ** 2;
     };
     let best = 0;
@@ -1053,10 +1065,18 @@ export function createWalkSim(THREE, ui) {
     }
     const w = parseFloat(ui.overlay.style.width) || 0;
     const h = parseFloat(ui.overlay.style.height) || 0;
-    const screenRight = toScreen(standX + 0.1, 1, input.distanceM, w, h).x > toScreen(standX, 1, input.distanceM, w, h).x ? 1 : -1;
+    const z = standZ(input);
+    const screenRight = toScreen(standX + 0.1, 1, z, w, h).x > toScreen(standX, 1, z, w, h).x ? 1 : -1;
     const step = (event.shiftKey ? 0.25 : 0.05) * (event.key === "ArrowRight" ? 1 : -1) * screenRight;
     moveStanding(standX + step);
   });
+
+  ui.stand.buttons.forEach((button) => button.addEventListener("click", () => {
+    standLine = button.dataset.stand;
+    if (input) poseStanding(input);
+    syncWalking();
+    render();
+  }));
 
   ui.person.prev.addEventListener("click", () => {
     standAvatar(standingIndex - 1);
