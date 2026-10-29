@@ -28,7 +28,7 @@ const HELP_TEXT = {
     g4Title: "Check the views", g4Sum: "The side elevation, the 3D scene and what the camera sees.",
     g4s1: "Side view: the camera's own slice down to the middle of the entrance, with the Best and Acceptable bands on the floor.",
     g4s2: "Orbit shows the same scene in 3D from outside: the camera, its view cone and the distances. Drag to look around.",
-    g4s3: "Camera view: what the camera itself sees. The window at the top right is one face at the camera's real resolution, a best case before blur and glare. The arrows change who stands on the line. Walk people sends a crowd across the counting line; Pause holds it on one frame.",
+    g4s3: "Camera view: what the camera itself sees. The window at the top right is one face at the camera's real resolution, a best case before blur and glare. Drag the standing person along the line, and the arrows change who it is. The corner button opens a bigger view. Walk people sends a crowd across the counting line; Pause holds it on one frame.",
 
     g5Title: "Share and print", g5Sum: "Keep a placement as a link or a printable site sheet.",
     g5s1: "Share makes a link that holds the whole placement; opening it later restores everything. In the Share window, add the site and location, then open the printable site sheet.",
@@ -60,7 +60,7 @@ const HELP_TEXT = {
     g4Title: "ดูมุมมองต่าง ๆ", g4Sum: "มุมมองด้านข้าง ฉาก 3 มิติ และภาพที่กล้องเห็น",
     g4s1: "มุมมองด้านข้าง: ภาพตัดของกล้องลงไปถึงกลางทางเข้า พร้อมช่วงดีที่สุดและพอใช้บนพื้น",
     g4s2: "หมุนดู แสดงฉากเดียวกันแบบ 3 มิติจากด้านนอก: กล้อง กรวยภาพ และระยะต่าง ๆ ลากเพื่อหมุนดู",
-    g4s3: "ภาพจากกล้อง: สิ่งที่กล้องมองเห็นจริง หน้าต่างมุมขวาบนคือใบหน้าหนึ่งคนที่ความละเอียดจริงของกล้อง เป็นกรณีดีที่สุดก่อนภาพเบลอหรือแสงจ้า ปุ่มลูกศรเปลี่ยนคนที่ยืนบนเส้น กด ให้คนเดิน เพื่อดูคนเดินผ่านเส้นนับและการนับ และ หยุดชั่วคราว เพื่อหยุดภาพไว้",
+    g4s3: "ภาพจากกล้อง: สิ่งที่กล้องมองเห็นจริง หน้าต่างมุมขวาบนคือใบหน้าหนึ่งคนที่ความละเอียดจริงของกล้อง เป็นกรณีดีที่สุดก่อนภาพเบลอหรือแสงจ้า ลากคนที่ยืนไปตามเส้นได้ และปุ่มลูกศรเปลี่ยนคน ปุ่มมุมขวาบนขยายภาพให้ใหญ่ขึ้น กด ให้คนเดิน เพื่อดูคนเดินผ่านเส้นนับและการนับ และ หยุดชั่วคราว เพื่อหยุดภาพไว้",
 
     g5Title: "แชร์และพิมพ์", g5Sum: "เก็บตำแหน่งไว้เป็นลิงก์ หรือใบสรุปหน้างานที่พิมพ์ได้",
     g5s1: "แชร์ สร้างลิงก์ที่เก็บตำแหน่งทั้งหมด เปิดลิงก์ภายหลังจะได้ค่าเดิมครบ ในหน้าต่างแชร์ ใส่ชื่อสถานที่และจุดติดตั้ง แล้วเปิดใบสรุปหน้างานเพื่อพิมพ์",

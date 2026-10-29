@@ -221,9 +221,18 @@ export function createWalkSim(THREE, ui) {
   scene.add(standing.body.group);
   const shownAgents = () => (walking ? agents : [standing]);
 
+  // Where along the counting line the standing person is, in scene x; kept inside the walkable width.
+  let standX = 0;
+  const standReach = (p) => {
+    const lay = layout(p);
+    return Math.max(0, (lay.doorZ !== null ? lay.doorHalf : lay.corridorHalf) - 0.35);
+  };
+
   function poseStanding(p) {
     const g = standing.body.group;
-    g.position.set(0, 0, p.distanceM);
+    const reach = standReach(p);
+    standX = Math.max(-reach, Math.min(reach, standX));
+    g.position.set(standX, 0, p.distanceM);
     g.rotation.y = Math.PI;
     g.scale.setScalar(p.humanHeightM / MODEL_HEIGHT_M);
   }
@@ -395,9 +404,11 @@ export function createWalkSim(THREE, ui) {
 
   function resize() {
     if (!input) return;
-    const width = ui.canvas.parentElement.clientWidth;
+    const stage = ui.canvas.parentElement;
+    // Expanded, the stage has a set size and the image fits inside it; otherwise the image sets the height.
+    const width = stage.dataset.fill === "true" ? Math.min(stage.clientWidth, stage.clientHeight * input.aspect) : stage.clientWidth;
     if (!width) return;
-    setSize(width, Math.round(width / input.aspect));
+    setSize(Math.round(width), Math.round(width / input.aspect));
   }
 
   function setSize(width, height) {
@@ -583,6 +594,16 @@ export function createWalkSim(THREE, ui) {
         ctx.fillRect(box.x, box.y, tagWidth, 15);
         ctx.fillStyle = "#0f1217";
         ctx.fillText(tag, box.x + 4, box.y + 13);
+      }
+      if (agent === standing && Math.abs(standX) >= 0.005 && !quiet) {
+        const text = input.text.fromCentre.split("{m}").join(Math.abs(standX).toFixed(2));
+        const tagWidth = ctx.measureText(text).width + 8;
+        const tag = { x: Math.max(0, Math.min(w - tagWidth, centreX - tagWidth / 2)), y: box.y + box.h + 3, w: tagWidth, h: 15 };
+        ctx.fillStyle = "rgba(12, 15, 20, 0.72)";
+        ctx.fillRect(tag.x, tag.y, tag.w, tag.h);
+        ctx.fillStyle = "rgba(230, 236, 245, 0.92)";
+        ctx.fillText(text, tag.x + 4, tag.y + 13);
+        lineLabels.push(tag);
       }
       if (agent.faceFlash > 0) {
         const head = Math.max(8, Math.min(box.w, box.h) * 0.3);
@@ -854,7 +875,8 @@ export function createWalkSim(THREE, ui) {
 
   function faceWindowRect(w) {
     const readout = densityReadoutRect(w);
-    const size = Math.round(Math.min(132, Math.max(84, w * 0.2)));
+    // Larger when the view is expanded, where the pixel detail is worth the room.
+    const size = Math.round(Math.min(w >= 900 ? 220 : 132, Math.max(84, w * 0.2)));
     return { x: w - 8 - size, y: readout.y + readout.h + 8, w: size, h: size + 48 };
   }
 
@@ -953,6 +975,89 @@ export function createWalkSim(THREE, ui) {
     syncWalking();
     start();
   });
+  // Dragging the standing person along the counting line: the nearest point of the line to the pointer, found on
+  // screen so the same search works through a fisheye.
+  let dragging = false;
+  function standBox() {
+    const g = standing.body.group;
+    const w = parseFloat(ui.overlay.style.width) || 0;
+    const h = parseFloat(ui.overlay.style.height) || 0;
+    return personBox(g, MODEL_HEIGHT_M * g.scale.x, w, h);
+  }
+  function pointerOnCanvas(event) {
+    const rect = ui.canvas.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+  function overStanding(point) {
+    const box = walking || !input ? null : standBox();
+    const pad = 8;
+    return Boolean(box) && point.x >= box.x - pad && point.x <= box.x + box.w + pad && point.y >= box.y - pad && point.y <= box.y + box.h + pad;
+  }
+  function lineXAt(point) {
+    const reach = standReach(input);
+    const w = parseFloat(ui.overlay.style.width) || 0;
+    const h = parseFloat(ui.overlay.style.height) || 0;
+    const midY = (MODEL_HEIGHT_M * standing.body.group.scale.x) / 2;
+    const miss = (x) => {
+      const s = toScreen(x, midY, input.distanceM, w, h);
+      return s.behind ? Infinity : (s.x - point.x) ** 2 + (s.y - point.y) ** 2;
+    };
+    let best = 0;
+    for (let i = 0; i <= 40; i += 1) {
+      const x = -reach + (2 * reach * i) / 40;
+      if (miss(x) < miss(best)) best = x;
+    }
+    let lo = Math.max(-reach, best - reach / 20);
+    let hi = Math.min(reach, best + reach / 20);
+    for (let i = 0; i < 24; i += 1) {
+      const a = lo + (hi - lo) / 3;
+      const b = hi - (hi - lo) / 3;
+      if (miss(a) < miss(b)) hi = b; else lo = a;
+    }
+    return (lo + hi) / 2;
+  }
+  function moveStanding(x) {
+    standX = x;
+    poseStanding(input);
+    render();
+  }
+  ui.canvas.addEventListener("pointerdown", (event) => {
+    if (!overStanding(pointerOnCanvas(event))) return;
+    dragging = true;
+    ui.canvas.setPointerCapture(event.pointerId);
+    ui.canvas.dataset.drag = "dragging";
+    event.preventDefault();
+  });
+  ui.canvas.addEventListener("pointermove", (event) => {
+    const point = pointerOnCanvas(event);
+    if (dragging) moveStanding(lineXAt(point));
+    else ui.canvas.dataset.drag = overStanding(point) ? "grab" : "";
+  });
+  const endDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    ui.canvas.dataset.drag = "grab";
+  };
+  ui.canvas.addEventListener("pointerup", endDrag);
+  ui.canvas.addEventListener("pointercancel", endDrag);
+  ui.canvas.addEventListener("dblclick", (event) => {
+    if (overStanding(pointerOnCanvas(event))) moveStanding(0);
+  });
+  // Arrow keys move the standing person the way it moves on screen; Home puts them back in the middle.
+  ui.canvas.addEventListener("keydown", (event) => {
+    if (walking || !input || !["ArrowLeft", "ArrowRight", "Home"].includes(event.key)) return;
+    event.preventDefault();
+    if (event.key === "Home") {
+      moveStanding(0);
+      return;
+    }
+    const w = parseFloat(ui.overlay.style.width) || 0;
+    const h = parseFloat(ui.overlay.style.height) || 0;
+    const screenRight = toScreen(standX + 0.1, 1, input.distanceM, w, h).x > toScreen(standX, 1, input.distanceM, w, h).x ? 1 : -1;
+    const step = (event.shiftKey ? 0.25 : 0.05) * (event.key === "ArrowRight" ? 1 : -1) * screenRight;
+    moveStanding(standX + step);
+  });
+
   ui.person.prev.addEventListener("click", () => {
     standAvatar(standingIndex - 1);
     render();

@@ -2144,6 +2144,108 @@
       pointer-events: none;
     }
 
+    /* Sideways drags move the standing person; up and down still scroll the page on a phone. */
+    #simCanvas {
+      touch-action: pan-y;
+    }
+
+    #simCanvas[data-drag="grab"] {
+      cursor: grab;
+    }
+
+    #simCanvas[data-drag="dragging"] {
+      cursor: grabbing;
+    }
+
+    #simCanvas:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+
+    .stage-expand .i-collapse,
+    .stage-expand[aria-pressed="true"] .i-expand {
+      display: none;
+    }
+
+    .stage-expand[aria-pressed="true"] .i-collapse {
+      display: block;
+    }
+
+    /* Expanded: the panel fills the window above a dimmed page, and the drawing takes every pixel left over. */
+    .view-expanded {
+      overflow: hidden;
+    }
+
+    .stage.expanded {
+      position: fixed;
+      inset: 12px;
+      z-index: 60;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 0 100vmax oklch(0.120 0.010 256 / 0.9), 0 24px 60px oklch(0.050 0.010 256 / 0.6);
+    }
+
+    .stage.expanded .diagram-wrap,
+    .stage.expanded .sim {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stage.expanded #topCanvas {
+      flex: 1 1 auto;
+      min-height: 0;
+      height: 100%;
+    }
+
+    .stage.expanded .sim-stage {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .stage.expanded #simCanvas,
+    .stage.expanded .sim-overlay {
+      grid-area: 1 / 1;
+      position: static;
+    }
+
+    .stage.expanded .sim-note {
+      display: none;
+    }
+
+    @media (max-width: 760px) {
+      .stage > .stage-head {
+        position: relative;
+      }
+
+      .stage-expand {
+        position: absolute;
+        top: 12px;
+        right: 14px;
+      }
+    }
+
+    /* On a phone the expanded view is the whole screen; every pixel goes to the picture. */
+    @media (max-width: 760px), (max-height: 560px) {
+      .stage.expanded {
+        inset: 0;
+        border-radius: 0;
+      }
+
+      .stage.expanded > .stage-head {
+        padding: 8px 12px;
+      }
+
+      .stage.expanded .stage-expand {
+        top: 8px;
+        right: 12px;
+      }
+    }
+
     .sim-hud {
       display: flex;
       flex-wrap: wrap;
@@ -4435,13 +4537,17 @@
                       <button type="button" data-topview="camera" aria-pressed="true" data-i18n="viewCamera">Camera</button>
                     </div>
                   </div>
+                  <button type="button" class="icon-button stage-expand" id="stageExpand" aria-pressed="false" aria-label="Expand the view" title="Expand the view">
+                    <svg class="i-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5"></path></svg>
+                    <svg class="i-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10h-6V4M4 14h6v6M14 10l6.5-6.5M10 14l-6.5 6.5"></path></svg>
+                  </button>
                 </div>
                 <div class="diagram-wrap">
                   <p class="warn-line" id="simFallback" data-i18n="simFallback" hidden>The 3D view could not load. It needs an internet connection; this flat camera view is shown instead.</p>
                   <canvas id="topCanvas" width="600" height="560" role="img" aria-label="Top-down coverage diagram" hidden></canvas>
                   <div class="sim" id="simWrap">
-                    <div class="sim-stage">
-                      <canvas id="simCanvas" role="img" aria-label="Simulated camera view with people walking past"></canvas>
+                    <div class="sim-stage" id="simStage">
+                      <canvas id="simCanvas" role="img" tabindex="0" aria-label="Simulated camera view with people walking past. Drag the standing person, or use the arrow keys, to move them along the counting line." data-i18n-attr="aria-label:simAria"></canvas>
                       <canvas id="simOverlay" class="sim-overlay" aria-hidden="true"></canvas>
                     </div>
                     <div class="sim-hud" aria-live="off">
@@ -5235,7 +5341,9 @@ function decodePlacement(hash) {
         titleTop: "Top view", titleCamera: "Camera view",
         in: "In", out: "Out", faces: "Faces", passers: "Passers-by, not counted", crossTraffic: "Cross traffic",
         crossTitle: "People also walk left to right across the view, without crossing the counting line",
-        walkPeople: "Walk people", reset: "Reset", pause: "Pause", resume: "Resume",
+        walkPeople: "Walk people", reset: "Reset", pause: "Pause", resume: "Resume", fromCentre: "{m} m from centre",
+        expandView: "Expand the view", collapseView: "Back to the page",
+        simAria: "Simulated camera view with people walking past. Drag the standing person, or use the arrow keys, to move them along the counting line.",
         personOf: "Person {i} of {n}", personGroup: "Person standing on the line", personPrev: "Previous person", personNext: "Next person",
         simStillNote: "One person standing on the counting line, as this camera sees them. Walk people to watch the counting.",
         simNote: "Simulated people through this camera. Counts come from the simulation, not real traffic.",
@@ -5335,7 +5443,9 @@ function decodePlacement(hash) {
         titleTop: "มุมมองจากด้านบน", titleCamera: "ภาพจากกล้อง",
         in: "เข้า", out: "ออก", faces: "ใบหน้า", passers: "คนเดินผ่าน (ไม่นับ)", crossTraffic: "คนเดินตัดผ่าน",
         crossTitle: "ให้มีคนเดินซ้ายไปขวาผ่านภาพด้วย โดยไม่ข้ามเส้นนับ",
-        walkPeople: "ให้คนเดิน", reset: "เริ่มใหม่", pause: "หยุดชั่วคราว", resume: "เดินต่อ",
+        walkPeople: "ให้คนเดิน", reset: "เริ่มใหม่", pause: "หยุดชั่วคราว", resume: "เดินต่อ", fromCentre: "ห่างจากกึ่งกลาง {m} m",
+        expandView: "ขยายภาพ", collapseView: "กลับสู่หน้าเดิม",
+        simAria: "ภาพจำลองจากกล้องพร้อมคนเดินผ่าน ลากคนที่ยืนอยู่ หรือใช้ปุ่มลูกศร เพื่อเลื่อนไปตามเส้นนับ",
         personOf: "คนที่ {i} จาก {n}", personGroup: "คนที่ยืนบนเส้น", personPrev: "คนก่อนหน้า", personNext: "คนถัดไป",
         simStillNote: "คนหนึ่งคนยืนบนเส้นนับ ตามที่กล้องนี้มองเห็น กด ให้คนเดิน เพื่อดูการนับ",
         simNote: "คนจำลองที่มองผ่านกล้องนี้ ตัวเลขมาจากการจำลอง ไม่ใช่การนับจริง",
@@ -5446,6 +5556,7 @@ function decodePlacement(hash) {
         });
       });
       document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+      syncExpandButton();
     }
 
 
@@ -5556,7 +5667,7 @@ function decodePlacement(hash) {
           countingLine: t("simCountingLine"), faceLine: t("simFaceLine"), face: t("simFace"),
           in: t("simIn"), out: t("simOut"), outsideFrame: t("simOutsideFrame"), effective: t("simEffective"),
           faceViewPx: t("faceViewPx"), faceViewBest: t("faceViewBest"), faceViewNone: t("faceViewNone"),
-          pause: t("pause"), resume: t("resume"), personOf: t("personOf")
+          pause: t("pause"), resume: t("resume"), personOf: t("personOf"), fromCentre: t("fromCentre")
         }
       };
     }
@@ -7149,6 +7260,33 @@ function decodePlacement(hash) {
       state.sideMode = button.dataset.sidemode;
       update();
     }));
+    // Expanded view: the Top / Camera panel over the whole window, for a closer look at the picture and the face.
+    const stagePanel = document.getElementById("stageExpand").closest(".stage");
+    function syncExpandButton() {
+      const button = document.getElementById("stageExpand");
+      const on = button.closest(".stage").classList.contains("expanded");
+      const label = t(on ? "collapseView" : "expandView");
+      button.setAttribute("aria-pressed", String(on));
+      button.setAttribute("aria-label", label);
+      button.title = label;
+    }
+    function setExpanded(on) {
+      stagePanel.classList.toggle("expanded", on);
+      document.documentElement.classList.toggle("view-expanded", on);
+      document.getElementById("simStage").dataset.fill = String(on);
+      syncExpandButton();
+      update();
+    }
+    document.getElementById("stageExpand").addEventListener("click", () => setExpanded(!stagePanel.classList.contains("expanded")));
+    document.addEventListener("keydown", (event) => {
+      // Esc belongs to an open dialog or tour first.
+      if (event.key !== "Escape" || !stagePanel.classList.contains("expanded") || document.querySelector("dialog[open]")) return;
+      const tour = document.getElementById("tour");
+      if (tour && !tour.hidden) return;
+      setExpanded(false);
+      document.getElementById("stageExpand").focus();
+    });
+
     document.querySelectorAll("[data-topview]").forEach((button) => button.addEventListener("click", () => {
       state.topView = button.dataset.topview;
       document.querySelectorAll("[data-topview]").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
@@ -7902,7 +8040,7 @@ const HELP_TEXT = {
     g4Title: "Check the views", g4Sum: "The side elevation, the 3D scene and what the camera sees.",
     g4s1: "Side view: the camera's own slice down to the middle of the entrance, with the Best and Acceptable bands on the floor.",
     g4s2: "Orbit shows the same scene in 3D from outside: the camera, its view cone and the distances. Drag to look around.",
-    g4s3: "Camera view: what the camera itself sees. The window at the top right is one face at the camera's real resolution, a best case before blur and glare. The arrows change who stands on the line. Walk people sends a crowd across the counting line; Pause holds it on one frame.",
+    g4s3: "Camera view: what the camera itself sees. The window at the top right is one face at the camera's real resolution, a best case before blur and glare. Drag the standing person along the line, and the arrows change who it is. The corner button opens a bigger view. Walk people sends a crowd across the counting line; Pause holds it on one frame.",
 
     g5Title: "Share and print", g5Sum: "Keep a placement as a link or a printable site sheet.",
     g5s1: "Share makes a link that holds the whole placement; opening it later restores everything. In the Share window, add the site and location, then open the printable site sheet.",
@@ -7934,7 +8072,7 @@ const HELP_TEXT = {
     g4Title: "ดูมุมมองต่าง ๆ", g4Sum: "มุมมองด้านข้าง ฉาก 3 มิติ และภาพที่กล้องเห็น",
     g4s1: "มุมมองด้านข้าง: ภาพตัดของกล้องลงไปถึงกลางทางเข้า พร้อมช่วงดีที่สุดและพอใช้บนพื้น",
     g4s2: "หมุนดู แสดงฉากเดียวกันแบบ 3 มิติจากด้านนอก: กล้อง กรวยภาพ และระยะต่าง ๆ ลากเพื่อหมุนดู",
-    g4s3: "ภาพจากกล้อง: สิ่งที่กล้องมองเห็นจริง หน้าต่างมุมขวาบนคือใบหน้าหนึ่งคนที่ความละเอียดจริงของกล้อง เป็นกรณีดีที่สุดก่อนภาพเบลอหรือแสงจ้า ปุ่มลูกศรเปลี่ยนคนที่ยืนบนเส้น กด ให้คนเดิน เพื่อดูคนเดินผ่านเส้นนับและการนับ และ หยุดชั่วคราว เพื่อหยุดภาพไว้",
+    g4s3: "ภาพจากกล้อง: สิ่งที่กล้องมองเห็นจริง หน้าต่างมุมขวาบนคือใบหน้าหนึ่งคนที่ความละเอียดจริงของกล้อง เป็นกรณีดีที่สุดก่อนภาพเบลอหรือแสงจ้า ลากคนที่ยืนไปตามเส้นได้ และปุ่มลูกศรเปลี่ยนคน ปุ่มมุมขวาบนขยายภาพให้ใหญ่ขึ้น กด ให้คนเดิน เพื่อดูคนเดินผ่านเส้นนับและการนับ และ หยุดชั่วคราว เพื่อหยุดภาพไว้",
 
     g5Title: "แชร์และพิมพ์", g5Sum: "เก็บตำแหน่งไว้เป็นลิงก์ หรือใบสรุปหน้างานที่พิมพ์ได้",
     g5s1: "แชร์ สร้างลิงก์ที่เก็บตำแหน่งทั้งหมด เปิดลิงก์ภายหลังจะได้ค่าเดิมครบ ในหน้าต่างแชร์ ใส่ชื่อสถานที่และจุดติดตั้ง แล้วเปิดใบสรุปหน้างานเพื่อพิมพ์",
@@ -8486,9 +8624,18 @@ function createWalkSim(THREE, ui) {
   scene.add(standing.body.group);
   const shownAgents = () => (walking ? agents : [standing]);
 
+  // Where along the counting line the standing person is, in scene x; kept inside the walkable width.
+  let standX = 0;
+  const standReach = (p) => {
+    const lay = layout(p);
+    return Math.max(0, (lay.doorZ !== null ? lay.doorHalf : lay.corridorHalf) - 0.35);
+  };
+
   function poseStanding(p) {
     const g = standing.body.group;
-    g.position.set(0, 0, p.distanceM);
+    const reach = standReach(p);
+    standX = Math.max(-reach, Math.min(reach, standX));
+    g.position.set(standX, 0, p.distanceM);
     g.rotation.y = Math.PI;
     g.scale.setScalar(p.humanHeightM / MODEL_HEIGHT_M);
   }
@@ -8660,9 +8807,11 @@ function createWalkSim(THREE, ui) {
 
   function resize() {
     if (!input) return;
-    const width = ui.canvas.parentElement.clientWidth;
+    const stage = ui.canvas.parentElement;
+    // Expanded, the stage has a set size and the image fits inside it; otherwise the image sets the height.
+    const width = stage.dataset.fill === "true" ? Math.min(stage.clientWidth, stage.clientHeight * input.aspect) : stage.clientWidth;
     if (!width) return;
-    setSize(width, Math.round(width / input.aspect));
+    setSize(Math.round(width), Math.round(width / input.aspect));
   }
 
   function setSize(width, height) {
@@ -8848,6 +8997,16 @@ function createWalkSim(THREE, ui) {
         ctx.fillRect(box.x, box.y, tagWidth, 15);
         ctx.fillStyle = "#0f1217";
         ctx.fillText(tag, box.x + 4, box.y + 13);
+      }
+      if (agent === standing && Math.abs(standX) >= 0.005 && !quiet) {
+        const text = input.text.fromCentre.split("{m}").join(Math.abs(standX).toFixed(2));
+        const tagWidth = ctx.measureText(text).width + 8;
+        const tag = { x: Math.max(0, Math.min(w - tagWidth, centreX - tagWidth / 2)), y: box.y + box.h + 3, w: tagWidth, h: 15 };
+        ctx.fillStyle = "rgba(12, 15, 20, 0.72)";
+        ctx.fillRect(tag.x, tag.y, tag.w, tag.h);
+        ctx.fillStyle = "rgba(230, 236, 245, 0.92)";
+        ctx.fillText(text, tag.x + 4, tag.y + 13);
+        lineLabels.push(tag);
       }
       if (agent.faceFlash > 0) {
         const head = Math.max(8, Math.min(box.w, box.h) * 0.3);
@@ -9119,7 +9278,8 @@ function createWalkSim(THREE, ui) {
 
   function faceWindowRect(w) {
     const readout = densityReadoutRect(w);
-    const size = Math.round(Math.min(132, Math.max(84, w * 0.2)));
+    // Larger when the view is expanded, where the pixel detail is worth the room.
+    const size = Math.round(Math.min(w >= 900 ? 220 : 132, Math.max(84, w * 0.2)));
     return { x: w - 8 - size, y: readout.y + readout.h + 8, w: size, h: size + 48 };
   }
 
@@ -9218,6 +9378,89 @@ function createWalkSim(THREE, ui) {
     syncWalking();
     start();
   });
+  // Dragging the standing person along the counting line: the nearest point of the line to the pointer, found on
+  // screen so the same search works through a fisheye.
+  let dragging = false;
+  function standBox() {
+    const g = standing.body.group;
+    const w = parseFloat(ui.overlay.style.width) || 0;
+    const h = parseFloat(ui.overlay.style.height) || 0;
+    return personBox(g, MODEL_HEIGHT_M * g.scale.x, w, h);
+  }
+  function pointerOnCanvas(event) {
+    const rect = ui.canvas.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+  function overStanding(point) {
+    const box = walking || !input ? null : standBox();
+    const pad = 8;
+    return Boolean(box) && point.x >= box.x - pad && point.x <= box.x + box.w + pad && point.y >= box.y - pad && point.y <= box.y + box.h + pad;
+  }
+  function lineXAt(point) {
+    const reach = standReach(input);
+    const w = parseFloat(ui.overlay.style.width) || 0;
+    const h = parseFloat(ui.overlay.style.height) || 0;
+    const midY = (MODEL_HEIGHT_M * standing.body.group.scale.x) / 2;
+    const miss = (x) => {
+      const s = toScreen(x, midY, input.distanceM, w, h);
+      return s.behind ? Infinity : (s.x - point.x) ** 2 + (s.y - point.y) ** 2;
+    };
+    let best = 0;
+    for (let i = 0; i <= 40; i += 1) {
+      const x = -reach + (2 * reach * i) / 40;
+      if (miss(x) < miss(best)) best = x;
+    }
+    let lo = Math.max(-reach, best - reach / 20);
+    let hi = Math.min(reach, best + reach / 20);
+    for (let i = 0; i < 24; i += 1) {
+      const a = lo + (hi - lo) / 3;
+      const b = hi - (hi - lo) / 3;
+      if (miss(a) < miss(b)) hi = b; else lo = a;
+    }
+    return (lo + hi) / 2;
+  }
+  function moveStanding(x) {
+    standX = x;
+    poseStanding(input);
+    render();
+  }
+  ui.canvas.addEventListener("pointerdown", (event) => {
+    if (!overStanding(pointerOnCanvas(event))) return;
+    dragging = true;
+    ui.canvas.setPointerCapture(event.pointerId);
+    ui.canvas.dataset.drag = "dragging";
+    event.preventDefault();
+  });
+  ui.canvas.addEventListener("pointermove", (event) => {
+    const point = pointerOnCanvas(event);
+    if (dragging) moveStanding(lineXAt(point));
+    else ui.canvas.dataset.drag = overStanding(point) ? "grab" : "";
+  });
+  const endDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    ui.canvas.dataset.drag = "grab";
+  };
+  ui.canvas.addEventListener("pointerup", endDrag);
+  ui.canvas.addEventListener("pointercancel", endDrag);
+  ui.canvas.addEventListener("dblclick", (event) => {
+    if (overStanding(pointerOnCanvas(event))) moveStanding(0);
+  });
+  // Arrow keys move the standing person the way it moves on screen; Home puts them back in the middle.
+  ui.canvas.addEventListener("keydown", (event) => {
+    if (walking || !input || !["ArrowLeft", "ArrowRight", "Home"].includes(event.key)) return;
+    event.preventDefault();
+    if (event.key === "Home") {
+      moveStanding(0);
+      return;
+    }
+    const w = parseFloat(ui.overlay.style.width) || 0;
+    const h = parseFloat(ui.overlay.style.height) || 0;
+    const screenRight = toScreen(standX + 0.1, 1, input.distanceM, w, h).x > toScreen(standX, 1, input.distanceM, w, h).x ? 1 : -1;
+    const step = (event.shiftKey ? 0.25 : 0.05) * (event.key === "ArrowRight" ? 1 : -1) * screenRight;
+    moveStanding(standX + step);
+  });
+
   ui.person.prev.addEventListener("click", () => {
     standAvatar(standingIndex - 1);
     render();

@@ -2229,6 +2229,108 @@ function buildHtml() {
       pointer-events: none;
     }
 
+    /* Sideways drags move the standing person; up and down still scroll the page on a phone. */
+    #simCanvas {
+      touch-action: pan-y;
+    }
+
+    #simCanvas[data-drag="grab"] {
+      cursor: grab;
+    }
+
+    #simCanvas[data-drag="dragging"] {
+      cursor: grabbing;
+    }
+
+    #simCanvas:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+
+    .stage-expand .i-collapse,
+    .stage-expand[aria-pressed="true"] .i-expand {
+      display: none;
+    }
+
+    .stage-expand[aria-pressed="true"] .i-collapse {
+      display: block;
+    }
+
+    /* Expanded: the panel fills the window above a dimmed page, and the drawing takes every pixel left over. */
+    .view-expanded {
+      overflow: hidden;
+    }
+
+    .stage.expanded {
+      position: fixed;
+      inset: 12px;
+      z-index: 60;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 0 100vmax oklch(0.120 0.010 256 / 0.9), 0 24px 60px oklch(0.050 0.010 256 / 0.6);
+    }
+
+    .stage.expanded .diagram-wrap,
+    .stage.expanded .sim {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stage.expanded #topCanvas {
+      flex: 1 1 auto;
+      min-height: 0;
+      height: 100%;
+    }
+
+    .stage.expanded .sim-stage {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .stage.expanded #simCanvas,
+    .stage.expanded .sim-overlay {
+      grid-area: 1 / 1;
+      position: static;
+    }
+
+    .stage.expanded .sim-note {
+      display: none;
+    }
+
+    @media (max-width: 760px) {
+      .stage > .stage-head {
+        position: relative;
+      }
+
+      .stage-expand {
+        position: absolute;
+        top: 12px;
+        right: 14px;
+      }
+    }
+
+    /* On a phone the expanded view is the whole screen; every pixel goes to the picture. */
+    @media (max-width: 760px), (max-height: 560px) {
+      .stage.expanded {
+        inset: 0;
+        border-radius: 0;
+      }
+
+      .stage.expanded > .stage-head {
+        padding: 8px 12px;
+      }
+
+      .stage.expanded .stage-expand {
+        top: 8px;
+        right: 12px;
+      }
+    }
+
     .sim-hud {
       display: flex;
       flex-wrap: wrap;
@@ -3281,13 +3383,17 @@ ${pwaCss}
                       <button type="button" data-topview="camera" aria-pressed="true" data-i18n="viewCamera">Camera</button>
                     </div>
                   </div>
+                  <button type="button" class="icon-button stage-expand" id="stageExpand" aria-pressed="false" aria-label="Expand the view" title="Expand the view">
+                    <svg class="i-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5"></path></svg>
+                    <svg class="i-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10h-6V4M4 14h6v6M14 10l6.5-6.5M10 14l-6.5 6.5"></path></svg>
+                  </button>
                 </div>
                 <div class="diagram-wrap">
                   <p class="warn-line" id="simFallback" data-i18n="simFallback" hidden>The 3D view could not load. It needs an internet connection; this flat camera view is shown instead.</p>
                   <canvas id="topCanvas" width="600" height="560" role="img" aria-label="Top-down coverage diagram" hidden></canvas>
                   <div class="sim" id="simWrap">
-                    <div class="sim-stage">
-                      <canvas id="simCanvas" role="img" aria-label="Simulated camera view with people walking past"></canvas>
+                    <div class="sim-stage" id="simStage">
+                      <canvas id="simCanvas" role="img" tabindex="0" aria-label="Simulated camera view with people walking past. Drag the standing person, or use the arrow keys, to move them along the counting line." data-i18n-attr="aria-label:simAria"></canvas>
                       <canvas id="simOverlay" class="sim-overlay" aria-hidden="true"></canvas>
                     </div>
                     <div class="sim-hud" aria-live="off">
@@ -3484,7 +3590,9 @@ ${shareSource}
         titleTop: "Top view", titleCamera: "Camera view",
         in: "In", out: "Out", faces: "Faces", passers: "Passers-by, not counted", crossTraffic: "Cross traffic",
         crossTitle: "People also walk left to right across the view, without crossing the counting line",
-        walkPeople: "Walk people", reset: "Reset", pause: "Pause", resume: "Resume",
+        walkPeople: "Walk people", reset: "Reset", pause: "Pause", resume: "Resume", fromCentre: "{m} m from centre",
+        expandView: "Expand the view", collapseView: "Back to the page",
+        simAria: "Simulated camera view with people walking past. Drag the standing person, or use the arrow keys, to move them along the counting line.",
         personOf: "Person {i} of {n}", personGroup: "Person standing on the line", personPrev: "Previous person", personNext: "Next person",
         simStillNote: "One person standing on the counting line, as this camera sees them. Walk people to watch the counting.",
         simNote: "Simulated people through this camera. Counts come from the simulation, not real traffic.",
@@ -3584,7 +3692,9 @@ ${shareSource}
         titleTop: "มุมมองจากด้านบน", titleCamera: "ภาพจากกล้อง",
         in: "เข้า", out: "ออก", faces: "ใบหน้า", passers: "คนเดินผ่าน (ไม่นับ)", crossTraffic: "คนเดินตัดผ่าน",
         crossTitle: "ให้มีคนเดินซ้ายไปขวาผ่านภาพด้วย โดยไม่ข้ามเส้นนับ",
-        walkPeople: "ให้คนเดิน", reset: "เริ่มใหม่", pause: "หยุดชั่วคราว", resume: "เดินต่อ",
+        walkPeople: "ให้คนเดิน", reset: "เริ่มใหม่", pause: "หยุดชั่วคราว", resume: "เดินต่อ", fromCentre: "ห่างจากกึ่งกลาง {m} m",
+        expandView: "ขยายภาพ", collapseView: "กลับสู่หน้าเดิม",
+        simAria: "ภาพจำลองจากกล้องพร้อมคนเดินผ่าน ลากคนที่ยืนอยู่ หรือใช้ปุ่มลูกศร เพื่อเลื่อนไปตามเส้นนับ",
         personOf: "คนที่ {i} จาก {n}", personGroup: "คนที่ยืนบนเส้น", personPrev: "คนก่อนหน้า", personNext: "คนถัดไป",
         simStillNote: "คนหนึ่งคนยืนบนเส้นนับ ตามที่กล้องนี้มองเห็น กด ให้คนเดิน เพื่อดูการนับ",
         simNote: "คนจำลองที่มองผ่านกล้องนี้ ตัวเลขมาจากการจำลอง ไม่ใช่การนับจริง",
@@ -3695,6 +3805,7 @@ ${shareSource}
         });
       });
       document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+      syncExpandButton();
     }
 
 
@@ -3805,7 +3916,7 @@ ${shareSource}
           countingLine: t("simCountingLine"), faceLine: t("simFaceLine"), face: t("simFace"),
           in: t("simIn"), out: t("simOut"), outsideFrame: t("simOutsideFrame"), effective: t("simEffective"),
           faceViewPx: t("faceViewPx"), faceViewBest: t("faceViewBest"), faceViewNone: t("faceViewNone"),
-          pause: t("pause"), resume: t("resume"), personOf: t("personOf")
+          pause: t("pause"), resume: t("resume"), personOf: t("personOf"), fromCentre: t("fromCentre")
         }
       };
     }
@@ -5398,6 +5509,33 @@ ${shareSource}
       state.sideMode = button.dataset.sidemode;
       update();
     }));
+    // Expanded view: the Top / Camera panel over the whole window, for a closer look at the picture and the face.
+    const stagePanel = document.getElementById("stageExpand").closest(".stage");
+    function syncExpandButton() {
+      const button = document.getElementById("stageExpand");
+      const on = button.closest(".stage").classList.contains("expanded");
+      const label = t(on ? "collapseView" : "expandView");
+      button.setAttribute("aria-pressed", String(on));
+      button.setAttribute("aria-label", label);
+      button.title = label;
+    }
+    function setExpanded(on) {
+      stagePanel.classList.toggle("expanded", on);
+      document.documentElement.classList.toggle("view-expanded", on);
+      document.getElementById("simStage").dataset.fill = String(on);
+      syncExpandButton();
+      update();
+    }
+    document.getElementById("stageExpand").addEventListener("click", () => setExpanded(!stagePanel.classList.contains("expanded")));
+    document.addEventListener("keydown", (event) => {
+      // Esc belongs to an open dialog or tour first.
+      if (event.key !== "Escape" || !stagePanel.classList.contains("expanded") || document.querySelector("dialog[open]")) return;
+      const tour = document.getElementById("tour");
+      if (tour && !tour.hidden) return;
+      setExpanded(false);
+      document.getElementById("stageExpand").focus();
+    });
+
     document.querySelectorAll("[data-topview]").forEach((button) => button.addEventListener("click", () => {
       state.topView = button.dataset.topview;
       document.querySelectorAll("[data-topview]").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
