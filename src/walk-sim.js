@@ -113,6 +113,20 @@ export function createWalkSim(THREE, ui) {
   fisheyeScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fisheyeMaterial));
   const screenCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
+  // The face window: one person's face rendered from the camera at the camera's own pixel count, then shown enlarged
+  // pixel for pixel, so the installer sees what the demographics model would get. A best case: no blur, noise or glare.
+  const FACE_CROP_M = 0.3;
+  const FACE_WIDTH_M = 0.16;
+  const FACE_SUPERSAMPLE = 4;
+  const faceCamera = new THREE.PerspectiveCamera(10, 1, 0.05, 120);
+  const faceTarget = new THREE.WebGLRenderTarget(16, 16);
+  faceTarget.texture.colorSpace = THREE.SRGBColorSpace;
+  const faceCanvas = document.createElement("canvas");
+  const faceSample = document.createElement("canvas");
+  const faceAnchor = new THREE.Vector3();
+  let faceShot = null;
+  let faceShotAt = 0;
+
   let props = new THREE.Group();
   scene.add(props);
   // Layer 1 holds what only the orbit view shows: the camera itself, its view cone and its aim.
@@ -172,7 +186,7 @@ export function createWalkSim(THREE, ui) {
     const cap = new THREE.Mesh(new THREE.SphereGeometry(0.112, 18, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), hair);
     cap.position.y = 1.605;
     group.add(legL, legR, torso, armL, armR, head, cap);
-    return { group, legL, legR, armL, armR };
+    return { group, legL, legR, armL, armR, head };
   }
 
   const standing = { body: makePerson(), flash: 0, flashDirection: null, faceFlash: 0 };
@@ -515,7 +529,7 @@ export function createWalkSim(THREE, ui) {
     // Density labels go last, placed around each other, the line labels and the readout box.
     ctx.font = "600 11px JetBrains Mono, monospace";
     const candidates = densityLabels.map((c) => ({ ...c, width: ctx.measureText(c.text).width + 8, height: 15 }));
-    placeLabels(candidates, [densityReadoutRect(w), ...lineLabels], w).forEach((spot) => {
+    placeLabels(candidates, [densityReadoutRect(w), faceWindowRect(w), ...lineLabels], w).forEach((spot) => {
       ctx.fillStyle = "rgba(12, 15, 20, 0.62)";
       ctx.fillRect(spot.x, spot.y, spot.w, spot.h);
       ctx.fillStyle = "rgba(230, 236, 245, 0.92)";
@@ -531,6 +545,7 @@ export function createWalkSim(THREE, ui) {
       ctx.fillText(input.text.outsideFrame, 8, h - 8);
     }
     drawDensityReadout(ctx, w);
+    drawFaceWindow(ctx, w);
   }
 
   function densityReadoutRect(w) {
@@ -719,6 +734,86 @@ export function createWalkSim(THREE, ui) {
     orbit.view.updateProjectionMatrix();
   }
 
+  // Still: the person on the counting line. Walking: whoever is walking in nearest the face line (or the counting line).
+  function faceSubject() {
+    if (!walking) return standing;
+    const line = input.faceLineDistanceM !== null ? input.faceLineDistanceM : input.distanceM;
+    const walkers = agents.filter((a) => a.kind === "in" && a.body.group.visible && a.body.group.position.z > 0.6);
+    return walkers.reduce((best, a) => (!best || Math.abs(a.body.group.position.z - line) < Math.abs(best.body.group.position.z - line) ? a : best), null);
+  }
+
+  function captureFace() {
+    const agent = faceSubject();
+    if (!agent) { faceShot = { inView: false }; return; }
+    agent.body.head.getWorldPosition(faceAnchor);
+    const spot = toScreen(faceAnchor.x, faceAnchor.y, faceAnchor.z, 1, 1);
+    if (spot.behind || spot.x < 0 || spot.x > 1 || spot.y < 0 || spot.y > 1) { faceShot = { inView: false }; return; }
+    const density = densityAt(faceAnchor.x, faceAnchor.y, faceAnchor.z);
+    const px = Math.max(2, Math.min(160, Math.round(density * FACE_CROP_M)));
+    const sampled = px * FACE_SUPERSAMPLE;
+    faceCamera.position.set(cameraX(), input.heightM, 0);
+    faceCamera.lookAt(faceAnchor);
+    faceCamera.fov = (2 * Math.atan(FACE_CROP_M / 2 / faceCamera.position.distanceTo(faceAnchor)) * 180) / Math.PI;
+    faceCamera.updateProjectionMatrix();
+    faceTarget.setSize(sampled, sampled);
+    renderer.setRenderTarget(faceTarget);
+    renderer.render(scene, faceCamera);
+    renderer.setRenderTarget(null);
+    const pixels = new Uint8Array(sampled * sampled * 4);
+    renderer.readRenderTargetPixels(faceTarget, 0, 0, sampled, sampled, pixels);
+    faceSample.width = faceSample.height = sampled;
+    const sampleCtx = faceSample.getContext("2d");
+    const image = sampleCtx.createImageData(sampled, sampled);
+    const rowBytes = sampled * 4;
+    // The render target comes back bottom row first.
+    for (let row = 0; row < sampled; row += 1) {
+      image.data.set(pixels.subarray((sampled - 1 - row) * rowBytes, (sampled - row) * rowBytes), row * rowBytes);
+    }
+    sampleCtx.putImageData(image, 0, 0);
+    // Averaging the oversampled render down to the real pixel count, as a sensor pixel averages the light on it.
+    faceCanvas.width = faceCanvas.height = px;
+    const faceCtx = faceCanvas.getContext("2d");
+    faceCtx.imageSmoothingEnabled = true;
+    faceCtx.imageSmoothingQuality = "high";
+    faceCtx.drawImage(faceSample, 0, 0, px, px);
+    faceShot = { inView: true, facePx: Math.max(1, Math.round(density * FACE_WIDTH_M)) };
+  }
+
+  function faceWindowRect(w) {
+    const readout = densityReadoutRect(w);
+    const size = Math.round(Math.min(132, Math.max(84, w * 0.2)));
+    return { x: w - 8 - size, y: readout.y + readout.h + 8, w: size, h: size + 34 };
+  }
+
+  function drawFaceWindow(ctx, w) {
+    const box = faceWindowRect(w);
+    const inner = box.w - 8;
+    ctx.fillStyle = "rgba(12, 15, 20, 0.86)";
+    ctx.fillRect(box.x, box.y, box.w, box.h);
+    if (faceShot && faceShot.inView) {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(faceCanvas, box.x + 4, box.y + 4, inner, inner);
+      ctx.imageSmoothingEnabled = true;
+    } else {
+      ctx.fillStyle = "rgba(230, 236, 245, 0.6)";
+      ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(input.text.faceViewNone, box.x + box.w / 2, box.y + 4 + inner / 2);
+    }
+    ctx.strokeStyle = input.colors.face;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(box.x + 3.5, box.y + 3.5, inner + 1, inner + 1);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+    ctx.font = "600 11px JetBrains Mono, monospace";
+    ctx.fillStyle = "rgba(230, 236, 245, 0.92)";
+    ctx.fillText(faceShot && faceShot.inView ? input.text.faceViewPx.split("{px}").join(String(faceShot.facePx)) : "", box.x + 6, box.y + inner + 19);
+    ctx.font = "600 10.5px Inter, 'Noto Sans Thai', sans-serif";
+    ctx.fillStyle = "rgba(230, 236, 245, 0.6)";
+    ctx.fillText(input.text.faceViewBest, box.x + 6, box.y + inner + 32);
+  }
+
   function render() {
     if (!input) return;
     if (countingStrip) countingStrip.material.opacity = Math.max(0.85, countingStrip.material.opacity - 0.02);
@@ -728,6 +823,12 @@ export function createWalkSim(THREE, ui) {
       renderer.render(fisheyeScene, screenCamera);
     } else {
       renderer.render(scene, camera);
+    }
+    // Still frames capture every time; a walking crowd refreshes the face about ten times a second.
+    const now = performance.now();
+    if (!quiet && (!walking || now - faceShotAt > 100)) {
+      captureFace();
+      faceShotAt = now;
     }
     drawOverlay();
     renderOrbit();
