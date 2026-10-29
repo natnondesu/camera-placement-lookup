@@ -60,7 +60,7 @@ export function inPlace(THREE, clip) {
 }
 
 /**
- * Loads every avatar and clip, then returns a maker for walking or standing people.
+ * Loads every avatar and clip, then returns how many there are and a maker for walking or standing people.
  * @param {typeof import("three")} THREE
  * @param {{ FBXLoader: Function, clone: Function, base: string, heightM: number }} options
  *   base: the folder holding the avatar folders and anims/; heightM: the height a body is built at
@@ -87,7 +87,7 @@ export async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
    * @param {"walk" | "idle"} motion
    * @param {number} phase where in the cycle to start, 0 to 1
    */
-  return function makeAvatar(index, motion, phase) {
+  function make(index, motion, phase) {
     const template = templates[((index % templates.length) + templates.length) % templates.length];
     const model = clone(template.model);
     const group = new THREE.Group();
@@ -110,11 +110,16 @@ export async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
         mixer.update(dt);
       },
     };
-  };
+  }
+  return { count: templates.length, make };
 }
 
 // One template: metres, a simple matte material, hair and lashes cut out by their alpha, and the face located.
 function prepare(THREE, model, heightM) {
+  // Each Rocketbox file carries the artist's grey ambient light; a crowd of them would wash the scene out.
+  const extras = [];
+  model.traverse((node) => { if (node.isLight || node.isCamera) extras.push(node); });
+  extras.forEach((node) => node.removeFromParent());
   model.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(model);
   const headBone = model.getObjectByName("Bip01_Head");

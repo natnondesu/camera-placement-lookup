@@ -160,14 +160,18 @@ export function createWalkSim(THREE, ui) {
 
   const material = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.85 });
 
-  // Avatars, once loaded (setPeople); until then, and if they never load, people are built from boxes.
-  let makeAvatar = null;
+  // Avatars, once loaded; until then, and if they never load, people are built from boxes.
+  let avatars = null;
   let avatarCount = 0;
+  let standingIndex = 0;
+  // Walking, but held still on one frame to look at it.
+  let paused = false;
+  const animating = () => walking && !paused;
 
   function makePerson(motion) {
-    if (makeAvatar) {
+    if (avatars) {
       avatarCount += 1;
-      return makeAvatar(avatarCount - 1, motion, random());
+      return avatars.make(avatarCount - 1, motion, random());
     }
     return makeBoxPerson();
   }
@@ -213,7 +217,7 @@ export function createWalkSim(THREE, ui) {
     };
   }
 
-  const standing = { body: makePerson("idle"), flash: 0, flashDirection: null, faceFlash: 0 };
+  const standing = { body: makeBoxPerson(), flash: 0, flashDirection: null, faceFlash: 0 };
   scene.add(standing.body.group);
   const shownAgents = () => (walking ? agents : [standing]);
 
@@ -230,7 +234,51 @@ export function createWalkSim(THREE, ui) {
     ui.walkButton.setAttribute("aria-pressed", String(walking));
     ui.walkOnly.forEach((el) => { el.hidden = !walking; });
     ui.stillOnly.forEach((el) => { el.hidden = walking; });
+    ui.person.row.hidden = walking || !avatars;
+    ui.pauseButton.setAttribute("aria-pressed", String(paused));
+    if (input) {
+      ui.pauseButton.textContent = paused ? input.text.resume : input.text.pause;
+      if (avatars) ui.person.label.textContent = input.text.personOf.split("{i}").join(String(standingIndex + 1)).split("{n}").join(String(avatars.count));
+    }
   }
+
+  function standAvatar(index) {
+    scene.remove(standing.body.group);
+    standingIndex = (index + avatars.count) % avatars.count;
+    standing.body = avatars.make(standingIndex, "idle", 0.3);
+    scene.add(standing.body.group);
+    if (input) poseStanding(input);
+    syncWalking();
+  }
+
+  function usePeople(loaded) {
+    avatars = loaded;
+    standAvatar(0);
+    if (!input) return;
+    seed = 7;
+    respawnAll(input);
+    if (active || orbitActive) render();
+  }
+
+  // The avatars are the heaviest part of the page, so they are fetched only once a 3D view is actually on screen.
+  let peopleRequested = false;
+  const onScreen = (canvas) => {
+    const box = canvas.getBoundingClientRect();
+    return box.width > 0 && box.bottom > 0 && box.top < window.innerHeight && box.right > 0 && box.left < window.innerWidth;
+  };
+  function wantPeople() {
+    if (peopleRequested || !ui.loadPeople) return;
+    if (!((active && onScreen(ui.canvas)) || (orbitActive && orbit && onScreen(orbit.renderer.domElement)))) return;
+    peopleRequested = true;
+    window.removeEventListener("scroll", wantPeople, true);
+    window.removeEventListener("resize", wantPeople);
+    ui.loadPeople()
+      .then(usePeople)
+      .catch((error) => console.error("People models could not load; showing box figures", error));
+  }
+  // Capturing, so a scroll inside any panel counts too.
+  window.addEventListener("scroll", wantPeople, { capture: true, passive: true });
+  window.addEventListener("resize", wantPeople);
 
   function lineStrip(z, width, color, opacity) {
     const strip = new THREE.Mesh(
@@ -334,7 +382,7 @@ export function createWalkSim(THREE, ui) {
   function respawnAll(p) {
     agents.forEach((a) => scene.remove(a.body.group));
     const lay = layout(p);
-    // The standing person is the first avatar; the crowd starts with the next, so a reset replays the same people.
+    // The crowd always starts from the same avatar, so a reset replays the same people.
     avatarCount = 1;
     agents = Array.from({ length: lay.doorZ !== null ? 7 : 6 }, () => {
       const agent = { body: makePerson("walk") };
@@ -754,11 +802,16 @@ export function createWalkSim(THREE, ui) {
     orbit.view.updateProjectionMatrix();
   }
 
-  // Still: the person on the counting line. Walking: whoever is walking in nearest the face line (or the counting line).
+  // Still: the person on the counting line. Walking: whoever is walking in nearest the face line (or the counting line),
+  // once through the doorway: beyond it the door header hides the face from a ceiling camera.
   function faceSubject() {
     if (!walking) return standing;
     const line = input.faceLineDistanceM !== null ? input.faceLineDistanceM : input.distanceM;
-    const walkers = agents.filter((a) => a.kind === "in" && a.body.group.visible && a.body.group.position.z > 0.6);
+    const doorZ = layout(input).doorZ;
+    const walkers = agents.filter((a) => {
+      const z = a.body.group.position.z;
+      return a.kind === "in" && a.body.group.visible && z > 0.6 && (doorZ === null || z < doorZ);
+    });
     return walkers.reduce((best, a) => (!best || Math.abs(a.body.group.position.z - line) < Math.abs(best.body.group.position.z - line) ? a : best), null);
   }
 
@@ -796,13 +849,13 @@ export function createWalkSim(THREE, ui) {
     faceCtx.imageSmoothingEnabled = true;
     faceCtx.imageSmoothingQuality = "high";
     faceCtx.drawImage(faceSample, 0, 0, px, px);
-    faceShot = { inView: true, facePx: Math.max(1, Math.round(density * FACE_WIDTH_M)) };
+    faceShot = { inView: true, facePx: Math.max(1, Math.round(density * FACE_WIDTH_M)), density: Math.round(density) };
   }
 
   function faceWindowRect(w) {
     const readout = densityReadoutRect(w);
     const size = Math.round(Math.min(132, Math.max(84, w * 0.2)));
-    return { x: w - 8 - size, y: readout.y + readout.h + 8, w: size, h: size + 34 };
+    return { x: w - 8 - size, y: readout.y + readout.h + 8, w: size, h: size + 48 };
   }
 
   function drawFaceWindow(ctx, w) {
@@ -828,10 +881,13 @@ export function createWalkSim(THREE, ui) {
     ctx.textBaseline = "alphabetic";
     ctx.font = "600 11px JetBrains Mono, monospace";
     ctx.fillStyle = "rgba(230, 236, 245, 0.92)";
-    ctx.fillText(faceShot && faceShot.inView ? input.text.faceViewPx.split("{px}").join(String(faceShot.facePx)) : "", box.x + 6, box.y + inner + 19);
+    if (faceShot && faceShot.inView) {
+      ctx.fillText(input.text.faceViewPx.split("{px}").join(String(faceShot.facePx)), box.x + 6, box.y + inner + 19);
+      ctx.fillText(faceShot.density + " px/m", box.x + 6, box.y + inner + 33);
+    }
     ctx.font = "600 10.5px Inter, 'Noto Sans Thai', sans-serif";
     ctx.fillStyle = "rgba(230, 236, 245, 0.6)";
-    ctx.fillText(input.text.faceViewBest, box.x + 6, box.y + inner + 32);
+    ctx.fillText(input.text.faceViewBest, box.x + 6, box.y + inner + 46);
   }
 
   function render() {
@@ -846,7 +902,7 @@ export function createWalkSim(THREE, ui) {
     }
     // Still frames capture every time; a walking crowd refreshes the face about ten times a second.
     const now = performance.now();
-    if (!quiet && (!walking || now - faceShotAt > 100)) {
+    if (!quiet && (!animating() || now - faceShotAt > 100)) {
       captureFace();
       faceShotAt = now;
     }
@@ -859,7 +915,7 @@ export function createWalkSim(THREE, ui) {
   }
 
   function frame(time) {
-    if (!(active || orbitActive) || !walking) return;
+    if (!(active || orbitActive) || !animating()) return;
     const dt = lastTime ? Math.min(0.05, (time - lastTime) / 1000) : 0;
     lastTime = time;
     step(dt);
@@ -869,7 +925,7 @@ export function createWalkSim(THREE, ui) {
 
   function start() {
     lastTime = 0;
-    if ((active || orbitActive) && walking) requestAnimationFrame(frame);
+    if ((active || orbitActive) && animating()) requestAnimationFrame(frame);
     else render();
   }
 
@@ -888,8 +944,22 @@ export function createWalkSim(THREE, ui) {
 
   ui.walkButton.addEventListener("click", () => {
     walking = !walking;
+    paused = false;
     syncWalking();
     start();
+  });
+  ui.pauseButton.addEventListener("click", () => {
+    paused = !paused;
+    syncWalking();
+    start();
+  });
+  ui.person.prev.addEventListener("click", () => {
+    standAvatar(standingIndex - 1);
+    render();
+  });
+  ui.person.next.addEventListener("click", () => {
+    standAvatar(standingIndex + 1);
+    render();
   });
   ui.resetButton.addEventListener("click", () => {
     Object.keys(counts).forEach((k) => {
@@ -938,19 +1008,6 @@ export function createWalkSim(THREE, ui) {
 
   return {
     snapshot,
-    // Swaps the box figures for avatars, keeping the crowd's seed so the same walk replays.
-    setPeople(maker) {
-      makeAvatar = maker;
-      scene.remove(standing.body.group);
-      avatarCount = 0;
-      standing.body = makePerson("idle");
-      scene.add(standing.body.group);
-      if (!input) return;
-      poseStanding(input);
-      seed = 7;
-      respawnAll(input);
-      if (active || orbitActive) render();
-    },
     // The orbit view: the same scene from outside, built the first time it is shown.
     setOrbit(canvas, OrbitControls, next) {
       if (next && !orbit) {
@@ -961,7 +1018,7 @@ export function createWalkSim(THREE, ui) {
         const controls = new OrbitControls(view, canvas);
         controls.enableDamping = false;
         controls.maxPolarAngle = Math.PI * 0.49;
-        controls.addEventListener("change", () => { if (!walking) requestAnimationFrame(renderOrbit); });
+        controls.addEventListener("change", () => { if (!animating()) requestAnimationFrame(renderOrbit); });
         orbit = { renderer, view, controls };
         if (input) aimOrbit(input, true);
       }
@@ -971,6 +1028,7 @@ export function createWalkSim(THREE, ui) {
         sizeOrbit();
         if (!wasActive) start();
       }
+      wantPeople();
     },
     setPlacement(placement) {
       const first = input === null;
@@ -991,10 +1049,11 @@ export function createWalkSim(THREE, ui) {
       const key = [placement.scene, placement.lens, placement.distanceM.toFixed(1), placement.entranceWidthM || 0, (placement.faceLineDistanceM || 0).toFixed(1)].join("|");
       if (first || key !== layoutKey) respawnAll(placement);
       layoutKey = key;
+      syncWalking();
       if (active) {
         resize();
-        if (!walking) render();
-      } else if (orbitActive && !walking) {
+        if (!animating()) render();
+      } else if (orbitActive && !animating()) {
         // Orbit can be on screen while the camera's own view is not (the Top tab); it still follows every change.
         renderOrbit();
       }
@@ -1006,6 +1065,7 @@ export function createWalkSim(THREE, ui) {
         resize();
         start();
       }
+      wantPeople();
     },
   };
 }

@@ -2256,6 +2256,24 @@ function buildHtml() {
       gap: 6px 14px;
     }
 
+    .person-step {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .person-step .icon-button {
+      width: 32px;
+      height: 32px;
+    }
+
+    .person-label {
+      min-width: 9ch;
+      text-align: center;
+      color: var(--ink-soft);
+      font-variant-numeric: tabular-nums;
+    }
+
     .sim-actions {
       display: flex;
       flex-wrap: wrap;
@@ -3273,6 +3291,11 @@ ${pwaCss}
                       <canvas id="simOverlay" class="sim-overlay" aria-hidden="true"></canvas>
                     </div>
                     <div class="sim-hud" aria-live="off">
+                      <span class="person-step" id="simPerson" role="group" aria-label="Person standing on the line" data-i18n-attr="aria-label:personGroup" hidden>
+                        <button type="button" class="icon-button" id="simPersonPrev" aria-label="Previous person" data-i18n-attr="aria-label:personPrev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 6-6 6 6 6"></path></svg></button>
+                        <span class="person-label" id="simPersonLabel" aria-live="polite"></span>
+                        <button type="button" class="icon-button" id="simPersonNext" aria-label="Next person" data-i18n-attr="aria-label:personNext"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 6 6 6-6 6"></path></svg></button>
+                      </span>
                       <span class="sim-counts" id="simCounts" hidden>
                         <span><span data-i18n="in">In</span> <b id="simIn">0</b></span>
                         <span><span data-i18n="out">Out</span> <b id="simOut">0</b></span>
@@ -3282,6 +3305,7 @@ ${pwaCss}
                       <span class="sim-actions">
                         <button type="button" class="button sim-toggle" id="simCross" aria-pressed="true" title="People also walk left to right across the view, without crossing the counting line" data-i18n-attr="title:crossTitle" data-i18n="crossTraffic" hidden>Cross traffic</button>
                         <button type="button" class="button" id="simReset" data-i18n="reset" hidden>Reset</button>
+                        <button type="button" class="button sim-toggle" id="simPause" aria-pressed="false" hidden>Pause</button>
                         <button type="button" class="button sim-toggle" id="simWalk" aria-pressed="false" data-i18n="walkPeople">Walk people</button>
                       </span>
                     </div>
@@ -3460,7 +3484,8 @@ ${shareSource}
         titleTop: "Top view", titleCamera: "Camera view",
         in: "In", out: "Out", faces: "Faces", passers: "Passers-by, not counted", crossTraffic: "Cross traffic",
         crossTitle: "People also walk left to right across the view, without crossing the counting line",
-        walkPeople: "Walk people", reset: "Reset",
+        walkPeople: "Walk people", reset: "Reset", pause: "Pause", resume: "Resume",
+        personOf: "Person {i} of {n}", personGroup: "Person standing on the line", personPrev: "Previous person", personNext: "Next person",
         simStillNote: "One person standing on the counting line, as this camera sees them. Walk people to watch the counting.",
         simNote: "Simulated people through this camera. Counts come from the simulation, not real traffic.",
         simFallback: "The 3D view could not load. It needs an internet connection; this flat camera view is shown instead.",
@@ -3559,7 +3584,8 @@ ${shareSource}
         titleTop: "มุมมองจากด้านบน", titleCamera: "ภาพจากกล้อง",
         in: "เข้า", out: "ออก", faces: "ใบหน้า", passers: "คนเดินผ่าน (ไม่นับ)", crossTraffic: "คนเดินตัดผ่าน",
         crossTitle: "ให้มีคนเดินซ้ายไปขวาผ่านภาพด้วย โดยไม่ข้ามเส้นนับ",
-        walkPeople: "ให้คนเดิน", reset: "เริ่มใหม่",
+        walkPeople: "ให้คนเดิน", reset: "เริ่มใหม่", pause: "หยุดชั่วคราว", resume: "เดินต่อ",
+        personOf: "คนที่ {i} จาก {n}", personGroup: "คนที่ยืนบนเส้น", personPrev: "คนก่อนหน้า", personNext: "คนถัดไป",
         simStillNote: "คนหนึ่งคนยืนบนเส้นนับ ตามที่กล้องนี้มองเห็น กด ให้คนเดิน เพื่อดูการนับ",
         simNote: "คนจำลองที่มองผ่านกล้องนี้ ตัวเลขมาจากการจำลอง ไม่ใช่การนับจริง",
         simFallback: "โหลดภาพ 3 มิติไม่ได้ ต้องใช้อินเทอร์เน็ต จึงแสดงภาพจากกล้องแบบแบนแทน",
@@ -3778,7 +3804,8 @@ ${shareSource}
         text: {
           countingLine: t("simCountingLine"), faceLine: t("simFaceLine"), face: t("simFace"),
           in: t("simIn"), out: t("simOut"), outsideFrame: t("simOutsideFrame"), effective: t("simEffective"),
-          faceViewPx: t("faceViewPx"), faceViewBest: t("faceViewBest"), faceViewNone: t("faceViewNone")
+          faceViewPx: t("faceViewPx"), faceViewBest: t("faceViewBest"), faceViewNone: t("faceViewNone"),
+          pause: t("pause"), resume: t("resume"), personOf: t("personOf")
         }
       };
     }
@@ -5553,7 +5580,12 @@ ${peopleSource}
         canvas: document.getElementById("simCanvas"),
         overlay: document.getElementById("simOverlay"),
         walkButton: document.getElementById("simWalk"),
-        walkOnly: ["simCounts", "simCross", "simReset", "simNote"].map((id) => document.getElementById(id)),
+        walkOnly: ["simCounts", "simCross", "simReset", "simPause", "simNote"].map((id) => document.getElementById(id)),
+        pauseButton: document.getElementById("simPause"),
+        person: { row: document.getElementById("simPerson"), label: document.getElementById("simPersonLabel"), prev: document.getElementById("simPersonPrev"), next: document.getElementById("simPersonNext") },
+        // The avatars are large and optional: the box figures stand in until they arrive, and for good if they fail.
+        loadPeople: () => Promise.all([import("${FBX_URL}"), import("${SKELETON_URL}")])
+          .then(([fbx, skeleton]) => loadPeople(THREE, { FBXLoader: fbx.FBXLoader, clone: skeleton.clone, base: "people/", heightM: MODEL_HEIGHT_M })),
         stillOnly: [document.getElementById("simStillNote")],
         resetButton: document.getElementById("simReset"),
         crossButton: document.getElementById("simCross"),
@@ -5566,11 +5598,6 @@ ${peopleSource}
         }
       });
       update();
-      // The avatars are large and optional: the box figures stand in until they arrive, and for good if they fail.
-      Promise.all([import("${FBX_URL}"), import("${SKELETON_URL}")])
-        .then(([fbx, skeleton]) => loadPeople(THREE, { FBXLoader: fbx.FBXLoader, clone: skeleton.clone, base: "people/", heightM: MODEL_HEIGHT_M }))
-        .then((maker) => window.walkSim.setPeople(maker))
-        .catch((error) => console.error("People models could not load; showing box figures", error));
     } catch (error) {
       state.simFailed = true;
       update();
@@ -5601,7 +5628,7 @@ for (const icon of ICONS) {
   iconBytes.push(bytes);
   await fs.writeFile(path.join(publicDir, "icons", icon), bytes);
 }
-// The avatars: copied as they are, then precached with the page.
+// The avatars: copied as they are. They are cached when a 3D view first fetches them, not at install, being 13 MB.
 const peopleSourceDir = path.join(__dirname, "assets/people");
 const peopleFiles = (await fs.readdir(peopleSourceDir, { recursive: true, withFileTypes: true }))
   .filter((entry) => entry.isFile() && !entry.name.startsWith("."))
@@ -5617,7 +5644,7 @@ for (const file of peopleFiles) {
 }
 const manifest = JSON.stringify(buildManifest({ themeColor: APP_BACKGROUND, backgroundColor: APP_BACKGROUND }), null, 2) + "\n";
 await fs.writeFile(path.join(publicDir, "manifest.webmanifest"), manifest, "utf8");
-const localFiles = ["/", "/index.html", "/manifest.webmanifest", ...ICONS.map((icon) => "/icons/" + icon), ...csvs.map(([name]) => "/" + name), ...peopleFiles.map((file) => "/people/" + encodeURI(file))];
+const localFiles = ["/", "/index.html", "/manifest.webmanifest", ...ICONS.map((icon) => "/icons/" + icon), ...csvs.map(([name]) => "/" + name)];
 const version = cacheVersion([html, manifest, serviceWorkerTemplate, ...csvs.map(([, csv]) => csv), ...iconBytes, ...peopleBytes]);
 const serviceWorker = renderServiceWorker(serviceWorkerTemplate, { version, local: localFiles, remote: [FONTS_URL, THREE_URL, ORBIT_URL, QR_URL, FBX_URL, SKELETON_URL, ...FBX_DEPENDENCIES] });
 await fs.writeFile(path.join(publicDir, "sw.js"), serviceWorker, "utf8");

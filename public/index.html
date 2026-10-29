@@ -2171,6 +2171,24 @@
       gap: 6px 14px;
     }
 
+    .person-step {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .person-step .icon-button {
+      width: 32px;
+      height: 32px;
+    }
+
+    .person-label {
+      min-width: 9ch;
+      text-align: center;
+      color: var(--ink-soft);
+      font-variant-numeric: tabular-nums;
+    }
+
     .sim-actions {
       display: flex;
       flex-wrap: wrap;
@@ -4427,6 +4445,11 @@
                       <canvas id="simOverlay" class="sim-overlay" aria-hidden="true"></canvas>
                     </div>
                     <div class="sim-hud" aria-live="off">
+                      <span class="person-step" id="simPerson" role="group" aria-label="Person standing on the line" data-i18n-attr="aria-label:personGroup" hidden>
+                        <button type="button" class="icon-button" id="simPersonPrev" aria-label="Previous person" data-i18n-attr="aria-label:personPrev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14.5 6-6 6 6 6"></path></svg></button>
+                        <span class="person-label" id="simPersonLabel" aria-live="polite"></span>
+                        <button type="button" class="icon-button" id="simPersonNext" aria-label="Next person" data-i18n-attr="aria-label:personNext"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.5 6 6 6-6 6"></path></svg></button>
+                      </span>
                       <span class="sim-counts" id="simCounts" hidden>
                         <span><span data-i18n="in">In</span> <b id="simIn">0</b></span>
                         <span><span data-i18n="out">Out</span> <b id="simOut">0</b></span>
@@ -4436,6 +4459,7 @@
                       <span class="sim-actions">
                         <button type="button" class="button sim-toggle" id="simCross" aria-pressed="true" title="People also walk left to right across the view, without crossing the counting line" data-i18n-attr="title:crossTitle" data-i18n="crossTraffic" hidden>Cross traffic</button>
                         <button type="button" class="button" id="simReset" data-i18n="reset" hidden>Reset</button>
+                        <button type="button" class="button sim-toggle" id="simPause" aria-pressed="false" hidden>Pause</button>
                         <button type="button" class="button sim-toggle" id="simWalk" aria-pressed="false" data-i18n="walkPeople">Walk people</button>
                       </span>
                     </div>
@@ -5211,7 +5235,8 @@ function decodePlacement(hash) {
         titleTop: "Top view", titleCamera: "Camera view",
         in: "In", out: "Out", faces: "Faces", passers: "Passers-by, not counted", crossTraffic: "Cross traffic",
         crossTitle: "People also walk left to right across the view, without crossing the counting line",
-        walkPeople: "Walk people", reset: "Reset",
+        walkPeople: "Walk people", reset: "Reset", pause: "Pause", resume: "Resume",
+        personOf: "Person {i} of {n}", personGroup: "Person standing on the line", personPrev: "Previous person", personNext: "Next person",
         simStillNote: "One person standing on the counting line, as this camera sees them. Walk people to watch the counting.",
         simNote: "Simulated people through this camera. Counts come from the simulation, not real traffic.",
         simFallback: "The 3D view could not load. It needs an internet connection; this flat camera view is shown instead.",
@@ -5310,7 +5335,8 @@ function decodePlacement(hash) {
         titleTop: "มุมมองจากด้านบน", titleCamera: "ภาพจากกล้อง",
         in: "เข้า", out: "ออก", faces: "ใบหน้า", passers: "คนเดินผ่าน (ไม่นับ)", crossTraffic: "คนเดินตัดผ่าน",
         crossTitle: "ให้มีคนเดินซ้ายไปขวาผ่านภาพด้วย โดยไม่ข้ามเส้นนับ",
-        walkPeople: "ให้คนเดิน", reset: "เริ่มใหม่",
+        walkPeople: "ให้คนเดิน", reset: "เริ่มใหม่", pause: "หยุดชั่วคราว", resume: "เดินต่อ",
+        personOf: "คนที่ {i} จาก {n}", personGroup: "คนที่ยืนบนเส้น", personPrev: "คนก่อนหน้า", personNext: "คนถัดไป",
         simStillNote: "คนหนึ่งคนยืนบนเส้นนับ ตามที่กล้องนี้มองเห็น กด ให้คนเดิน เพื่อดูการนับ",
         simNote: "คนจำลองที่มองผ่านกล้องนี้ ตัวเลขมาจากการจำลอง ไม่ใช่การนับจริง",
         simFallback: "โหลดภาพ 3 มิติไม่ได้ ต้องใช้อินเทอร์เน็ต จึงแสดงภาพจากกล้องแบบแบนแทน",
@@ -5529,7 +5555,8 @@ function decodePlacement(hash) {
         text: {
           countingLine: t("simCountingLine"), faceLine: t("simFaceLine"), face: t("simFace"),
           in: t("simIn"), out: t("simOut"), outsideFrame: t("simOutsideFrame"), effective: t("simEffective"),
-          faceViewPx: t("faceViewPx"), faceViewBest: t("faceViewBest"), faceViewNone: t("faceViewNone")
+          faceViewPx: t("faceViewPx"), faceViewBest: t("faceViewBest"), faceViewNone: t("faceViewNone"),
+          pause: t("pause"), resume: t("resume"), personOf: t("personOf")
         }
       };
     }
@@ -7875,7 +7902,7 @@ const HELP_TEXT = {
     g4Title: "Check the views", g4Sum: "The side elevation, the 3D scene and what the camera sees.",
     g4s1: "Side view: the camera's own slice down to the middle of the entrance, with the Best and Acceptable bands on the floor.",
     g4s2: "Orbit shows the same scene in 3D from outside: the camera, its view cone and the distances. Drag to look around.",
-    g4s3: "Camera view: what the camera itself sees. The window at the top right is one face at the camera's real resolution, a best case before blur and glare. Walk people sends a crowd across the counting line to watch the counting.",
+    g4s3: "Camera view: what the camera itself sees. The window at the top right is one face at the camera's real resolution, a best case before blur and glare. The arrows change who stands on the line. Walk people sends a crowd across the counting line; Pause holds it on one frame.",
 
     g5Title: "Share and print", g5Sum: "Keep a placement as a link or a printable site sheet.",
     g5s1: "Share makes a link that holds the whole placement; opening it later restores everything. In the Share window, add the site and location, then open the printable site sheet.",
@@ -7907,7 +7934,7 @@ const HELP_TEXT = {
     g4Title: "ดูมุมมองต่าง ๆ", g4Sum: "มุมมองด้านข้าง ฉาก 3 มิติ และภาพที่กล้องเห็น",
     g4s1: "มุมมองด้านข้าง: ภาพตัดของกล้องลงไปถึงกลางทางเข้า พร้อมช่วงดีที่สุดและพอใช้บนพื้น",
     g4s2: "หมุนดู แสดงฉากเดียวกันแบบ 3 มิติจากด้านนอก: กล้อง กรวยภาพ และระยะต่าง ๆ ลากเพื่อหมุนดู",
-    g4s3: "ภาพจากกล้อง: สิ่งที่กล้องมองเห็นจริง หน้าต่างมุมขวาบนคือใบหน้าหนึ่งคนที่ความละเอียดจริงของกล้อง เป็นกรณีดีที่สุดก่อนภาพเบลอหรือแสงจ้า กด ให้คนเดิน เพื่อดูคนเดินผ่านเส้นนับและการนับ",
+    g4s3: "ภาพจากกล้อง: สิ่งที่กล้องมองเห็นจริง หน้าต่างมุมขวาบนคือใบหน้าหนึ่งคนที่ความละเอียดจริงของกล้อง เป็นกรณีดีที่สุดก่อนภาพเบลอหรือแสงจ้า ปุ่มลูกศรเปลี่ยนคนที่ยืนบนเส้น กด ให้คนเดิน เพื่อดูคนเดินผ่านเส้นนับและการนับ และ หยุดชั่วคราว เพื่อหยุดภาพไว้",
 
     g5Title: "แชร์และพิมพ์", g5Sum: "เก็บตำแหน่งไว้เป็นลิงก์ หรือใบสรุปหน้างานที่พิมพ์ได้",
     g5s1: "แชร์ สร้างลิงก์ที่เก็บตำแหน่งทั้งหมด เปิดลิงก์ภายหลังจะได้ค่าเดิมครบ ในหน้าต่างแชร์ ใส่ชื่อสถานที่และจุดติดตั้ง แล้วเปิดใบสรุปหน้างานเพื่อพิมพ์",
@@ -8398,14 +8425,18 @@ function createWalkSim(THREE, ui) {
 
   const material = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.85 });
 
-  // Avatars, once loaded (setPeople); until then, and if they never load, people are built from boxes.
-  let makeAvatar = null;
+  // Avatars, once loaded; until then, and if they never load, people are built from boxes.
+  let avatars = null;
   let avatarCount = 0;
+  let standingIndex = 0;
+  // Walking, but held still on one frame to look at it.
+  let paused = false;
+  const animating = () => walking && !paused;
 
   function makePerson(motion) {
-    if (makeAvatar) {
+    if (avatars) {
       avatarCount += 1;
-      return makeAvatar(avatarCount - 1, motion, random());
+      return avatars.make(avatarCount - 1, motion, random());
     }
     return makeBoxPerson();
   }
@@ -8451,7 +8482,7 @@ function createWalkSim(THREE, ui) {
     };
   }
 
-  const standing = { body: makePerson("idle"), flash: 0, flashDirection: null, faceFlash: 0 };
+  const standing = { body: makeBoxPerson(), flash: 0, flashDirection: null, faceFlash: 0 };
   scene.add(standing.body.group);
   const shownAgents = () => (walking ? agents : [standing]);
 
@@ -8468,7 +8499,51 @@ function createWalkSim(THREE, ui) {
     ui.walkButton.setAttribute("aria-pressed", String(walking));
     ui.walkOnly.forEach((el) => { el.hidden = !walking; });
     ui.stillOnly.forEach((el) => { el.hidden = walking; });
+    ui.person.row.hidden = walking || !avatars;
+    ui.pauseButton.setAttribute("aria-pressed", String(paused));
+    if (input) {
+      ui.pauseButton.textContent = paused ? input.text.resume : input.text.pause;
+      if (avatars) ui.person.label.textContent = input.text.personOf.split("{i}").join(String(standingIndex + 1)).split("{n}").join(String(avatars.count));
+    }
   }
+
+  function standAvatar(index) {
+    scene.remove(standing.body.group);
+    standingIndex = (index + avatars.count) % avatars.count;
+    standing.body = avatars.make(standingIndex, "idle", 0.3);
+    scene.add(standing.body.group);
+    if (input) poseStanding(input);
+    syncWalking();
+  }
+
+  function usePeople(loaded) {
+    avatars = loaded;
+    standAvatar(0);
+    if (!input) return;
+    seed = 7;
+    respawnAll(input);
+    if (active || orbitActive) render();
+  }
+
+  // The avatars are the heaviest part of the page, so they are fetched only once a 3D view is actually on screen.
+  let peopleRequested = false;
+  const onScreen = (canvas) => {
+    const box = canvas.getBoundingClientRect();
+    return box.width > 0 && box.bottom > 0 && box.top < window.innerHeight && box.right > 0 && box.left < window.innerWidth;
+  };
+  function wantPeople() {
+    if (peopleRequested || !ui.loadPeople) return;
+    if (!((active && onScreen(ui.canvas)) || (orbitActive && orbit && onScreen(orbit.renderer.domElement)))) return;
+    peopleRequested = true;
+    window.removeEventListener("scroll", wantPeople, true);
+    window.removeEventListener("resize", wantPeople);
+    ui.loadPeople()
+      .then(usePeople)
+      .catch((error) => console.error("People models could not load; showing box figures", error));
+  }
+  // Capturing, so a scroll inside any panel counts too.
+  window.addEventListener("scroll", wantPeople, { capture: true, passive: true });
+  window.addEventListener("resize", wantPeople);
 
   function lineStrip(z, width, color, opacity) {
     const strip = new THREE.Mesh(
@@ -8572,7 +8647,7 @@ function createWalkSim(THREE, ui) {
   function respawnAll(p) {
     agents.forEach((a) => scene.remove(a.body.group));
     const lay = layout(p);
-    // The standing person is the first avatar; the crowd starts with the next, so a reset replays the same people.
+    // The crowd always starts from the same avatar, so a reset replays the same people.
     avatarCount = 1;
     agents = Array.from({ length: lay.doorZ !== null ? 7 : 6 }, () => {
       const agent = { body: makePerson("walk") };
@@ -8992,11 +9067,16 @@ function createWalkSim(THREE, ui) {
     orbit.view.updateProjectionMatrix();
   }
 
-  // Still: the person on the counting line. Walking: whoever is walking in nearest the face line (or the counting line).
+  // Still: the person on the counting line. Walking: whoever is walking in nearest the face line (or the counting line),
+  // once through the doorway: beyond it the door header hides the face from a ceiling camera.
   function faceSubject() {
     if (!walking) return standing;
     const line = input.faceLineDistanceM !== null ? input.faceLineDistanceM : input.distanceM;
-    const walkers = agents.filter((a) => a.kind === "in" && a.body.group.visible && a.body.group.position.z > 0.6);
+    const doorZ = layout(input).doorZ;
+    const walkers = agents.filter((a) => {
+      const z = a.body.group.position.z;
+      return a.kind === "in" && a.body.group.visible && z > 0.6 && (doorZ === null || z < doorZ);
+    });
     return walkers.reduce((best, a) => (!best || Math.abs(a.body.group.position.z - line) < Math.abs(best.body.group.position.z - line) ? a : best), null);
   }
 
@@ -9034,13 +9114,13 @@ function createWalkSim(THREE, ui) {
     faceCtx.imageSmoothingEnabled = true;
     faceCtx.imageSmoothingQuality = "high";
     faceCtx.drawImage(faceSample, 0, 0, px, px);
-    faceShot = { inView: true, facePx: Math.max(1, Math.round(density * FACE_WIDTH_M)) };
+    faceShot = { inView: true, facePx: Math.max(1, Math.round(density * FACE_WIDTH_M)), density: Math.round(density) };
   }
 
   function faceWindowRect(w) {
     const readout = densityReadoutRect(w);
     const size = Math.round(Math.min(132, Math.max(84, w * 0.2)));
-    return { x: w - 8 - size, y: readout.y + readout.h + 8, w: size, h: size + 34 };
+    return { x: w - 8 - size, y: readout.y + readout.h + 8, w: size, h: size + 48 };
   }
 
   function drawFaceWindow(ctx, w) {
@@ -9066,10 +9146,13 @@ function createWalkSim(THREE, ui) {
     ctx.textBaseline = "alphabetic";
     ctx.font = "600 11px JetBrains Mono, monospace";
     ctx.fillStyle = "rgba(230, 236, 245, 0.92)";
-    ctx.fillText(faceShot && faceShot.inView ? input.text.faceViewPx.split("{px}").join(String(faceShot.facePx)) : "", box.x + 6, box.y + inner + 19);
+    if (faceShot && faceShot.inView) {
+      ctx.fillText(input.text.faceViewPx.split("{px}").join(String(faceShot.facePx)), box.x + 6, box.y + inner + 19);
+      ctx.fillText(faceShot.density + " px/m", box.x + 6, box.y + inner + 33);
+    }
     ctx.font = "600 10.5px Inter, 'Noto Sans Thai', sans-serif";
     ctx.fillStyle = "rgba(230, 236, 245, 0.6)";
-    ctx.fillText(input.text.faceViewBest, box.x + 6, box.y + inner + 32);
+    ctx.fillText(input.text.faceViewBest, box.x + 6, box.y + inner + 46);
   }
 
   function render() {
@@ -9084,7 +9167,7 @@ function createWalkSim(THREE, ui) {
     }
     // Still frames capture every time; a walking crowd refreshes the face about ten times a second.
     const now = performance.now();
-    if (!quiet && (!walking || now - faceShotAt > 100)) {
+    if (!quiet && (!animating() || now - faceShotAt > 100)) {
       captureFace();
       faceShotAt = now;
     }
@@ -9097,7 +9180,7 @@ function createWalkSim(THREE, ui) {
   }
 
   function frame(time) {
-    if (!(active || orbitActive) || !walking) return;
+    if (!(active || orbitActive) || !animating()) return;
     const dt = lastTime ? Math.min(0.05, (time - lastTime) / 1000) : 0;
     lastTime = time;
     step(dt);
@@ -9107,7 +9190,7 @@ function createWalkSim(THREE, ui) {
 
   function start() {
     lastTime = 0;
-    if ((active || orbitActive) && walking) requestAnimationFrame(frame);
+    if ((active || orbitActive) && animating()) requestAnimationFrame(frame);
     else render();
   }
 
@@ -9126,8 +9209,22 @@ function createWalkSim(THREE, ui) {
 
   ui.walkButton.addEventListener("click", () => {
     walking = !walking;
+    paused = false;
     syncWalking();
     start();
+  });
+  ui.pauseButton.addEventListener("click", () => {
+    paused = !paused;
+    syncWalking();
+    start();
+  });
+  ui.person.prev.addEventListener("click", () => {
+    standAvatar(standingIndex - 1);
+    render();
+  });
+  ui.person.next.addEventListener("click", () => {
+    standAvatar(standingIndex + 1);
+    render();
   });
   ui.resetButton.addEventListener("click", () => {
     Object.keys(counts).forEach((k) => {
@@ -9176,19 +9273,6 @@ function createWalkSim(THREE, ui) {
 
   return {
     snapshot,
-    // Swaps the box figures for avatars, keeping the crowd's seed so the same walk replays.
-    setPeople(maker) {
-      makeAvatar = maker;
-      scene.remove(standing.body.group);
-      avatarCount = 0;
-      standing.body = makePerson("idle");
-      scene.add(standing.body.group);
-      if (!input) return;
-      poseStanding(input);
-      seed = 7;
-      respawnAll(input);
-      if (active || orbitActive) render();
-    },
     // The orbit view: the same scene from outside, built the first time it is shown.
     setOrbit(canvas, OrbitControls, next) {
       if (next && !orbit) {
@@ -9199,7 +9283,7 @@ function createWalkSim(THREE, ui) {
         const controls = new OrbitControls(view, canvas);
         controls.enableDamping = false;
         controls.maxPolarAngle = Math.PI * 0.49;
-        controls.addEventListener("change", () => { if (!walking) requestAnimationFrame(renderOrbit); });
+        controls.addEventListener("change", () => { if (!animating()) requestAnimationFrame(renderOrbit); });
         orbit = { renderer, view, controls };
         if (input) aimOrbit(input, true);
       }
@@ -9209,6 +9293,7 @@ function createWalkSim(THREE, ui) {
         sizeOrbit();
         if (!wasActive) start();
       }
+      wantPeople();
     },
     setPlacement(placement) {
       const first = input === null;
@@ -9229,10 +9314,11 @@ function createWalkSim(THREE, ui) {
       const key = [placement.scene, placement.lens, placement.distanceM.toFixed(1), placement.entranceWidthM || 0, (placement.faceLineDistanceM || 0).toFixed(1)].join("|");
       if (first || key !== layoutKey) respawnAll(placement);
       layoutKey = key;
+      syncWalking();
       if (active) {
         resize();
-        if (!walking) render();
-      } else if (orbitActive && !walking) {
+        if (!animating()) render();
+      } else if (orbitActive && !animating()) {
         // Orbit can be on screen while the camera's own view is not (the Top tab); it still follows every change.
         renderOrbit();
       }
@@ -9244,6 +9330,7 @@ function createWalkSim(THREE, ui) {
         resize();
         start();
       }
+      wantPeople();
     },
   };
 }
@@ -9310,7 +9397,7 @@ function inPlace(THREE, clip) {
 }
 
 /**
- * Loads every avatar and clip, then returns a maker for walking or standing people.
+ * Loads every avatar and clip, then returns how many there are and a maker for walking or standing people.
  * @param {typeof import("three")} THREE
  * @param {{ FBXLoader: Function, clone: Function, base: string, heightM: number }} options
  *   base: the folder holding the avatar folders and anims/; heightM: the height a body is built at
@@ -9337,7 +9424,7 @@ async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
    * @param {"walk" | "idle"} motion
    * @param {number} phase where in the cycle to start, 0 to 1
    */
-  return function makeAvatar(index, motion, phase) {
+  function make(index, motion, phase) {
     const template = templates[((index % templates.length) + templates.length) % templates.length];
     const model = clone(template.model);
     const group = new THREE.Group();
@@ -9360,11 +9447,16 @@ async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
         mixer.update(dt);
       },
     };
-  };
+  }
+  return { count: templates.length, make };
 }
 
 // One template: metres, a simple matte material, hair and lashes cut out by their alpha, and the face located.
 function prepare(THREE, model, heightM) {
+  // Each Rocketbox file carries the artist's grey ambient light; a crowd of them would wash the scene out.
+  const extras = [];
+  model.traverse((node) => { if (node.isLight || node.isCamera) extras.push(node); });
+  extras.forEach((node) => node.removeFromParent());
   model.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(model);
   const headBone = model.getObjectByName("Bip01_Head");
@@ -9410,7 +9502,12 @@ function prepare(THREE, model, heightM) {
         canvas: document.getElementById("simCanvas"),
         overlay: document.getElementById("simOverlay"),
         walkButton: document.getElementById("simWalk"),
-        walkOnly: ["simCounts", "simCross", "simReset", "simNote"].map((id) => document.getElementById(id)),
+        walkOnly: ["simCounts", "simCross", "simReset", "simPause", "simNote"].map((id) => document.getElementById(id)),
+        pauseButton: document.getElementById("simPause"),
+        person: { row: document.getElementById("simPerson"), label: document.getElementById("simPersonLabel"), prev: document.getElementById("simPersonPrev"), next: document.getElementById("simPersonNext") },
+        // The avatars are large and optional: the box figures stand in until they arrive, and for good if they fail.
+        loadPeople: () => Promise.all([import("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/FBXLoader.js"), import("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/SkeletonUtils.js")])
+          .then(([fbx, skeleton]) => loadPeople(THREE, { FBXLoader: fbx.FBXLoader, clone: skeleton.clone, base: "people/", heightM: MODEL_HEIGHT_M })),
         stillOnly: [document.getElementById("simStillNote")],
         resetButton: document.getElementById("simReset"),
         crossButton: document.getElementById("simCross"),
@@ -9423,11 +9520,6 @@ function prepare(THREE, model, heightM) {
         }
       });
       update();
-      // The avatars are large and optional: the box figures stand in until they arrive, and for good if they fail.
-      Promise.all([import("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/FBXLoader.js"), import("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/SkeletonUtils.js")])
-        .then(([fbx, skeleton]) => loadPeople(THREE, { FBXLoader: fbx.FBXLoader, clone: skeleton.clone, base: "people/", heightM: MODEL_HEIGHT_M }))
-        .then((maker) => window.walkSim.setPeople(maker))
-        .catch((error) => console.error("People models could not load; showing box figures", error));
     } catch (error) {
       state.simFailed = true;
       update();
