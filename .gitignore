@@ -6,3 +6,5 @@ node_modules/
 .impeccable/review/
 .impeccable/questions/
 .impeccable/build/
+# Copied from assets/people at build
+/public/people/

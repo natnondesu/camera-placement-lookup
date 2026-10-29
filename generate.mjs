@@ -54,6 +54,7 @@ cameras.cameras.filter((camera) => camera.lens !== "fisheye").forEach((camera) =
 
 const engineSource = (await fs.readFile(path.join(__dirname, "src/placement-rule.js"), "utf8")).replace(/^export /gm, "");
 const simSource = (await fs.readFile(path.join(__dirname, "src/walk-sim.js"), "utf8")).replace(/^export /gm, "");
+const peopleSource = (await fs.readFile(path.join(__dirname, "src/people.js"), "utf8")).replace(/^export /gm, "");
 const shareSource = (await fs.readFile(path.join(__dirname, "src/share-link.js"), "utf8")).replace(/^export /gm, "");
 const sheetSource = await fs.readFile(path.join(__dirname, "src/site-sheet.js"), "utf8");
 const sheetCss = await fs.readFile(path.join(__dirname, "src/site-sheet.css"), "utf8");
@@ -68,6 +69,11 @@ const serviceWorkerTemplate = await fs.readFile(path.join(__dirname, "src/servic
 const FONTS_URL = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap";
 const THREE_URL = "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
 const ORBIT_URL = "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+const THREE_ADDONS = "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/";
+const FBX_URL = THREE_ADDONS + "loaders/FBXLoader.js";
+const SKELETON_URL = THREE_ADDONS + "utils/SkeletonUtils.js";
+// The FBX loader's own imports, so the avatars still load offline.
+const FBX_DEPENDENCIES = ["libs/fflate.module.js", "curves/NURBSCurve.js", "curves/NURBSUtils.js"].map((file) => THREE_ADDONS + file);
 const QR_URL = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js";
 if (!sheetSource.includes(QR_URL)) throw new Error("src/site-sheet.js no longer loads " + QR_URL + "; update QR_URL in generate.mjs so it stays cached offline.");
 const APP_BACKGROUND = "#0b0f14";
@@ -5533,6 +5539,7 @@ ${pwaSource}
   <script type="importmap">{ "imports": { "three": "${THREE_URL}" } }</script>
   <script type="module">
 ${simSource}
+${peopleSource}
     try {
       const THREE = await import("three");
       // The orbit view is an extra; without its controls the side view simply has no Orbit mode.
@@ -5559,6 +5566,11 @@ ${simSource}
         }
       });
       update();
+      // The avatars are large and optional: the box figures stand in until they arrive, and for good if they fail.
+      Promise.all([import("${FBX_URL}"), import("${SKELETON_URL}")])
+        .then(([fbx, skeleton]) => loadPeople(THREE, { FBXLoader: fbx.FBXLoader, clone: skeleton.clone, base: "people/", heightM: MODEL_HEIGHT_M }))
+        .then((maker) => window.walkSim.setPeople(maker))
+        .catch((error) => console.error("People models could not load; showing box figures", error));
     } catch (error) {
       state.simFailed = true;
       update();
@@ -5589,11 +5601,25 @@ for (const icon of ICONS) {
   iconBytes.push(bytes);
   await fs.writeFile(path.join(publicDir, "icons", icon), bytes);
 }
+// The avatars: copied as they are, then precached with the page.
+const peopleSourceDir = path.join(__dirname, "assets/people");
+const peopleFiles = (await fs.readdir(peopleSourceDir, { recursive: true, withFileTypes: true }))
+  .filter((entry) => entry.isFile() && !entry.name.startsWith("."))
+  .map((entry) => path.relative(peopleSourceDir, path.join(entry.parentPath ?? entry.path, entry.name)).split(path.sep).join("/"))
+  .sort();
+await fs.rm(path.join(publicDir, "people"), { recursive: true, force: true });
+const peopleBytes = [];
+for (const file of peopleFiles) {
+  const bytes = await fs.readFile(path.join(peopleSourceDir, file));
+  peopleBytes.push(bytes);
+  await fs.mkdir(path.dirname(path.join(publicDir, "people", file)), { recursive: true });
+  await fs.writeFile(path.join(publicDir, "people", file), bytes);
+}
 const manifest = JSON.stringify(buildManifest({ themeColor: APP_BACKGROUND, backgroundColor: APP_BACKGROUND }), null, 2) + "\n";
 await fs.writeFile(path.join(publicDir, "manifest.webmanifest"), manifest, "utf8");
-const localFiles = ["/", "/index.html", "/manifest.webmanifest", ...ICONS.map((icon) => "/icons/" + icon), ...csvs.map(([name]) => "/" + name)];
-const version = cacheVersion([html, manifest, serviceWorkerTemplate, ...csvs.map(([, csv]) => csv), ...iconBytes]);
-const serviceWorker = renderServiceWorker(serviceWorkerTemplate, { version, local: localFiles, remote: [FONTS_URL, THREE_URL, ORBIT_URL, QR_URL] });
+const localFiles = ["/", "/index.html", "/manifest.webmanifest", ...ICONS.map((icon) => "/icons/" + icon), ...csvs.map(([name]) => "/" + name), ...peopleFiles.map((file) => "/people/" + encodeURI(file))];
+const version = cacheVersion([html, manifest, serviceWorkerTemplate, ...csvs.map(([, csv]) => csv), ...iconBytes, ...peopleBytes]);
+const serviceWorker = renderServiceWorker(serviceWorkerTemplate, { version, local: localFiles, remote: [FONTS_URL, THREE_URL, ORBIT_URL, QR_URL, FBX_URL, SKELETON_URL, ...FBX_DEPENDENCIES] });
 await fs.writeFile(path.join(publicDir, "sw.js"), serviceWorker, "utf8");
 
 console.log(`Generated index.html, ${rules.profiles.length} lookup CSVs and the offline app (cache ${version}, rules ${rules.version}).`);

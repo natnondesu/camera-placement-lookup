@@ -88,10 +88,19 @@
       border-color: var(--accent);
     }
 
-    .help-shortcut {
+    .help-shortcut,
+    .help-credit {
       margin: 12px 0 0;
       color: var(--muted);
       font-size: 12px;
+    }
+
+    .help-credit {
+      margin-top: 4px;
+    }
+
+    .help-credit a {
+      color: inherit;
     }
 
     .tour {

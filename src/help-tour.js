@@ -5,6 +5,7 @@ const HELP_TEXT = {
   en: {
     hpHelp: "Help", hpTitle: "How to use the console", hpIntro: "Five short guides. Show me walks through the real controls; press Esc to stop at any time.",
     hpShowMe: "Show me", hpClose: "Close", hpShortcut: "Press ? to open this help from anywhere.",
+    hpCredit: "People in the 3D views: Microsoft Rocketbox avatars, © 2020 Microsoft,", hpLicence: "MIT licence",
     hpNext: "Next", hpBack: "Back", hpDone: "Done", hpStep: "{i} of {n}", hpStop: "Stop the tour",
 
     g1Title: "Read the verdict", g1Sum: "What Best, Acceptable and Out of range mean, and where warnings appear.",
@@ -27,7 +28,7 @@ const HELP_TEXT = {
     g4Title: "Check the views", g4Sum: "The side elevation, the 3D scene and what the camera sees.",
     g4s1: "Side view: the camera's own slice down to the middle of the entrance, with the Best and Acceptable bands on the floor.",
     g4s2: "Orbit shows the same scene in 3D from outside: the camera, its view cone and the distances. Drag to look around.",
-    g4s3: "Camera view: what the camera itself sees. Walk people sends a crowd across the counting line to watch the counting.",
+    g4s3: "Camera view: what the camera itself sees. The window at the top right is one face at the camera's real resolution, a best case before blur and glare. Walk people sends a crowd across the counting line to watch the counting.",
 
     g5Title: "Share and print", g5Sum: "Keep a placement as a link or a printable site sheet.",
     g5s1: "Share makes a link that holds the whole placement; opening it later restores everything. In the Share window, add the site and location, then open the printable site sheet.",
@@ -36,6 +37,7 @@ const HELP_TEXT = {
   th: {
     hpHelp: "วิธีใช้", hpTitle: "วิธีใช้งานโปรแกรม", hpIntro: "คู่มือสั้น ๆ 5 เรื่อง กด แสดงให้ดู เพื่อพาไล่ดูปุ่มจริงบนหน้าจอ กด Esc เพื่อหยุดได้ทุกเมื่อ",
     hpShowMe: "แสดงให้ดู", hpClose: "ปิด", hpShortcut: "กด ? เพื่อเปิดหน้านี้ได้จากทุกที่",
+    hpCredit: "คนในภาพ 3 มิติ: อวตาร Microsoft Rocketbox © 2020 Microsoft", hpLicence: "สัญญาอนุญาต MIT",
     hpNext: "ถัดไป", hpBack: "ย้อนกลับ", hpDone: "เสร็จ", hpStep: "{i} จาก {n}", hpStop: "หยุดการแนะนำ",
 
     g1Title: "อ่านผลการประเมิน", g1Sum: "ดีที่สุด พอใช้ และเกินเกณฑ์ หมายถึงอะไร และคำเตือนอยู่ตรงไหน",
@@ -58,7 +60,7 @@ const HELP_TEXT = {
     g4Title: "ดูมุมมองต่าง ๆ", g4Sum: "มุมมองด้านข้าง ฉาก 3 มิติ และภาพที่กล้องเห็น",
     g4s1: "มุมมองด้านข้าง: ภาพตัดของกล้องลงไปถึงกลางทางเข้า พร้อมช่วงดีที่สุดและพอใช้บนพื้น",
     g4s2: "หมุนดู แสดงฉากเดียวกันแบบ 3 มิติจากด้านนอก: กล้อง กรวยภาพ และระยะต่าง ๆ ลากเพื่อหมุนดู",
-    g4s3: "ภาพจากกล้อง: สิ่งที่กล้องมองเห็นจริง กด ให้คนเดิน เพื่อดูคนเดินผ่านเส้นนับและการนับ",
+    g4s3: "ภาพจากกล้อง: สิ่งที่กล้องมองเห็นจริง หน้าต่างมุมขวาบนคือใบหน้าหนึ่งคนที่ความละเอียดจริงของกล้อง เป็นกรณีดีที่สุดก่อนภาพเบลอหรือแสงจ้า กด ให้คนเดิน เพื่อดูคนเดินผ่านเส้นนับและการนับ",
 
     g5Title: "แชร์และพิมพ์", g5Sum: "เก็บตำแหน่งไว้เป็นลิงก์ หรือใบสรุปหน้างานที่พิมพ์ได้",
     g5s1: "แชร์ สร้างลิงก์ที่เก็บตำแหน่งทั้งหมด เปิดลิงก์ภายหลังจะได้ค่าเดิมครบ ในหน้าต่างแชร์ ใส่ชื่อสถานที่และจุดติดตั้ง แล้วเปิดใบสรุปหน้างานเพื่อพิมพ์",
@@ -133,7 +135,8 @@ const TOURS = [
       '<li><div><b data-i18n="' + tour.title + '"></b><span data-i18n="' + tour.summary + '"></span></div>' +
       '<button type="button" class="help-show" data-tour="' + tour.id + '" data-i18n="hpShowMe">Show me</button></li>'
     ).join("") + "</ul>" +
-    '<p class="help-shortcut" data-i18n="hpShortcut"></p>';
+    '<p class="help-shortcut" data-i18n="hpShortcut"></p>' +
+    '<p class="help-credit"><span data-i18n="hpCredit"></span> <a href="people/LICENSE-Rocketbox.md" target="_blank" rel="noopener" data-i18n="hpLicence"></a></p>';
   document.body.appendChild(dialog);
 
   const tour = document.createElement("div");

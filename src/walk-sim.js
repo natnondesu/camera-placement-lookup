@@ -37,7 +37,7 @@ export function placeLabels(candidates, blocked, canvasWidth) {
   return placed;
 }
 
-const MODEL_HEIGHT_M = 1.7;
+export const MODEL_HEIGHT_M = 1.7;
 // Matches the engine's 80% effective coverage: the outer 10% each side, or 20% of a fisheye's radius.
 const EFFECTIVE_SHARE = 0.8;
 const SKIN = ["#f1c7a5", "#d9a47c", "#b97b52", "#8d5a3b", "#5f3b26"];
@@ -160,7 +160,19 @@ export function createWalkSim(THREE, ui) {
 
   const material = (color) => new THREE.MeshStandardMaterial({ color, roughness: 0.85 });
 
-  function makePerson() {
+  // Avatars, once loaded (setPeople); until then, and if they never load, people are built from boxes.
+  let makeAvatar = null;
+  let avatarCount = 0;
+
+  function makePerson(motion) {
+    if (makeAvatar) {
+      avatarCount += 1;
+      return makeAvatar(avatarCount - 1, motion, random());
+    }
+    return makeBoxPerson();
+  }
+
+  function makeBoxPerson() {
     const skin = material(pick(SKIN));
     const top = material(pick(TOPS));
     const bottom = material(pick(BOTTOMS));
@@ -186,10 +198,22 @@ export function createWalkSim(THREE, ui) {
     const cap = new THREE.Mesh(new THREE.SphereGeometry(0.112, 18, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), hair);
     cap.position.y = 1.605;
     group.add(legL, legR, torso, armL, armR, head, cap);
-    return { group, legL, legR, armL, armR, head };
+    let phase = random() * Math.PI * 2;
+    return {
+      group,
+      head,
+      animate(dt, speed) {
+        phase += speed * dt * 5.2;
+        const swing = Math.sin(phase);
+        legL.rotation.x = swing * 0.55;
+        legR.rotation.x = -swing * 0.55;
+        armL.rotation.x = -swing * 0.45;
+        armR.rotation.x = swing * 0.45;
+      },
+    };
   }
 
-  const standing = { body: makePerson(), flash: 0, flashDirection: null, faceFlash: 0 };
+  const standing = { body: makePerson("idle"), flash: 0, flashDirection: null, faceFlash: 0 };
   scene.add(standing.body.group);
   const shownAgents = () => (walking ? agents : [standing]);
 
@@ -299,7 +323,6 @@ export function createWalkSim(THREE, ui) {
       length,
       travelled: (fresh ? random() : 0) * length,
       speed: 1.05 + random() * 0.45,
-      phase: random() * Math.PI * 2,
       lastZ: null,
       flash: 0,
       flashDirection: null,
@@ -311,8 +334,10 @@ export function createWalkSim(THREE, ui) {
   function respawnAll(p) {
     agents.forEach((a) => scene.remove(a.body.group));
     const lay = layout(p);
+    // The standing person is the first avatar; the crowd starts with the next, so a reset replays the same people.
+    avatarCount = 1;
     agents = Array.from({ length: lay.doorZ !== null ? 7 : 6 }, () => {
-      const agent = { body: makePerson() };
+      const agent = { body: makePerson("walk") };
       scene.add(agent.body.group);
       spawn(agent, lay, p, true);
       return agent;
@@ -351,12 +376,7 @@ export function createWalkSim(THREE, ui) {
       const g = agent.body.group;
       g.position.set(x, 0, z);
       g.rotation.y = Math.atan2(agent.to.x - agent.from.x, agent.to.z - agent.from.z);
-      agent.phase += agent.speed * dt * 5.2;
-      const swing = Math.sin(agent.phase);
-      agent.body.legL.rotation.x = swing * 0.55;
-      agent.body.legR.rotation.x = -swing * 0.55;
-      agent.body.armL.rotation.x = -swing * 0.45;
-      agent.body.armR.rotation.x = swing * 0.45;
+      agent.body.animate(dt, agent.speed);
 
       if (agent.kind !== "pass" && agent.kind !== "cross" && agent.lastZ !== null) {
         const crossed = crossingDirection(agent.lastZ, z, input.distanceM);
@@ -918,6 +938,19 @@ export function createWalkSim(THREE, ui) {
 
   return {
     snapshot,
+    // Swaps the box figures for avatars, keeping the crowd's seed so the same walk replays.
+    setPeople(maker) {
+      makeAvatar = maker;
+      scene.remove(standing.body.group);
+      avatarCount = 0;
+      standing.body = makePerson("idle");
+      scene.add(standing.body.group);
+      if (!input) return;
+      poseStanding(input);
+      seed = 7;
+      respawnAll(input);
+      if (active || orbitActive) render();
+    },
     // The orbit view: the same scene from outside, built the first time it is shown.
     setOrbit(canvas, OrbitControls, next) {
       if (next && !orbit) {
