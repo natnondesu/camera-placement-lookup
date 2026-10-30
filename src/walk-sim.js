@@ -416,7 +416,7 @@ export function createWalkSim(THREE, ui) {
 
   function resize() {
     if (!input) return;
-    const stage = ui.canvas.parentElement;
+    const stage = ui.canvas.closest(".sim-stage");
     // Expanded, the stage has a set size and the image fits inside it; otherwise the image sets the height.
     const width = stage.dataset.fill === "true" ? Math.min(stage.clientWidth, stage.clientHeight * input.aspect) : stage.clientWidth;
     if (!width) return;
@@ -651,14 +651,14 @@ export function createWalkSim(THREE, ui) {
 
   function densityReadoutRect(w) {
     const rows = input.faceLineDistanceM !== null ? 2 : 1;
-    return { x: w - 184, y: 8, w: 176, h: 10 + rows * 17 };
+    return { x: w - 214, y: 8, w: 206, h: 10 + rows * 17 };
   }
 
   // Top-right readout: pixel density where each line meets the floor (counting) or the face point (face).
   function drawDensityReadout(ctx, w) {
-    const rows = [[input.text.countingLine, input.colors.count, densityAt(0, 0, input.distanceM)]];
+    const rows = [[input.text.readCount, input.colors.count, densityAt(0, 0, input.distanceM)]];
     if (input.faceLineDistanceM !== null) {
-      rows.push([input.text.faceLine, input.colors.face, densityAt(0, input.facePointM, input.faceLineDistanceM)]);
+      rows.push([input.text.readFace, input.colors.face, densityAt(0, input.facePointM, input.faceLineDistanceM)]);
     }
     const lineHeight = 17;
     const { x, y, w: boxW, h: boxH } = densityReadoutRect(w);
@@ -854,7 +854,11 @@ export function createWalkSim(THREE, ui) {
     agent.body.head.getWorldPosition(faceAnchor);
     const spot = toScreen(faceAnchor.x, faceAnchor.y, faceAnchor.z, 1, 1);
     if (spot.behind || spot.x < 0 || spot.x > 1 || spot.y < 0 || spot.y > 1) { faceShot = { inView: false }; return; }
-    const density = densityAt(faceAnchor.x, faceAnchor.y, faceAnchor.z);
+    // The picture is centred on the model's own face; the figures use the rule's face point, as the box label
+    // above the person and the readouts do, so the same person never shows two px/m values.
+    const g = agent.body.group;
+    const faceY = MODEL_HEIGHT_M * g.scale.x * (input.facePointM / input.humanHeightM);
+    const density = densityAt(g.position.x, faceY, g.position.z);
     const px = Math.max(2, Math.min(160, Math.round(density * FACE_CROP_M)));
     const sampled = px * FACE_SUPERSAMPLE;
     faceCamera.position.set(cameraX(), input.heightM, 0);

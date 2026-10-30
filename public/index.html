@@ -2133,7 +2133,7 @@
       color: var(--bad);
     }
 
-    .sim-stage {
+    .sim-frame {
       position: relative;
     }
 
@@ -2207,10 +2207,8 @@
       overflow: hidden;
     }
 
-    .stage.expanded #simCanvas,
-    .stage.expanded .sim-overlay {
-      grid-area: 1 / 1;
-      position: static;
+    .stage.expanded .sim-frame {
+      width: max-content;
     }
 
     .stage.expanded .sim-note {
@@ -4560,8 +4558,10 @@
                   <canvas id="topCanvas" width="600" height="560" role="img" aria-label="Top-down coverage diagram" hidden></canvas>
                   <div class="sim" id="simWrap">
                     <div class="sim-stage" id="simStage">
+                      <div class="sim-frame">
                       <canvas id="simCanvas" role="img" tabindex="0" aria-label="Simulated camera view with people walking past. Drag the standing person, or use the arrow keys, to move them along the counting line." data-i18n-attr="aria-label:simAria"></canvas>
                       <canvas id="simOverlay" class="sim-overlay" aria-hidden="true"></canvas>
+                      </div>
                     </div>
                     <div class="sim-hud" aria-live="off">
                       <span class="person-step" id="simPerson" role="group" aria-label="Person standing on the line" data-i18n-attr="aria-label:personGroup" hidden>
@@ -5400,7 +5400,7 @@ function decodePlacement(hash) {
         effectiveCircle: "effective 80% circle",
         faceAbove: "Face line is above the frame", framedNote: "Whole person in frame at the counting line",
         cutOffNote: "Person cut off at the counting line", fisheyeNote: "Ceiling fisheye, looking straight down",
-        simCountingLine: "counting line", simFaceLine: "face line", simFace: "face", simIn: "IN", simOut: "OUT",
+        simCountingLine: "counting line", simFaceLine: "face line", simReadCount: "counting line · feet", simReadFace: "face line · face", simFace: "face", simIn: "IN", simOut: "OUT",
         simOutsideFrame: "Counting line is outside the frame", simEffective: "effective 80%",
         tableMeta: "{scene}, {min}-{max} m in {step} m steps, rules {version}",
         copiedReadings: "Readings copied.", copiedCsv: "CSV copied.",
@@ -5504,7 +5504,7 @@ function decodePlacement(hash) {
         effectiveCircle: "วงใช้งานได้ 80%",
         faceAbove: "เส้นจับใบหน้าอยู่เหนือภาพ", framedNote: "เห็นคนทั้งตัวที่เส้นนับ",
         cutOffNote: "คนที่เส้นนับอยู่ไม่ครบในภาพ", fisheyeNote: "ฟิชอายติดเพดาน มองตรงลง",
-        simCountingLine: "เส้นนับ", simFaceLine: "เส้นจับใบหน้า", simFace: "ใบหน้า", simIn: "เข้า", simOut: "ออก",
+        simCountingLine: "เส้นนับ", simFaceLine: "เส้นจับใบหน้า", simReadCount: "เส้นนับ · ที่เท้า", simReadFace: "เส้นจับใบหน้า · ที่ใบหน้า", simFace: "ใบหน้า", simIn: "เข้า", simOut: "ออก",
         simOutsideFrame: "เส้นนับอยู่นอกภาพ", simEffective: "ใช้งานได้ 80%",
         tableMeta: "{scene} ความสูง {min}-{max} m ทีละ {step} m กฎ {version}",
         copiedReadings: "คัดลอกค่าแล้ว", copiedCsv: "คัดลอก CSV แล้ว",
@@ -5686,6 +5686,7 @@ function decodePlacement(hash) {
         colors: { count: SIM_COLORS[r.feet.status], out: SIM_COLORS.out, face: SIM_COLORS.face, bad: SIM_COLORS.bad, camera: SIM_COLORS.out },
         text: {
           countingLine: t("simCountingLine"), faceLine: t("simFaceLine"), face: t("simFace"),
+          readCount: t("simReadCount"), readFace: t("simReadFace"),
           in: t("simIn"), out: t("simOut"), outsideFrame: t("simOutsideFrame"), effective: t("simEffective"),
           faceViewPx: t("faceViewPx"), faceViewBest: t("faceViewBest"), faceViewNone: t("faceViewNone"),
           pause: t("pause"), resume: t("resume"), personOf: t("personOf"), fromCentre: t("fromCentre"),
@@ -8841,7 +8842,7 @@ function createWalkSim(THREE, ui) {
 
   function resize() {
     if (!input) return;
-    const stage = ui.canvas.parentElement;
+    const stage = ui.canvas.closest(".sim-stage");
     // Expanded, the stage has a set size and the image fits inside it; otherwise the image sets the height.
     const width = stage.dataset.fill === "true" ? Math.min(stage.clientWidth, stage.clientHeight * input.aspect) : stage.clientWidth;
     if (!width) return;
@@ -9076,14 +9077,14 @@ function createWalkSim(THREE, ui) {
 
   function densityReadoutRect(w) {
     const rows = input.faceLineDistanceM !== null ? 2 : 1;
-    return { x: w - 184, y: 8, w: 176, h: 10 + rows * 17 };
+    return { x: w - 214, y: 8, w: 206, h: 10 + rows * 17 };
   }
 
   // Top-right readout: pixel density where each line meets the floor (counting) or the face point (face).
   function drawDensityReadout(ctx, w) {
-    const rows = [[input.text.countingLine, input.colors.count, densityAt(0, 0, input.distanceM)]];
+    const rows = [[input.text.readCount, input.colors.count, densityAt(0, 0, input.distanceM)]];
     if (input.faceLineDistanceM !== null) {
-      rows.push([input.text.faceLine, input.colors.face, densityAt(0, input.facePointM, input.faceLineDistanceM)]);
+      rows.push([input.text.readFace, input.colors.face, densityAt(0, input.facePointM, input.faceLineDistanceM)]);
     }
     const lineHeight = 17;
     const { x, y, w: boxW, h: boxH } = densityReadoutRect(w);
@@ -9279,7 +9280,11 @@ function createWalkSim(THREE, ui) {
     agent.body.head.getWorldPosition(faceAnchor);
     const spot = toScreen(faceAnchor.x, faceAnchor.y, faceAnchor.z, 1, 1);
     if (spot.behind || spot.x < 0 || spot.x > 1 || spot.y < 0 || spot.y > 1) { faceShot = { inView: false }; return; }
-    const density = densityAt(faceAnchor.x, faceAnchor.y, faceAnchor.z);
+    // The picture is centred on the model's own face; the figures use the rule's face point, as the box label
+    // above the person and the readouts do, so the same person never shows two px/m values.
+    const g = agent.body.group;
+    const faceY = MODEL_HEIGHT_M * g.scale.x * (input.facePointM / input.humanHeightM);
+    const density = densityAt(g.position.x, faceY, g.position.z);
     const px = Math.max(2, Math.min(160, Math.round(density * FACE_CROP_M)));
     const sampled = px * FACE_SUPERSAMPLE;
     faceCamera.position.set(cameraX(), input.heightM, 0);

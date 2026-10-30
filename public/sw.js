@@ -2,7 +2,7 @@
 // Everything the console needs is cached on install, so it works with no connection, 3D view included.
 // A new build installs beside the old one and waits; the page offers a reload, and only then does it take over.
 
-const VERSION = "4717f9c4eb50";
+const VERSION = "e5b69dec4ebd";
 const CACHE = "cpl-" + VERSION;
 const LOCAL = ["/","/index.html","/manifest.webmanifest","/icons/icon.svg","/icons/icon-192.png","/icons/icon-512.png","/icons/maskable-512.png","/icons/apple-touch-icon.png","/camera-placement-lookup-open_door.csv","/camera-placement-lookup-corridor.csv"];
 const REMOTE = ["https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap","https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js","https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js","https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/FBXLoader.js","https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/SkeletonUtils.js","https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/fflate.module.js","https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/curves/NURBSCurve.js","https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/curves/NURBSUtils.js"];

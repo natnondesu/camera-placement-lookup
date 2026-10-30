@@ -2218,7 +2218,7 @@ function buildHtml() {
       color: var(--bad);
     }
 
-    .sim-stage {
+    .sim-frame {
       position: relative;
     }
 
@@ -2292,10 +2292,8 @@ function buildHtml() {
       overflow: hidden;
     }
 
-    .stage.expanded #simCanvas,
-    .stage.expanded .sim-overlay {
-      grid-area: 1 / 1;
-      position: static;
+    .stage.expanded .sim-frame {
+      width: max-content;
     }
 
     .stage.expanded .sim-note {
@@ -3406,8 +3404,10 @@ ${pwaCss}
                   <canvas id="topCanvas" width="600" height="560" role="img" aria-label="Top-down coverage diagram" hidden></canvas>
                   <div class="sim" id="simWrap">
                     <div class="sim-stage" id="simStage">
+                      <div class="sim-frame">
                       <canvas id="simCanvas" role="img" tabindex="0" aria-label="Simulated camera view with people walking past. Drag the standing person, or use the arrow keys, to move them along the counting line." data-i18n-attr="aria-label:simAria"></canvas>
                       <canvas id="simOverlay" class="sim-overlay" aria-hidden="true"></canvas>
+                      </div>
                     </div>
                     <div class="sim-hud" aria-live="off">
                       <span class="person-step" id="simPerson" role="group" aria-label="Person standing on the line" data-i18n-attr="aria-label:personGroup" hidden>
@@ -3649,7 +3649,7 @@ ${shareSource}
         effectiveCircle: "effective 80% circle",
         faceAbove: "Face line is above the frame", framedNote: "Whole person in frame at the counting line",
         cutOffNote: "Person cut off at the counting line", fisheyeNote: "Ceiling fisheye, looking straight down",
-        simCountingLine: "counting line", simFaceLine: "face line", simFace: "face", simIn: "IN", simOut: "OUT",
+        simCountingLine: "counting line", simFaceLine: "face line", simReadCount: "counting line · feet", simReadFace: "face line · face", simFace: "face", simIn: "IN", simOut: "OUT",
         simOutsideFrame: "Counting line is outside the frame", simEffective: "effective 80%",
         tableMeta: "{scene}, {min}-{max} m in {step} m steps, rules {version}",
         copiedReadings: "Readings copied.", copiedCsv: "CSV copied.",
@@ -3753,7 +3753,7 @@ ${shareSource}
         effectiveCircle: "วงใช้งานได้ 80%",
         faceAbove: "เส้นจับใบหน้าอยู่เหนือภาพ", framedNote: "เห็นคนทั้งตัวที่เส้นนับ",
         cutOffNote: "คนที่เส้นนับอยู่ไม่ครบในภาพ", fisheyeNote: "ฟิชอายติดเพดาน มองตรงลง",
-        simCountingLine: "เส้นนับ", simFaceLine: "เส้นจับใบหน้า", simFace: "ใบหน้า", simIn: "เข้า", simOut: "ออก",
+        simCountingLine: "เส้นนับ", simFaceLine: "เส้นจับใบหน้า", simReadCount: "เส้นนับ · ที่เท้า", simReadFace: "เส้นจับใบหน้า · ที่ใบหน้า", simFace: "ใบหน้า", simIn: "เข้า", simOut: "ออก",
         simOutsideFrame: "เส้นนับอยู่นอกภาพ", simEffective: "ใช้งานได้ 80%",
         tableMeta: "{scene} ความสูง {min}-{max} m ทีละ {step} m กฎ {version}",
         copiedReadings: "คัดลอกค่าแล้ว", copiedCsv: "คัดลอก CSV แล้ว",
@@ -3935,6 +3935,7 @@ ${shareSource}
         colors: { count: SIM_COLORS[r.feet.status], out: SIM_COLORS.out, face: SIM_COLORS.face, bad: SIM_COLORS.bad, camera: SIM_COLORS.out },
         text: {
           countingLine: t("simCountingLine"), faceLine: t("simFaceLine"), face: t("simFace"),
+          readCount: t("simReadCount"), readFace: t("simReadFace"),
           in: t("simIn"), out: t("simOut"), outsideFrame: t("simOutsideFrame"), effective: t("simEffective"),
           faceViewPx: t("faceViewPx"), faceViewBest: t("faceViewBest"), faceViewNone: t("faceViewNone"),
           pause: t("pause"), resume: t("resume"), personOf: t("personOf"), fromCentre: t("fromCentre"),
