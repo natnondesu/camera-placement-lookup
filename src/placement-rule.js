@@ -253,6 +253,40 @@ export function projectPoint(pose, point) {
   };
 }
 
+/**
+ * The floor a rectilinear camera sees, for the plan view: the image's corners carried down to the floor along their
+ * rays, so it turns and tilts exactly as the 3D view does. Image edges are straight lines on the floor, so four corners
+ * describe it. Where the image reaches toward the horizon, the far edge is cut where the middle of the image is rangeM
+ * away along the floor.
+ * @param {{ position: {x:number,y:number,z:number}, forward: {x:number,y:number,z:number}, right: {x:number,y:number,z:number}, up: {x:number,y:number,z:number} }} pose
+ * @param {number} hFovDeg
+ * @param {number} vFovDeg
+ * @param {number} [share] of the width, from the middle: 0.8 for the effective coverage
+ * @param {number} [rangeM]
+ * @returns {{ corners: {x:number,z:number}[], farIsImageTop: boolean } | null} corners: near left, near right, far right,
+ *   far left (near is the bottom of the image); null when no part of the image meets the floor within range
+ */
+export function floorFootprint(pose, hFovDeg, vFovDeg, share = 1, rangeM = 40) {
+  const across = Math.tan(toRad(hFovDeg / 2)) * share;
+  const down = Math.tan(toRad(vFovDeg / 2));
+  const { position: p, forward: f, right: r, up } = pose;
+  // Tilted down by t: forward.y = -sin t and up.y = cos t; the image row whose middle lands rangeM out along the floor.
+  const sinT = -f.y;
+  const cosT = up.y;
+  const rangeRow = (rangeM * sinT - p.y * cosT) / (p.y * sinT + rangeM * cosT);
+  const top = Math.min(down, rangeRow);
+  if (!(top > -down)) return null;
+  const hit = (u, v) => {
+    const ray = { x: f.x + u * r.x + v * up.x, y: f.y + u * r.y + v * up.y, z: f.z + u * r.z + v * up.z };
+    if (ray.y >= -1e-9) return null;
+    const s = p.y / -ray.y;
+    return { x: p.x + s * ray.x, z: p.z + s * ray.z };
+  };
+  const corners = [hit(-across, -down), hit(across, -down), hit(across, top), hit(-across, top)];
+  if (corners.some((c) => c === null)) return null;
+  return { corners, farIsImageTop: top === down };
+}
+
 // Whole-person framing is a vertical question; a too-wide entrance warns through the entrance check instead.
 function framedAt(pose, point, vFovDeg) {
   const p = projectPoint(pose, point);
@@ -379,21 +413,34 @@ function entranceOnLine(entranceWidthM, inView, inEffective) {
   return { widthM: entranceWidthM, status: inside ? "covered" : "tight", uncoveredM: 0 };
 }
 
-// Where the image's side edges (or a share of the way out to them) cross the counting line, solved from the projection.
+// The stretch of the counting line (on the floor) inside the image, or a share of its width, solved from the projection.
+// Each image bound (in front of the lens, within the sides, within the top and bottom) is a linear condition on x along
+// the line, so the stretch is where five half-lines overlap. A steep, close camera can lose the line off the bottom
+// of the picture before its side, so the sides alone are not enough.
 function lineInView(camera, heightM, distanceM, offsetM, tiltDeg, share) {
   if (isFisheye(camera)) {
     const half = fisheyeChord(heightM, distanceM, (camera.fovDeg / 2) * share) / 2;
     return { leftM: offsetM - half, rightM: offsetM + half };
   }
-  const T = Math.tan(toRad(horizontalFov(camera) / 2)) * share;
-  const reach = Math.hypot(offsetM, distanceM);
-  const t = toRad(tiltDeg);
-  const k = reach * (reach * Math.cos(t) + heightM * Math.sin(t));
-  const edge = (sign) => {
-    const denominator = distanceM + sign * T * offsetM * Math.cos(t);
-    return denominator > 0 ? (sign * T * k) / denominator : sign * Infinity;
-  };
-  return { leftM: edge(-1), rightM: edge(1) };
+  const { position: p, forward: f, right: r, up } = cameraPose({ heightM, distanceM, offsetM, tiltDeg });
+  const across = Math.tan(toRad(horizontalFov(camera) / 2)) * share;
+  const down = Math.tan(toRad(verticalFov(camera) / 2));
+  const bound = (w) => ({ a: w.x, c: -w.x * p.x - w.y * p.y - w.z * p.z });
+  const mix = (a, k, b) => ({ x: a.x * k + b.x, y: a.y * k + b.y, z: a.z * k + b.z });
+  const flip = (w) => ({ x: -w.x, y: -w.y, z: -w.z });
+  const bounds = [f, mix(f, across, flip(r)), mix(f, across, r), mix(f, down, flip(up)), mix(f, down, up)].map(bound);
+  let leftM = -Infinity;
+  let rightM = Infinity;
+  for (const { a, c } of bounds) {
+    if (Math.abs(a) < 1e-12) {
+      if (c < 0) return { leftM: 0, rightM: 0 };
+    } else if (a > 0) {
+      leftM = Math.max(leftM, -c / a);
+    } else {
+      rightM = Math.min(rightM, -c / a);
+    }
+  }
+  return rightM > leftM ? { leftM, rightM } : { leftM: 0, rightM: 0 };
 }
 
 /**

@@ -4711,17 +4711,6 @@ ${shareSource}
 
       const cam = S(offset, d);
       const aimAngle = Math.atan2(-d, -offset);
-      const farRay = 4 * (w + h);
-      // A view edge: through where it meets the counting line, or, if it never does, at the view's angle.
-      const edge = (xOnLine, sign, share) => {
-        if (Number.isFinite(xOnLine)) {
-          const target = S(xOnLine, 0);
-          const a = Math.atan2(target[1] - cam[1], target[0] - cam[0]);
-          return [cam[0] + Math.cos(a) * farRay, cam[1] + Math.sin(a) * farRay];
-        }
-        const a = aimAngle + sign * Math.atan(share * Math.tan(toRad(o.horizontalFovDeg / 2)));
-        return [cam[0] + Math.cos(a) * farRay, cam[1] + Math.sin(a) * farRay];
-      };
       if (fisheye) {
         const radius = p.heightM * Math.tan(toRad((o.horizontalFovDeg / 2) * 0.8)) * scale;
         ctx.fillStyle = colorWithAlpha(COL.accent, "0.08");
@@ -4729,17 +4718,29 @@ ${shareSource}
         ctx.strokeStyle = colorWithAlpha(COL.best, "0.75");
         ctx.setLineDash([6, 5]); ctx.lineWidth = 1.25; ctx.stroke(); ctx.setLineDash([]);
       } else {
-        const left = edge(o.inView.leftM, 1, 1), right = edge(o.inView.rightM, -1, 1);
-        ctx.fillStyle = colorWithAlpha(COL.accent, "0.08");
-        ctx.beginPath(); ctx.moveTo(cam[0], cam[1]); ctx.lineTo(left[0], left[1]); ctx.lineTo(right[0], right[1]); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = colorWithAlpha(COL.accent, "0.5");
-        ctx.lineWidth = 1.2;
-        ctx.beginPath(); ctx.moveTo(left[0], left[1]); ctx.lineTo(cam[0], cam[1]); ctx.lineTo(right[0], right[1]); ctx.stroke();
-        const effLeft = edge(o.inEffective.leftM, 1, 0.8), effRight = edge(o.inEffective.rightM, -1, 0.8);
-        ctx.strokeStyle = colorWithAlpha(COL.best, "0.7");
-        ctx.setLineDash([6, 5]);
-        ctx.beginPath(); ctx.moveTo(effLeft[0], effLeft[1]); ctx.lineTo(cam[0], cam[1]); ctx.lineTo(effRight[0], effRight[1]); ctx.stroke();
-        ctx.setLineDash([]);
+        // What the camera sees of the floor: the image's corners carried down along their rays, the same projection as
+        // the 3D view, so it turns and tilts with the camera. Its near edge is the bottom of the picture.
+        const pose = cameraPose({ heightM: p.heightM, distanceM: d, offsetM: offset, tiltDeg: r.tilt.value });
+        const area = floorFootprint(pose, o.horizontalFovDeg, o.verticalFovDeg, 1);
+        const effective = floorFootprint(pose, o.horizontalFovDeg, o.verticalFovDeg, EFFECTIVE_COVERAGE);
+        if (area) {
+          const pts = area.corners.map((c) => S(c.x, c.z));
+          ctx.fillStyle = colorWithAlpha(COL.accent, "0.08");
+          ctx.beginPath(); pts.forEach((pt, i) => (i ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1]))); ctx.closePath(); ctx.fill();
+          ctx.strokeStyle = colorWithAlpha(COL.accent, "0.5");
+          ctx.lineWidth = 1.2;
+          // Near edge and sides; the far edge only when it is the top of the picture rather than a cut in the distance.
+          ctx.beginPath(); ctx.moveTo(pts[3][0], pts[3][1]); ctx.lineTo(pts[0][0], pts[0][1]); ctx.lineTo(pts[1][0], pts[1][1]); ctx.lineTo(pts[2][0], pts[2][1]);
+          if (area.farIsImageTop) ctx.lineTo(pts[3][0], pts[3][1]);
+          ctx.stroke();
+        }
+        if (effective) {
+          const pts = effective.corners.map((c) => S(c.x, c.z));
+          ctx.strokeStyle = colorWithAlpha(COL.best, "0.7");
+          ctx.setLineDash([6, 5]);
+          ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); ctx.lineTo(pts[3][0], pts[3][1]); ctx.moveTo(pts[1][0], pts[1][1]); ctx.lineTo(pts[2][0], pts[2][1]); ctx.stroke();
+          ctx.setLineDash([]);
+        }
       }
 
       // Entrance centre line.
