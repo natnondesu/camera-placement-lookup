@@ -34,6 +34,7 @@ Object.keys(PWA_TEXT).forEach((code) => Object.assign(I18N[code], PWA_TEXT[code]
   function show(key, offerReload) {
     window.clearTimeout(hideTimer);
     text.textContent = t(key);
+    text.dataset.i18n = key;
     reload.hidden = !offerReload;
     toast.hidden = false;
     // The offline note is news, not a decision; it goes by itself.

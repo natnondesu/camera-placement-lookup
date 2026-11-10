@@ -1,8 +1,9 @@
     /* ---------- Offline support: update and saved-for-offline notes ---------- */
     .pwa-toast {
       position: fixed;
-      left: 22px;
+      left: 50%;
       bottom: 22px;
+      transform: translateX(-50%);
       z-index: 900;
       display: flex;
       align-items: center;
@@ -67,6 +68,7 @@
         bottom: auto;
         top: calc(var(--topbar-h, 64px) + 10px);
         max-width: none;
+        transform: none;
       }
 
       .pwa-reload,

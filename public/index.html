@@ -163,7 +163,7 @@
       text-overflow: ellipsis;
     }
 
-    .wordmark span {
+    .wordmark > span {
       color: var(--muted);
       font-size: 12px;
       font-weight: 500;
@@ -1493,7 +1493,7 @@
 
     .clusters {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 16px;
     }
 
@@ -1504,7 +1504,7 @@
     .cluster h3 {
       margin: 0 0 14px;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 13.5px;
       font-weight: 750;
     }
 
@@ -1923,7 +1923,7 @@
     }
 
     @media (max-width: 560px) {
-      .wordmark span {
+      .wordmark > span {
         display: none;
       }
 
@@ -2003,8 +2003,13 @@
     .field-hint {
       margin: 0;
       color: var(--faint);
-      font-size: 11.5px;
+      font-size: 12.5px;
       line-height: 1.4;
+    }
+
+    .pillar-note[data-state="warn"],
+    .answer-sub[data-state="warn"] {
+      color: var(--ok);
     }
 
     .tilt-auto {
@@ -2021,13 +2026,34 @@
       transition: background 160ms var(--ease), color 160ms var(--ease), border-color 160ms var(--ease);
     }
 
+    /* Automatic: a status, not a control. A check and the accent, no border to press. */
     .tilt-auto[aria-pressed="true"] {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding-left: 2px;
+      border-color: transparent;
+      background: none;
       color: var(--accent);
-      border-color: oklch(0.715 0.150 256 / 0.45);
-      background: var(--accent-dim);
+      cursor: default;
     }
 
-    .tilt-auto:hover {
+    .tilt-auto[aria-pressed="true"]::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      background: currentColor;
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+    }
+
+    /* Set by hand: a button that puts it back. */
+    .tilt-auto[aria-pressed="false"] {
+      color: var(--ink-soft);
+      border-color: var(--border-strong);
+    }
+
+    .tilt-auto[aria-pressed="false"]:hover {
       color: var(--ink);
       border-color: var(--border-strong);
     }
@@ -2213,6 +2239,48 @@
 
     .stage.expanded .sim-note {
       display: none;
+    }
+
+    /* Only the expanded view needs it: elsewhere the verdict card is on the page. */
+    .stage-verdict {
+      display: none;
+    }
+
+    .stage.expanded .stage-verdict {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      margin: 0 12px 0 auto;
+      color: var(--ink-soft);
+      font-size: 13px;
+    }
+
+    .stage-verdict .status-chip {
+      flex: none;
+    }
+
+    .stage-verdict .mono {
+      color: var(--ink);
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stage-verdict .warn {
+      overflow: hidden;
+      color: var(--ok);
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .stage.expanded .stage-expand {
+      margin-left: 0;
+    }
+
+    @media (max-width: 760px) {
+      .stage.expanded .stage-verdict .warn {
+        display: none;
+      }
     }
 
     @media (max-width: 760px) {
@@ -2512,6 +2580,9 @@
 
     .answer-chips {
       min-width: 0;
+      padding-right: 24px;
+      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
+      mask-image: linear-gradient(to right, #000 calc(100% - 24px), transparent);
       display: flex;
       flex-wrap: nowrap;
       gap: 6px;
@@ -2712,7 +2783,7 @@
     @media (max-width: 760px) {
       .topbar {
         flex-wrap: nowrap;
-        gap: 10px;
+        gap: 6px;
         padding: 10px 14px;
       }
 
@@ -2732,6 +2803,12 @@
         justify-content: space-between;
       }
 
+      .panel-reset,
+      .notes-more,
+      #copyReadings {
+        min-height: 44px;
+      }
+
       .brand {
         min-width: 0;
       }
@@ -2740,12 +2817,24 @@
         min-width: 0;
       }
 
+      /* Five header buttons leave room for two short words: the name keeps them. */
+      .wordmark-tail {
+        display: none;
+      }
+
+      .top-actions {
+        gap: 6px;
+      }
+
       .wordmark b {
-        display: block;
+        display: -webkit-box;
         overflow: hidden;
-        font-size: 15px;
-        white-space: nowrap;
-        text-overflow: ellipsis;
+        font-size: 14px;
+        letter-spacing: -0.01em;
+        line-height: 1.15;
+        white-space: normal;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
       }
 
       .tabs {
@@ -4209,8 +4298,9 @@
     /* ---------- Offline support: update and saved-for-offline notes ---------- */
     .pwa-toast {
       position: fixed;
-      left: 22px;
+      left: 50%;
       bottom: 22px;
+      transform: translateX(-50%);
       z-index: 900;
       display: flex;
       align-items: center;
@@ -4275,6 +4365,7 @@
         bottom: auto;
         top: calc(var(--topbar-h, 64px) + 10px);
         max-width: none;
+        transform: none;
       }
 
       .pwa-reload,
@@ -4298,7 +4389,7 @@
           </svg>
         </div>
         <div class="wordmark">
-          <b>Camera Placement Lookup</b>
+          <b>Camera Placement<span class="wordmark-tail"> Lookup</span></b>
           <span data-i18n="subtitle">Geometry console</span>
         </div>
       </div>
@@ -4420,7 +4511,7 @@
               <input id="distanceRange" type="range" min="0.3" max="36" step="0.01" value="4.60">
               <div class="ticks"><span id="distanceMinTick">0.30</span><span id="distanceMaxTick">36.00</span></div>
             </div>
-            <div class="rec-row" aria-label="Recommended placement action">
+            <div class="rec-row" id="recRow" aria-label="Recommended placement action">
               <span class="rec-pill"><small data-i18n="recommendedDistance">recommended distance</small><b id="recommendedDistance" class="mono"></b></span>
               <button class="use-button" type="button" id="snapButton">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -4442,7 +4533,7 @@
             <div class="field" id="offsetField">
               <div class="field-top">
                 <label class="field-label" for="offsetRange" data-i18n="offsetFromCentre">From the centre line</label>
-                <button type="button" class="tilt-auto" id="offsetCentre" aria-pressed="true" data-i18n="centreButton">Centre</button>
+                <button type="button" class="tilt-auto" id="offsetCentre" aria-pressed="true">Centred</button>
                 <span class="value-edit">
                   <input id="offsetInput" type="number" inputmode="decimal" min="-10" max="10" step="0.05" value="0.00" aria-describedby="offsetCaption" aria-label="Camera offset from the entrance centre line in meters, positive to the right" data-i18n-attr="aria-label:offsetAria">
                   <span class="unit">m</span>
@@ -4458,7 +4549,7 @@
                 <div class="field" id="tiltField">
                   <div class="field-top">
                     <label class="field-label" for="tiltRange" data-i18n="tiltAngle">Tilt angle</label>
-                    <button type="button" class="tilt-auto" id="tiltAuto" aria-pressed="true" data-i18n="recommended">Recommended</button>
+                    <button type="button" class="tilt-auto" id="tiltAuto" aria-pressed="true">Recommended</button>
                     <span class="value-edit">
                       <input id="tiltInput" type="number" inputmode="decimal" min="0" max="90" step="0.5" value="30" aria-label="Tilt angle in degrees" data-i18n-attr="aria-label:tiltAngle">
                       <span class="unit">deg</span>
@@ -4471,7 +4562,7 @@
                 <div class="field" id="panField">
                   <div class="field-top">
                     <label class="field-label" for="panRange" data-i18n="panAngle">Pan angle</label>
-                    <button type="button" class="tilt-auto" id="panAuto" aria-pressed="true" data-i18n="panAimMiddle">Aim at middle</button>
+                    <button type="button" class="tilt-auto" id="panAuto" aria-pressed="true">Aimed at middle</button>
                     <span class="value-edit">
                       <input id="panInput" type="number" inputmode="decimal" min="-60" max="60" step="0.5" value="0" aria-label="Pan angle in degrees" data-i18n-attr="aria-label:panAngle">
                       <span class="unit">deg</span>
@@ -4625,6 +4716,7 @@
                       <button type="button" data-topview="camera" aria-pressed="true" data-i18n="viewCamera">Camera</button>
                     </div>
                   </div>
+                  <p class="stage-verdict" id="stageVerdict" aria-live="polite"></p>
                   <button type="button" class="icon-button stage-expand" id="stageExpand" aria-pressed="false" aria-label="Expand the view" title="Expand the view">
                     <svg class="i-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5"></path></svg>
                     <svg class="i-collapse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10h-6V4M4 14h6v6M14 10l6.5-6.5M10 14l-6.5 6.5"></path></svg>
@@ -4676,13 +4768,6 @@
               </section>
             </div>
             <section class="clusters" aria-label="Placement metrics">
-              <div class="cluster">
-                <h3 data-i18n="linesOnFloor">Lines on the floor</h3>
-                <div class="metrics">
-                  <div class="metric"><span class="value" id="countingMetric"></span><span class="label" data-i18n="countingLineLower">counting line</span></div>
-                  <div class="metric"><span class="value" id="faceLineMetric"></span><span class="label" data-i18n="faceLineLower">face line</span></div>
-                </div>
-              </div>
               <div class="cluster">
                 <h3 data-i18n="opticsFov">Optics - field of view</h3>
                 <div class="metrics">
@@ -5629,7 +5714,11 @@ function decodePlacement(hash) {
         mountingHeight: "Mounting height", solved: "solved", countingDistance: "Counting line distance",
         recommendedDistance: "recommended distance", useRecommended: "Use recommended distance",
         notesNone: "Nothing to flag for this placement.", notesMore: "+{n} more", notesMoreAria: "Show the next note, {i} of {n}",
-        offsetFromCentre: "From the centre line", centreButton: "Centre",
+        offsetFromCentre: "From the centre line", centreButton: "Centre", centredStatus: "Centred",
+        useRecommendedTilt: "Use recommended", panAimedMiddle: "Aimed at middle",
+        edgeInline: "{side} end at {angle} deg is outside the feet bands; people there may be missed.",
+        edgeInlineCut: "{side} end is cut off; people there may be missed.",
+        stageLine: "line", stageFeet: "feet",
         faceViewPx: "{px} px face", faceViewBest: "best case", faceViewNone: "No face in view",
         faceViewLoading: "Loading face…", faceViewFailed: "No face model",
         sideModeSide: "Side", sideModeOrbit: "Orbit", sideReadingsAria: "Current side-view readings",
@@ -5640,9 +5729,9 @@ function decodePlacement(hash) {
         planCamera: "camera, {height} m up", planDragSideways: "drag the camera sideways (the distance is solved); turn it by the dot", planDragAnywhere: "drag the camera; turn it by the dot",
         planWidths: "view {width} m wide at the line, effective {effective} m", planEffectiveOnly: "effective {effective} m at the line", leftTick: "left", rightTick: "right",
         offsetAria: "Camera offset from the entrance centre line in meters, positive to the right",
-        offsetCentred: "On the entrance centre line. The camera aims at the middle of the entrance.",
-        offsetSide: "{distance} m {side} of the entrance centre line, as the camera faces it. It turns {pan} deg to aim at the middle.",
-        offsetSideManual: "{distance} m {side} of the entrance centre line, as the camera faces it. Aiming at the middle would take a {pan} deg turn; the pan is set by hand (Advanced optics).",
+        offsetCentred: "On the entrance centre line, aimed at the middle.",
+        offsetSide: "{distance} m {side} of the centre line, as the camera faces it; a {pan} deg turn aims it at the middle.",
+        offsetSideManual: "{distance} m {side} of the centre line; pan set by hand (the middle needs {pan} deg).",
         aimOffEffective: "Turned this far, a person in the middle of the entrance reaches the outer 10% of the picture, where detection is weaker. Turn the camera back toward the middle (Pan angle, Aim at middle).",
         entranceTurnedOut: "Entrance {width} m would fit the {covered} m view, but turned this way its {side} end is {miss} m out of it. Turn the camera toward that end, or move it closer to the entrance centre line.",
         edgeBodySteep: "is steeper than the feet bands, so people walking there may be missed. Move the counting line farther out or mount the camera lower.",
@@ -5654,11 +5743,11 @@ function decodePlacement(hash) {
         noDistance: "From this far off-centre no distance gives an Acceptable feet angle in the middle of the entrance. Move the camera toward the centre line or mount it higher.",
         faceOffCentre: "No face-Best spot along the middle of the entrance from this far off-centre. Move the camera toward the centre line.",
         entranceWidth: "Entrance width", none: "none",
-        entranceHint: "Optional. Width of the door or entrance people pass through, checked against what the camera covers at the counting line.",
+        entranceHint: "Optional: the doorway people walk through, checked against the view at the counting line.",
         advancedOptics: "Advanced optics", tiltAngle: "Tilt angle", recommended: "Recommended", level: "level", down: "down",
         panAngle: "Pan angle", panAimMiddle: "Aim at middle", panLeft: "left", panRight: "right",
-        panStraight: "Facing straight across the entrance.", panTurned: "Turned {deg} deg to the {side}.",
-        panAuto: "Aimed at the middle of the entrance.", panOffMiddle: "{deg} deg off the middle of the entrance; the middle stays in the picture.",
+        panStraight: "Facing straight across.", panTurned: "Turned {deg} deg {side}.",
+        panAuto: "At the middle of the entrance.", panOffMiddle: "{deg} deg off the middle.",
         panFisheye: "A ceiling fisheye looks straight down; it is not panned.",
         tiltHint: "Ceiling fisheye: always 90 deg, straight down.", sensorFormat: "Sensor format", presetBadge: "preset",
         focalLength: "Focal length", resolution: "Resolution",
@@ -5746,7 +5835,11 @@ function decodePlacement(hash) {
         mountingHeight: "ความสูงติดตั้ง", solved: "คำนวณให้", countingDistance: "ระยะเส้นนับ",
         recommendedDistance: "ระยะที่แนะนำ", useRecommended: "ใช้ระยะที่แนะนำ",
         notesNone: "ตำแหน่งนี้ไม่มีข้อควรระวัง", notesMore: "อีก {n} ข้อ", notesMoreAria: "ดูข้อถัดไป {i} จาก {n}",
-        offsetFromCentre: "ห่างจากแนวกึ่งกลาง", centreButton: "กึ่งกลาง",
+        offsetFromCentre: "ห่างจากแนวกึ่งกลาง", centreButton: "กึ่งกลาง", centredStatus: "อยู่กึ่งกลาง",
+        useRecommendedTilt: "ใช้ค่าแนะนำ", panAimedMiddle: "เล็งกลางแล้ว",
+        edgeInline: "ปลายด้าน{side} {angle} deg อยู่นอกเกณฑ์มุมเท้า คนที่เดินตรงนั้นอาจนับไม่ได้",
+        edgeInlineCut: "ปลายด้าน{side}หลุดภาพ คนที่เดินตรงนั้นอาจนับไม่ได้",
+        stageLine: "เส้นนับ", stageFeet: "มุมเท้า",
         faceViewPx: "ใบหน้า {px} px", faceViewBest: "กรณีดีที่สุด", faceViewNone: "ไม่เห็นใบหน้า",
         faceViewLoading: "กำลังโหลด…", faceViewFailed: "ไม่มีโมเดลใบหน้า",
         sideModeSide: "ด้านข้าง", sideModeOrbit: "หมุนดู", sideReadingsAria: "ค่าที่อ่านได้จากมุมมองด้านข้าง",
@@ -5757,9 +5850,9 @@ function decodePlacement(hash) {
         planCamera: "กล้อง สูง {height} m", planDragSideways: "ลากกล้องไปด้านข้างได้ (ระยะคำนวณให้) หมุนกล้องด้วยจุดหน้ากล้อง", planDragAnywhere: "ลากกล้องได้ หมุนกล้องด้วยจุดหน้ากล้อง",
         planWidths: "ภาพกว้าง {width} m ที่เส้นนับ ใช้งานได้ {effective} m", planEffectiveOnly: "ใช้งานได้ {effective} m ที่เส้นนับ", leftTick: "ซ้าย", rightTick: "ขวา",
         offsetAria: "ระยะกล้องจากแนวกึ่งกลางทางเข้า เป็นเมตร ค่าบวกคือทางขวา",
-        offsetCentred: "อยู่บนแนวกึ่งกลางทางเข้า กล้องเล็งไปที่กลางทางเข้า",
-        offsetSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า (มองจากกล้อง) กล้องหัน {pan} องศาเพื่อเล็งกลางทางเข้า",
-        offsetSideManual: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า (มองจากกล้อง) ถ้าจะเล็งกลางทางเข้าต้องหัน {pan} องศา ตอนนี้ตั้งมุมหันเอง (ตั้งค่าเลนส์ขั้นสูง)",
+        offsetCentred: "อยู่บนแนวกึ่งกลางทางเข้า เล็งที่กลางทางเข้า",
+        offsetSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลาง (มองจากกล้อง) หัน {pan} deg เพื่อเล็งกลางทางเข้า",
+        offsetSideManual: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลาง ตั้งมุมหันเอง (ถ้าจะเล็งกลางต้องหัน {pan} deg)",
         aimOffEffective: "หันกล้องไปมากขนาดนี้ คนที่ยืนกลางทางเข้าจะอยู่ในช่วง 10% ริมภาพซึ่งตรวจจับได้ไม่ดี หันกล้องกลับเข้าหากลางทางเข้า (มุมหัน เล็งกลางทางเข้า)",
         entranceTurnedOut: "ทางเข้า {width} m แคบกว่าภาพ ({covered} m) แต่หันกล้องแบบนี้ ปลายด้าน{side}หลุดภาพไป {miss} m หันกล้องไปทางปลายนั้น หรือย้ายกล้องเข้าใกล้แนวกึ่งกลางทางเข้า",
         edgeBodySteep: "ชันกว่าเกณฑ์มุมเท้า คนที่เดินตรงนั้นอาจนับไม่ได้ ย้ายเส้นนับออกไปไกลขึ้นหรือติดกล้องให้ต่ำลง",
@@ -5771,11 +5864,11 @@ function decodePlacement(hash) {
         noDistance: "กล้องห่างจากกึ่งกลางมากจนไม่มีระยะไหนให้มุมเท้าที่กลางทางเข้าพอใช้ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น",
         faceOffCentre: "กล้องห่างจากกึ่งกลางมากเกินไป จึงไม่มีจุดที่มุมหน้าดีที่สุดตามแนวกลางทางเข้า ขยับกล้องเข้าหาแนวกึ่งกลาง",
         entranceWidth: "ความกว้างทางเข้า", none: "ไม่มี",
-        entranceHint: "ไม่บังคับ ความกว้างของประตูหรือทางเข้าที่คนเดินผ่าน ใช้ตรวจว่ากล้องมองเห็นครบที่เส้นนับหรือไม่",
+        entranceHint: "ไม่บังคับ: ช่องที่คนเดินผ่าน ใช้ตรวจกับภาพที่เส้นนับ",
         advancedOptics: "ตั้งค่าเลนส์ขั้นสูง", tiltAngle: "มุมก้ม", recommended: "ค่าแนะนำ", level: "ระดับ", down: "ก้มลง",
         panAngle: "มุมหัน", panAimMiddle: "เล็งกลางทางเข้า", panLeft: "ซ้าย", panRight: "ขวา",
         panStraight: "หันตรงตั้งฉากกับทางเข้า", panTurned: "หันไปทาง{side} {deg} deg",
-        panAuto: "เล็งกลางทางเข้า", panOffMiddle: "ห่างจากกลางทางเข้า {deg} deg กลางทางเข้ายังอยู่ในภาพ",
+        panAuto: "เล็งกลางทางเข้า", panOffMiddle: "ห่างจากกลาง {deg} deg",
         panFisheye: "ฟิชอายติดเพดานมองตรงลง ไม่ต้องหัน",
         tiltHint: "ฟิชอายติดเพดาน: ก้ม 90 deg ตรงลงเสมอ", sensorFormat: "ขนาดเซนเซอร์", presetBadge: "ตามรุ่น",
         focalLength: "ความยาวโฟกัส", resolution: "ความละเอียด",
@@ -5953,7 +6046,7 @@ function decodePlacement(hash) {
       acceptableZone: byId("acceptableZone"), bestZone: byId("bestZone"),
       minMarker: byId("minMarker"), minMarkerLabel: byId("minMarkerLabel"), bestMarker: byId("bestMarker"), bestMarkerLabel: byId("bestMarkerLabel"),
       maxMarker: byId("maxMarker"), maxMarkerLabel: byId("maxMarkerLabel"), distanceCursor: byId("distanceCursor"), cursorLabel: byId("cursorLabel"),
-      countingMetric: byId("countingMetric"), faceLineMetric: byId("faceLineMetric"),
+
       horizontalFovMetric: byId("horizontalFovMetric"), verticalFovMetric: byId("verticalFovMetric"),
       fullWidthMetric: byId("fullWidthMetric"), effectiveWidthMetric: byId("effectiveWidthMetric"),
       horizontalPpmMetric: byId("horizontalPpmMetric"), verticalPpmMetric: byId("verticalPpmMetric"),
@@ -6351,6 +6444,15 @@ function decodePlacement(hash) {
       }
     }
 
+    // One line for the verdict card: which end, its angle, what it means. The notes keep the full advice.
+    function edgeInline(p) {
+      const edge = p.result.countingLine.edge;
+      const side = t(edge.side === "right" ? "sideRightCap" : "sideLeftCap");
+      return edge.framed
+        ? t("edgeInline", { side: side, angle: fmt(edge.feetAngleDeg, 1) })
+        : t("edgeInlineCut", { side: side });
+    }
+
     function edgeCopy(p) {
       if (p.result.countingLine.edge === null) return "";
       const parts = edgeParts(p, (angle) => angle);
@@ -6424,8 +6526,7 @@ function decodePlacement(hash) {
     function updateMetrics(p, verticalPpm) {
       const o = p.result.optics;
       const fl = p.result.faceLine;
-      els.countingMetric.innerHTML = fmt(p.distanceM, 2) + "<small>m</small>";
-      els.faceLineMetric.innerHTML = fl.distanceM === null ? t("none") : fmt(fl.distanceM, 2) + "<small>m</small>";
+
       els.horizontalFovMetric.innerHTML = fmt(o.horizontalFovDeg, 2) + "<small>deg</small>";
       els.verticalFovMetric.innerHTML = fmt(o.verticalFovDeg, 2) + "<small>deg</small>";
       els.fullWidthMetric.innerHTML = widthText(o.coverageWidthM) + "<small>m</small>";
@@ -7393,24 +7494,34 @@ function decodePlacement(hash) {
 
       const fisheye = r.optics.lens === "fisheye";
       // A ceiling fisheye always looks straight down, so its tilt cannot be changed.
-      els.tiltInput.disabled = els.tiltRange.disabled = els.tiltAuto.disabled = fisheye;
+      els.tiltInput.disabled = els.tiltRange.disabled = fisheye;
       els.tiltHint.hidden = !fisheye;
       // The fields show what is in use (90 deg and no pan for a fisheye) while a hand-set value waits in state.
       setFieldValue(els.tiltInput, els.tiltRange, r.tilt.value, 1, document.activeElement === els.tiltInput);
       els.tiltAuto.setAttribute("aria-pressed", String(fisheye || !state.tiltUserAdjusted));
+      els.tiltAuto.textContent = t(fisheye || !state.tiltUserAdjusted ? "recommended" : "useRecommendedTilt");
+      els.tiltAuto.disabled = fisheye || !state.tiltUserAdjusted;
       // The pan's reach keeps the middle of the entrance in the picture, so the range moves with the placement.
       els.panInput.min = els.panRange.min = String(Math.floor(r.pan.range.min * 10) / 10);
       els.panInput.max = els.panRange.max = String(Math.ceil(r.pan.range.max * 10) / 10);
-      els.panInput.disabled = els.panRange.disabled = els.panAuto.disabled = fisheye;
+      els.panInput.disabled = els.panRange.disabled = fisheye;
       setFieldValue(els.panInput, els.panRange, r.pan.value, 1, document.activeElement === els.panInput);
       if (state.panUserAdjusted && !fisheye) state.panDeg = r.pan.value;
       els.panAuto.setAttribute("aria-pressed", String(fisheye || !state.panUserAdjusted));
+      els.panAuto.textContent = t(fisheye || !state.panUserAdjusted ? "panAimedMiddle" : "panAimMiddle");
+      els.panAuto.disabled = fisheye || !state.panUserAdjusted;
       els.panHint.textContent = panCopy(r);
       syncDistanceBounds(p);
       [els.heightRange, els.distanceRange, els.tiltRange, els.panRange, els.focalRange, els.offsetRange].forEach(setRangeFill);
       els.offsetCaption.textContent = offsetCopy(p);
+      // The expanded view's verdict line: status, where the line goes, the feet angle, and an end at risk.
+      const stageVerdict = document.getElementById("stageVerdict");
+      stageVerdict.innerHTML = '<span class="status-chip ' + r.verdict + '">' + escapeHtml(STATUS_LABEL[r.verdict]) + "</span>" +
+        "<span>" + escapeHtml(t("stageLine")) + ' <b class="mono">' + fmt(p.distanceM, 2) + " m</b> · " + escapeHtml(t("stageFeet")) + ' <b class="mono">' + fmt(r.feet.angleDeg, 1) + " deg</b></span>" +
+        (r.countingLine.edge !== null ? '<span class="warn">' + escapeHtml(edgeInline(p)) + "</span>" : "");
       els.offsetCentre.setAttribute("aria-pressed", String(state.offsetM === 0));
       els.offsetCentre.disabled = state.offsetM === 0;
+      els.offsetCentre.textContent = t(state.offsetM === 0 ? "centredStatus" : "centreButton");
       document.querySelectorAll("[data-scene]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.scene === profile.id)));
       els.sceneCaption.textContent = sceneDesc(profile);
 
@@ -7442,6 +7553,8 @@ function decodePlacement(hash) {
         [els.entranceLine, r.entrance !== null]
       ]);
       els.recommendedDistance.textContent = fmt(r.countingLine.recommendedDistanceM, 2, " m");
+      // Distance and Height already show the solved value in their own field; only Manual needs the way back to it.
+      document.getElementById("recRow").hidden = state.solveMode !== "manual";
       // Only Manual mode leaves the line where the installer put it, so only there can the button act.
       const onTarget = Math.abs(r.countingLine.recommendedDistanceM - distanceM) < 0.01;
       els.snapButton.hidden = state.solveMode !== "manual";
@@ -7462,7 +7575,9 @@ function decodePlacement(hash) {
       const readingIsHeight = state.solveMode === "height";
       els.verdictReading.textContent = readingIsHeight ? fmt(heightM, 1) : fmt(distanceM, 2);
       els.verdictReadingLabel.textContent = t(readingIsHeight ? "mountHeightLower" : "countingLineLower");
-      els.countNote.textContent = r.countingLine.framed ? t("countFramed", { target: profile.feetAngleDeg.target }) : t("countCut");
+      const endAtRisk = r.countingLine.edge !== null ? edgeInline(p) : "";
+      els.countNote.textContent = endAtRisk || (r.countingLine.framed ? t("countFramed", { target: profile.feetAngleDeg.target }) : t("countCut"));
+      els.countNote.dataset.state = endAtRisk ? "warn" : "";
       updateStatusElement(els.faceStatus, visibleClass, face.label);
       els.faceLineDistance.innerHTML = r.faceLine.distanceM === null ? t("none") : fmt(r.faceLine.distanceM, 2) + "<small>m</small>";
       els.faceAngle.innerHTML = r.faceLine.angleDeg === null ? t("none") : fmt(r.faceLine.angleDeg, 1) + "<small>deg</small>";
@@ -7533,7 +7648,9 @@ function decodePlacement(hash) {
       els.answerPill.textContent = verdictLabel;
       els.answerFeet.textContent = fmt(r.feet.angleDeg, 1, " deg");
       els.answerDistance.textContent = fmt(p.distanceM, 2);
-      els.answerSub.textContent = verdictCopy(p);
+      const endAtRisk = p.result.countingLine.edge !== null ? edgeInline(p) : "";
+      els.answerSub.textContent = endAtRisk || verdictCopy(p);
+      els.answerSub.dataset.state = endAtRisk ? "warn" : "";
       els.answerFace.textContent = r.faceLine.distanceM === null ? t("none") : fmt(r.faceLine.distanceM, 2, " m");
       els.answerEntry.hidden = r.entrance === null;
       if (r.entrance !== null) {
@@ -7764,6 +7881,7 @@ function decodePlacement(hash) {
         document.getElementById("resetDismiss").addEventListener("click", hideResetToast);
       }
       document.getElementById("resetText").textContent = t("resetDone");
+      document.getElementById("resetText").dataset.i18n = "resetDone";
       document.getElementById("resetUndo").textContent = t("undo");
       document.getElementById("resetDismiss").setAttribute("aria-label", t("hpClose"));
       resetToast.hidden = false;
@@ -8867,6 +8985,7 @@ Object.keys(PWA_TEXT).forEach((code) => Object.assign(I18N[code], PWA_TEXT[code]
   function show(key, offerReload) {
     window.clearTimeout(hideTimer);
     text.textContent = t(key);
+    text.dataset.i18n = key;
     reload.hidden = !offerReload;
     toast.hidden = false;
     // The offline note is news, not a decision; it goes by itself.
