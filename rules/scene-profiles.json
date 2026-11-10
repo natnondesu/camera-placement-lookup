@@ -23,7 +23,7 @@
     {
       "id": "corridor",
       "name": "Corridor",
-      "description": "People can only move in one direction through the view, e.g. a mall entrance or an escalator.",
+      "description": "People can only move in one direction through the view, e.g. a mall entrance.",
       "heightRangeM": { "min": 2.0, "max": 10.0, "step": 0.1 },
       "facePointM": 1.5,
       "humanHeightM": 1.7,
@@ -31,6 +31,24 @@
         "target": 38,
         "best": { "min": 35, "max": 43 },
         "acceptable": { "min": 33, "max": 48 }
+      },
+      "faceAngleDeg": {
+        "best": { "min": 10, "max": 25 },
+        "acceptableMax": 30
+      },
+      "minPixelsPerMetre": { "counting": 80, "face": 200 }
+    },
+    {
+      "id": "escalator",
+      "name": "Escalator",
+      "description": "People step off one escalator onto the landing and leave by the other. Counted on the flat landing, with the Open door thresholds.",
+      "heightRangeM": { "min": 2.0, "max": 10.0, "step": 0.1 },
+      "facePointM": 1.5,
+      "humanHeightM": 1.7,
+      "feetAngleDeg": {
+        "target": 41,
+        "best": { "min": 38, "max": 43 },
+        "acceptable": { "min": 38, "max": 48 }
       },
       "faceAngleDeg": {
         "best": { "min": 10, "max": 25 },
