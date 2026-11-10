@@ -5331,6 +5331,8 @@ function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg, entra
     },
     faceLine: judgeFaceLine({ profile, camera, heightM, distanceM, offsetM, pose, lens }),
     tilt: { value: tilt, recommended },
+    // Where the camera is and which way it looks, as judged: views draw from this rather than rebuilding it.
+    pose,
     pan: {
       deg: Math.abs(pan), toward: Math.abs(pan) < 0.05 ? null : pan < 0 ? "left" : "right",
       value: pan, recommended: recommendedPan, manual: !fisheye && Number.isFinite(panDeg), range: panRange,
@@ -6730,7 +6732,7 @@ function decodePlacement(hash) {
       } else {
         // What the camera sees of the floor: the image's corners carried down along their rays, the same projection as
         // the 3D view, so it turns and tilts with the camera. Its near edge is the bottom of the picture.
-        const pose = cameraPose({ heightM: p.heightM, distanceM: d, offsetM: offset, tiltDeg: r.tilt.value });
+        const pose = r.pose;
         const lens = lensFor(p.camera);
         const area = floorFootprint(pose, lens, 1);
         const effective = floorFootprint(pose, lens, EFFECTIVE_COVERAGE);

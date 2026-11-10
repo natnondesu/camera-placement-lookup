@@ -636,6 +636,8 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
     },
     faceLine: judgeFaceLine({ profile, camera, heightM, distanceM, offsetM, pose, lens }),
     tilt: { value: tilt, recommended },
+    // Where the camera is and which way it looks, as judged: views draw from this rather than rebuilding it.
+    pose,
     pan: {
       deg: Math.abs(pan), toward: Math.abs(pan) < 0.05 ? null : pan < 0 ? "left" : "right",
       value: pan, recommended: recommendedPan, manual: !fisheye && Number.isFinite(panDeg), range: panRange,

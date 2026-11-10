@@ -697,3 +697,15 @@ test("a ceiling fisheye ignores a pan", () => {
   assert.equal(result.pan.value, 0);
   assert.equal(result.pan.manual, false);
 });
+
+test("the pose a placement is judged with is returned, facing where the pan says", () => {
+  const result = evaluatePlacement({ profile: openDoor, heightM: 3.5, distanceM: 4.03, entranceWidthM: 5, camera: wideCamera, panDeg: -30 });
+  // Level forward turns 30 deg to the camera's left (negative x) from straight across (negative z).
+  const { forward } = result.pose;
+  close(Math.atan2(forward.x, -forward.z) * (180 / Math.PI), -30, 1e-9);
+  close(result.pan.value, -30, 1e-9);
+  // The plan's floor area comes from this pose, so it turns with the pan.
+  const area = floorFootprint(result.pose, lensFor(wideCamera), 1);
+  const middleOfFar = area.top[Math.floor(area.top.length / 2)];
+  assert.ok(middleOfFar.x < -1);
+});

@@ -4781,7 +4781,7 @@ ${shareSource}
       } else {
         // What the camera sees of the floor: the image's corners carried down along their rays, the same projection as
         // the 3D view, so it turns and tilts with the camera. Its near edge is the bottom of the picture.
-        const pose = cameraPose({ heightM: p.heightM, distanceM: d, offsetM: offset, tiltDeg: r.tilt.value });
+        const pose = r.pose;
         const lens = lensFor(p.camera);
         const area = floorFootprint(pose, lens, 1);
         const effective = floorFootprint(pose, lens, EFFECTIVE_COVERAGE);
