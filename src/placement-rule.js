@@ -253,45 +253,128 @@ export function projectPoint(pose, point) {
   };
 }
 
+// Camera space: x to the right of the image, y up it, z out of the lens.
+const toCamera = (pose, v) => ({ x: dot(v, pose.right), y: dot(v, pose.up), z: dot(v, pose.forward) });
+const toWorld = (pose, c) => ({
+  x: c.x * pose.right.x + c.y * pose.up.x + c.z * pose.forward.x,
+  y: c.x * pose.right.y + c.y * pose.up.y + c.z * pose.forward.y,
+  z: c.x * pose.right.z + c.y * pose.up.z + c.z * pose.forward.z,
+});
+const fromCamera = (pose, point) => toCamera(pose, { x: point.x - pose.position.x, y: point.y - pose.position.y, z: point.z - pose.position.z });
+
+function radialLens(kind, halfH, radius, inverse, maxTheta) {
+  return {
+    kind,
+    halfH,
+    /** @param {{x:number,y:number,z:number}} c camera-space direction @returns {{x:number,y:number} | null} */
+    toImage(c) {
+      if (c.z <= 0) return null;
+      const rho = Math.hypot(c.x, c.y);
+      if (rho < 1e-12) return { x: 0, y: 0 };
+      const theta = Math.atan2(rho, c.z);
+      if (theta > maxTheta) return null;
+      const r = radius(theta);
+      return { x: (r * c.x) / rho, y: (r * c.y) / rho };
+    },
+    /** @returns {{x:number,y:number,z:number} | null} a unit camera-space direction */
+    toRay(x, y) {
+      const r = Math.hypot(x, y);
+      if (r < 1e-12) return { x: 0, y: 0, z: 1 };
+      const theta = inverse(r);
+      if (theta === null || theta > maxTheta) return null;
+      const sin = Math.sin(theta);
+      return { x: (sin * x) / r, y: (sin * y) / r, z: Math.cos(theta) };
+    },
+    inImage(c, share = 1) {
+      const p = this.toImage(c);
+      return p !== null && Math.abs(p.x) <= share + 1e-9 && Math.abs(p.y) <= halfH + 1e-9;
+    },
+  };
+}
+
 /**
- * The floor a rectilinear camera sees, for the plan view: the image's corners carried down to the floor along their
- * rays, so it turns and tilts exactly as the 3D view does. Image edges are straight lines on the floor, so four corners
- * describe it. Where the image reaches toward the horizon, the far edge is cut where the middle of the image is rangeM
- * away along the floor.
+ * How a direction from a rectilinear camera lands in its image. Image coordinates run -1 to 1 across the width and
+ * -halfH to halfH up the height (halfH = height / width). A camera known by its sensor and focal length is a pinhole.
+ * A datasheet's horizontal and vertical views rarely both fit a pinhole on the stream's shape: a wide lens squeezes
+ * more into the edges of its picture (barrel distortion). Its image radius follows f(θ + aθ³), θ from the lens axis,
+ * with f and a set so both quoted views land exactly on the picture's edges. The 3D view renders through the same lens.
+ * @param {CameraOptics} camera a rectilinear camera
+ */
+export function lensFor(camera) {
+  const halfH = camera.resolution.h / camera.resolution.w;
+  const th = toRad(horizontalFov(camera) / 2);
+  const tv = toRad(verticalFov(camera) / 2);
+  const flat = toRad(89);
+  const denominator = tv ** 3 - halfH * th ** 3;
+  if (!camera.datasheetFov || Math.abs(denominator) < 1e-12) {
+    const f = 1 / Math.tan(th);
+    return radialLens("pinhole", halfH, (t) => f * Math.tan(t), (r) => Math.atan(r / f), flat);
+  }
+  // r(θv) = halfH where r(θh) = 1:  θv + aθv³ = halfH (θh + aθh³).
+  const a = (halfH * th - tv) / denominator;
+  const f = 1 / (th + a * th ** 3);
+  // A strong barrel curve turns back on itself; the lens ends just before it does.
+  const maxTheta = a < 0 ? Math.min(flat, 0.98 * Math.sqrt(-1 / (3 * a))) : flat;
+  const inverse = (r) => {
+    const target = r / f;
+    let t = Math.min(target, maxTheta);
+    for (let i = 0; i < 30; i += 1) {
+      const step = (t + a * t ** 3 - target) / (1 + 3 * a * t * t);
+      t -= step;
+      if (Math.abs(step) < 1e-12) break;
+    }
+    return Number.isFinite(t) && t >= 0 && Math.abs(t + a * t ** 3 - target) < 1e-9 ? t : null;
+  };
+  return { ...radialLens("barrel", halfH, (t) => f * (t + a * t ** 3), inverse, maxTheta), a, f };
+}
+
+/**
+ * The floor a rectilinear camera sees, for the plan view: the outline of its picture carried down to the floor along
+ * each ray, through the same lens as the 3D view, so it turns, tilts and bends exactly as that view does. Rays that
+ * reach toward the horizon, or past rangeM along the floor, are cut at rangeM.
  * @param {{ position: {x:number,y:number,z:number}, forward: {x:number,y:number,z:number}, right: {x:number,y:number,z:number}, up: {x:number,y:number,z:number} }} pose
- * @param {number} hFovDeg
- * @param {number} vFovDeg
+ * @param {ReturnType<typeof lensFor>} lens
  * @param {number} [share] of the width, from the middle: 0.8 for the effective coverage
  * @param {number} [rangeM]
- * @returns {{ corners: {x:number,z:number}[], farIsImageTop: boolean } | null} corners: near left, near right, far right,
- *   far left (near is the bottom of the image); null when no part of the image meets the floor within range
+ * @returns {{ bottom: {x:number,z:number}[], right: {x:number,z:number}[], top: {x:number,z:number}[], left: {x:number,z:number}[],
+ *   outline: {x:number,z:number}[], farIsImageTop: boolean } | null} each edge in order around the picture (bottom left
+ *   to right, right side upward, top right to left, left side downward); null when it misses the floor altogether
  */
-export function floorFootprint(pose, hFovDeg, vFovDeg, share = 1, rangeM = 40) {
-  const across = Math.tan(toRad(hFovDeg / 2)) * share;
-  const down = Math.tan(toRad(vFovDeg / 2));
-  const { position: p, forward: f, right: r, up } = pose;
-  // Tilted down by t: forward.y = -sin t and up.y = cos t; the image row whose middle lands rangeM out along the floor.
-  const sinT = -f.y;
-  const cosT = up.y;
-  const rangeRow = (rangeM * sinT - p.y * cosT) / (p.y * sinT + rangeM * cosT);
-  const top = Math.min(down, rangeRow);
-  if (!(top > -down)) return null;
-  const hit = (u, v) => {
-    const ray = { x: f.x + u * r.x + v * up.x, y: f.y + u * r.y + v * up.y, z: f.z + u * r.z + v * up.z };
-    if (ray.y >= -1e-9) return null;
-    const s = p.y / -ray.y;
-    return { x: p.x + s * ray.x, z: p.z + s * ray.z };
+export function floorFootprint(pose, lens, share = 1, rangeM = 40) {
+  const p = pose.position;
+  // Traced in steps: a curved lens bends its edges, and a ray cut at the range would cut a straight edge short too.
+  const steps = 48;
+  const along = (from, to) => Array.from({ length: steps + 1 }, (_, i) => [from[0] + ((to[0] - from[0]) * i) / steps, from[1] + ((to[1] - from[1]) * i) / steps]);
+  const h = lens.halfH;
+  let capped = false;
+  const onFloor = ([x, y], isTop) => {
+    const c = lens.toRay(x, y);
+    if (c === null) return null;
+    const ray = toWorld(pose, c);
+    if (ray.y < -1e-9) {
+      const s = p.y / -ray.y;
+      if (Math.hypot(s * ray.x, s * ray.z) <= rangeM) return { x: p.x + s * ray.x, z: p.z + s * ray.z };
+    }
+    const level = Math.hypot(ray.x, ray.z);
+    if (level < 1e-9) return null;
+    if (isTop) capped = true;
+    return { x: p.x + (ray.x / level) * rangeM, z: p.z + (ray.z / level) * rangeM };
   };
-  const corners = [hit(-across, -down), hit(across, -down), hit(across, top), hit(-across, top)];
-  if (corners.some((c) => c === null)) return null;
-  return { corners, farIsImageTop: top === down };
+  const trace = (from, to, isTop = false) => along(from, to).map((pt) => onFloor(pt, isTop)).filter(Boolean);
+  const bottom = trace([-share, -h], [share, -h]);
+  const right = trace([share, -h], [share, h]);
+  const top = trace([share, h], [-share, h], true);
+  const left = trace([-share, h], [-share, -h]);
+  const outline = [...bottom, ...right, ...top, ...left];
+  if (outline.length < 3) return null;
+  return { bottom, right, top, left, outline, farIsImageTop: !capped };
 }
 
 // Whole-person framing is a vertical question; a too-wide entrance warns through the entrance check instead.
-function framedAt(pose, point, vFovDeg) {
-  const p = projectPoint(pose, point);
-  if (pose.fisheye) return p.offAxisDeg <= FISHEYE_MAX_OFF_AXIS_DEG;
-  return p.depth > 0 && Math.abs(p.v) <= Math.tan(toRad(vFovDeg / 2)) + 1e-12;
+function framedAt(pose, point, lens) {
+  if (pose.fisheye) return projectPoint(pose, point).offAxisDeg <= FISHEYE_MAX_OFF_AXIS_DEG;
+  const image = lens.toImage(fromCamera(pose, point));
+  return image !== null && Math.abs(image.y) <= lens.halfH + 1e-12;
 }
 
 const STATUS_RANK = { best: 0, acceptable: 1, out_of_range: 2 };
@@ -373,7 +456,7 @@ export function solveHeight({ profile, distanceM, offsetM = 0 }) {
 }
 
 // Face line: the first face-Best distance from the counting line, judged along the middle of the entrance.
-function judgeFaceLine({ profile, camera, heightM, distanceM, offsetM, pose, vFovDeg }) {
+function judgeFaceLine({ profile, camera, heightM, distanceM, offsetM, pose, lens }) {
   const none = { distanceM: null, angleDeg: null, coincides: false, pixelsPerMetre: null, visible: false, tooSmall: false };
   if (heightM <= profile.facePointM) return { ...none, reason: "camera_below_face_point" };
   const distance = faceLineDistance(heightM, distanceM, profile, offsetM);
@@ -382,7 +465,7 @@ function judgeFaceLine({ profile, camera, heightM, distanceM, offsetM, pose, vFo
   const angleDeg = faceAngle(heightM, reach, profile.facePointM);
   const pixelsPerMetre = pixelDensity(camera, Math.hypot(heightM - profile.facePointM, reach), 90 - angleDeg);
   const base = { distanceM: distance, angleDeg, coincides: distance === round2(distanceM), pixelsPerMetre };
-  if (!framedAt(pose, { x: 0, y: profile.facePointM, z: distanceM - distance }, vFovDeg)) {
+  if (!framedAt(pose, { x: 0, y: profile.facePointM, z: distanceM - distance }, lens)) {
     return { ...base, visible: false, tooSmall: false, reason: "outside_frame" };
   }
   // In frame but too few pixels across a face for demographics; still never fails the placement.
@@ -413,6 +496,35 @@ function entranceOnLine(entranceWidthM, inView, inEffective) {
   return { widthM: entranceWidthM, status: inside ? "covered" : "tight", uncoveredM: 0 };
 }
 
+// Through a curved lens the picture's edges are curves, so the stretch is found by search: out from the middle of the
+// entrance (or the first point in view) until a point leaves the picture, then narrowed down to a millimetre.
+function lineThroughLens(pose, lens, share) {
+  const inside = (x) => lens.inImage(fromCamera(pose, { x, y: 0, z: 0 }), share);
+  const far = 1e4;
+  let start = 0;
+  if (!inside(start)) {
+    const found = Array.from({ length: 401 }, (_, i) => -100 + i * 0.5).find(inside);
+    if (found === undefined) return { leftM: 0, rightM: 0 };
+    start = found;
+  }
+  const reach = (sign) => {
+    let inX = start;
+    let step = 0.5;
+    while (Math.abs(inX) < far && inside(inX + sign * step)) {
+      inX += sign * step;
+      step *= 2;
+    }
+    if (Math.abs(inX) >= far) return sign * Infinity;
+    let outX = inX + sign * step;
+    while (Math.abs(outX - inX) > 1e-3) {
+      const mid = (inX + outX) / 2;
+      if (inside(mid)) inX = mid; else outX = mid;
+    }
+    return inX;
+  };
+  return { leftM: reach(-1), rightM: reach(1) };
+}
+
 // The stretch of the counting line (on the floor) inside the image, or a share of its width, solved from the projection.
 // Each image bound (in front of the lens, within the sides, within the top and bottom) is a linear condition on x along
 // the line, so the stretch is where five half-lines overlap. A steep, close camera can lose the line off the bottom
@@ -422,7 +534,10 @@ function lineInView(camera, heightM, distanceM, offsetM, tiltDeg, share) {
     const half = fisheyeChord(heightM, distanceM, (camera.fovDeg / 2) * share) / 2;
     return { leftM: offsetM - half, rightM: offsetM + half };
   }
-  const { position: p, forward: f, right: r, up } = cameraPose({ heightM, distanceM, offsetM, tiltDeg });
+  const pose = cameraPose({ heightM, distanceM, offsetM, tiltDeg });
+  const lens = lensFor(camera);
+  if (lens.kind !== "pinhole") return lineThroughLens(pose, lens, share);
+  const { position: p, forward: f, right: r, up } = pose;
   const across = Math.tan(toRad(horizontalFov(camera) / 2)) * share;
   const down = Math.tan(toRad(verticalFov(camera) / 2));
   const bound = (w) => ({ a: w.x, c: -w.x * p.x - w.y * p.y - w.z * p.z });
@@ -459,6 +574,7 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
   const vFovDeg = verticalFov(camera);
   const hFovDeg = horizontalFov(camera);
   const pose = cameraPose({ heightM, distanceM, offsetM, tiltDeg: tilt, fisheye });
+  const lens = fisheye ? null : lensFor(camera);
 
   const span = walkableSpan(entranceWidthM);
   const solved = solveDistance({ profile, heightM, offsetM });
@@ -466,7 +582,7 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
   const points = Object.fromEntries(Object.entries(xs).map(([key, x]) => {
     const floorDistanceM = Math.hypot(x - offsetM, distanceM);
     const angle = feetAngle(heightM, floorDistanceM);
-    const framed = framedAt(pose, { x, y: 0, z: 0 }, vFovDeg) && framedAt(pose, { x, y: profile.humanHeightM, z: 0 }, vFovDeg);
+    const framed = framedAt(pose, { x, y: 0, z: 0 }, lens) && framedAt(pose, { x, y: profile.humanHeightM, z: 0 }, lens);
     return [key, { xM: x, floorDistanceM, feetAngleDeg: angle, status: judgeFeet(angle, profile), framed }];
   }));
   const feet = points.aim;
@@ -488,7 +604,7 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
       distanceM, offsetM, recommendedDistanceM: solved.distanceM, window: { best: solved.best, acceptable: solved.acceptable, judgedBy: solved.judgedBy },
       framed, headAngleDeg, walkable: span, points, edge,
     },
-    faceLine: judgeFaceLine({ profile, camera, heightM, distanceM, offsetM, pose, vFovDeg }),
+    faceLine: judgeFaceLine({ profile, camera, heightM, distanceM, offsetM, pose, lens }),
     tilt: { value: tilt, recommended },
     pan: { deg: panDeg, toward: panDeg < 0.05 ? null : offsetM > 0 ? "left" : "right" },
     optics: {

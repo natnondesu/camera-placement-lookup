@@ -71,6 +71,34 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
+// A curved (barrel) lens: each output pixel finds its angle from the lens axis through r = f(θ + aθ³), then reads the
+// wide pinhole render that covers the whole picture. Same lens as the plan and the coverage figures.
+const BARREL_FRAGMENT = `
+uniform sampler2D tScene;
+uniform float a;
+uniform float f;
+uniform float halfH;
+uniform vec2 extent;
+uniform float maxTheta;
+varying vec2 vUv;
+void main() {
+  vec2 img = vec2(vUv.x * 2.0 - 1.0, (vUv.y * 2.0 - 1.0) * halfH);
+  float r = length(img);
+  float target = r / f;
+  float theta = target;
+  for (int i = 0; i < 12; i++) {
+    theta -= (theta + a * theta * theta * theta - target) / (1.0 + 3.0 * a * theta * theta);
+  }
+  vec2 pin = r < 1e-6 ? img / f : img * (tan(theta) / r);
+  vec2 uv = pin / extent * 0.5 + 0.5;
+  if (theta > maxTheta || uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+    gl_FragColor = vec4(0.02, 0.025, 0.03, 1.0);
+    return;
+  }
+  gl_FragColor = texture2D(tScene, uv);
+  #include <colorspace_fragment>
+}`;
+
 /**
  * @param {typeof import("three")} THREE
  * @param {{ canvas: HTMLCanvasElement, overlay: HTMLCanvasElement, playButton: HTMLButtonElement,
@@ -112,6 +140,23 @@ export function createWalkSim(THREE, ui) {
   const fisheyeScene = new THREE.Scene();
   fisheyeScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fisheyeMaterial));
   const screenCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+  // Barrel lens: the scene is rendered by a wider pinhole camera (same pose) that covers the whole picture, then bent.
+  const barrelTarget = new THREE.WebGLRenderTarget(16, 16);
+  const barrelMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      tScene: { value: barrelTarget.texture }, a: { value: 0 }, f: { value: 1 }, halfH: { value: 0.75 },
+      extent: { value: new THREE.Vector2(1, 1) }, maxTheta: { value: 1.5 },
+    },
+    vertexShader: FISHEYE_VERTEX,
+    fragmentShader: BARREL_FRAGMENT,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const barrelScene = new THREE.Scene();
+  barrelScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), barrelMaterial));
+  const isBarrel = () => input !== null && input.lensModel !== null && input.lensModel.kind === "barrel";
+  const bufferSize = new THREE.Vector2();
 
   // The face window: one person's face rendered from the camera at the camera's own pixel count, then shown enlarged
   // pixel for pixel, so the installer sees what the demographics model would get. A best case: no blur, noise or glare.
@@ -477,8 +522,51 @@ export function createWalkSim(THREE, ui) {
       const f = input.fisheyeProjection({ x: x - cameraX(), y: y - input.heightM, z });
       return { x: ((f.u + 1) / 2) * w, y: ((1 - f.v) / 2) * h, behind: !f.inside };
     }
-    projected.set(x, y, z).project(camera);
-    return { x: ((projected.x + 1) / 2) * w, y: ((1 - projected.y) / 2) * h, behind: projected.z > 1 };
+    // Through the lens the plan and the coverage use; the 3D camera looks down its own -z.
+    const lens = input.lensModel;
+    projected.set(x, y, z).applyMatrix4(camera.matrixWorldInverse);
+    const image = lens.toImage({ x: projected.x, y: projected.y, z: -projected.z });
+    if (image === null) return { x: 0, y: 0, behind: true };
+    return { x: ((image.x + 1) / 2) * w, y: ((1 - image.y / lens.halfH) / 2) * h, behind: false };
+  }
+
+  // A direction in the world for a point of the picture (x across -1 to 1, y up -halfH to halfH), through the lens.
+  function pictureRay(x, y) {
+    const c = input.lensModel.toRay(x, y);
+    return c === null ? null : new THREE.Vector3(c.x, c.y, -c.z).applyQuaternion(camera.quaternion);
+  }
+
+  // The 3D camera's own projection: the picture itself for a pinhole; for a barrel lens, a wider pinhole covering it.
+  function configureLens(p) {
+    const lens = p.lensModel;
+    if (!lens || lens.kind !== "barrel") {
+      camera.fov = Math.min(p.vFovDeg, 170);
+      camera.aspect = p.aspect;
+      return;
+    }
+    let reachX = 0;
+    let reachY = 0;
+    const steps = 16;
+    const edge = (x0, y0, x1, y1) => {
+      for (let i = 0; i <= steps; i += 1) {
+        const c = lens.toRay(x0 + ((x1 - x0) * i) / steps, y0 + ((y1 - y0) * i) / steps);
+        if (c === null || c.z < 0.08) continue;
+        reachX = Math.max(reachX, Math.abs(c.x / c.z));
+        reachY = Math.max(reachY, Math.abs(c.y / c.z));
+      }
+    };
+    const h = lens.halfH;
+    edge(-1, -h, 1, -h); edge(1, -h, 1, h); edge(1, h, -1, h); edge(-1, h, -1, -h);
+    reachX *= 1.01;
+    reachY *= 1.01;
+    camera.fov = (2 * Math.atan(reachY) * 180) / Math.PI;
+    camera.aspect = reachX / reachY;
+    const u = barrelMaterial.uniforms;
+    u.a.value = lens.a;
+    u.f.value = lens.f;
+    u.halfH.value = h;
+    u.extent.value.set(reachX, reachY);
+    u.maxTheta.value = Math.min(1.55, lens.toRay(1, h) === null ? 1.55 : Math.acos(lens.toRay(1, h).z) + 0.2);
   }
 
   // Pixel density at a point, from the console's lens model.
@@ -752,15 +840,24 @@ export function createWalkSim(THREE, ui) {
       const spokes = [0, 1, 2, 3].flatMap((i) => [origin, ring[i * 16]]);
       helpers.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(spokes), lines));
     } else {
-      // Frustum corners, each carried down to the floor or out 12 m.
+      // The picture's outline through the lens, each ray carried down to the floor or out 12 m, and its four corners
+      // joined to the camera. A curved lens bends the outline as it bends the camera view.
       camera.updateMatrixWorld();
-      const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([x, y]) => {
-        const dir = new THREE.Vector3(x, y, 0.5).unproject(camera).sub(origin).normalize();
-        const reach = dir.y < -0.02 ? Math.min(p.heightM / -dir.y, 12) : 8;
+      const h = p.lensModel.halfH;
+      const carried = (x, y) => {
+        const dir = pictureRay(x, y);
+        if (!dir) return null;
+        const reach = dir.y < -0.02 ? Math.min(p.heightM / -dir.y, 12) : 12;
         return origin.clone().addScaledVector(dir, reach);
-      });
-      const edges = corners.flatMap((c, i) => [origin, c, c, corners[(i + 1) % 4]]);
-      helpers.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(edges), lines));
+      };
+      const corners = [[-1, -h], [1, -h], [1, h], [-1, h]];
+      const outline = corners.flatMap(([x0, y0], i) => {
+        const [x1, y1] = corners[(i + 1) % 4];
+        return Array.from({ length: 24 }, (_, k) => carried(x0 + ((x1 - x0) * k) / 24, y0 + ((y1 - y0) * k) / 24));
+      }).filter(Boolean);
+      helpers.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(outline), lines));
+      const spokes = corners.map(([x, y]) => carried(x, y)).filter(Boolean).flatMap((c) => [origin, c]);
+      helpers.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(spokes), lines));
       const aim = new THREE.Line(
         new THREE.BufferGeometry().setFromPoints([origin, new THREE.Vector3(0, p.humanHeightM / 2, p.distanceM)]),
         new THREE.LineDashedMaterial({ color: p.colors.camera, dashSize: 0.15, gapSize: 0.1 }),
@@ -935,6 +1032,17 @@ export function createWalkSim(THREE, ui) {
       cubeCamera.position.set(cameraX(), input.heightM, 0);
       cubeCamera.update(renderer, scene);
       renderer.render(fisheyeScene, screenCamera);
+    } else if (isBarrel()) {
+      // The wide render keeps the picture's own pixel scale in the middle, where the lens is closest to a pinhole.
+      renderer.getDrawingBufferSize(bufferSize);
+      const u = barrelMaterial.uniforms;
+      const width = Math.min(4096, Math.ceil(u.extent.value.x * u.f.value * bufferSize.x));
+      const height = Math.min(4096, Math.ceil(u.extent.value.y * u.f.value * bufferSize.x));
+      if (barrelTarget.width !== width || barrelTarget.height !== height) barrelTarget.setSize(width, height);
+      renderer.setRenderTarget(barrelTarget);
+      renderer.render(scene, camera);
+      renderer.setRenderTarget(null);
+      renderer.render(barrelScene, screenCamera);
     } else {
       renderer.render(scene, camera);
     }
@@ -1162,8 +1270,7 @@ export function createWalkSim(THREE, ui) {
     setPlacement(placement) {
       const first = input === null;
       input = placement;
-      camera.fov = Math.min(placement.vFovDeg, 170);
-      camera.aspect = placement.aspect;
+      configureLens(placement);
       camera.position.set(-placement.offsetM, placement.heightM, 0);
       // Turned to the middle of the entrance, then tilted down.
       camera.rotation.set((-placement.tiltDeg * Math.PI) / 180, Math.atan2(-placement.offsetM, -placement.distanceM), 0);

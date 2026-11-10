@@ -3921,6 +3921,8 @@ ${shareSource}
         tiltDeg: r.tilt.value,
         vFovDeg: r.optics.verticalFovDeg,
         aspect: p.resolution.w / p.resolution.h,
+        // The same lens the plan and the coverage use; the 3D view renders through it.
+        lensModel: r.optics.lens === "fisheye" ? null : lensFor(p.camera),
         faceLineDistanceM: r.faceLine.distanceM,
         faceLineVisible: r.faceLine.visible,
         entranceWidthM: state.entranceM,
@@ -4721,24 +4723,27 @@ ${shareSource}
         // What the camera sees of the floor: the image's corners carried down along their rays, the same projection as
         // the 3D view, so it turns and tilts with the camera. Its near edge is the bottom of the picture.
         const pose = cameraPose({ heightM: p.heightM, distanceM: d, offsetM: offset, tiltDeg: r.tilt.value });
-        const area = floorFootprint(pose, o.horizontalFovDeg, o.verticalFovDeg, 1);
-        const effective = floorFootprint(pose, o.horizontalFovDeg, o.verticalFovDeg, EFFECTIVE_COVERAGE);
+        const lens = lensFor(p.camera);
+        const area = floorFootprint(pose, lens, 1);
+        const effective = floorFootprint(pose, lens, EFFECTIVE_COVERAGE);
+        const path = (points, start) => points.forEach((c, i) => {
+          const pt = S(c.x, c.z);
+          if (i === 0 && start) ctx.moveTo(pt[0], pt[1]); else ctx.lineTo(pt[0], pt[1]);
+        });
         if (area) {
-          const pts = area.corners.map((c) => S(c.x, c.z));
           ctx.fillStyle = colorWithAlpha(COL.accent, "0.08");
-          ctx.beginPath(); pts.forEach((pt, i) => (i ? ctx.lineTo(pt[0], pt[1]) : ctx.moveTo(pt[0], pt[1]))); ctx.closePath(); ctx.fill();
+          ctx.beginPath(); path(area.outline, true); ctx.closePath(); ctx.fill();
           ctx.strokeStyle = colorWithAlpha(COL.accent, "0.5");
           ctx.lineWidth = 1.2;
           // Near edge and sides; the far edge only when it is the top of the picture rather than a cut in the distance.
-          ctx.beginPath(); ctx.moveTo(pts[3][0], pts[3][1]); ctx.lineTo(pts[0][0], pts[0][1]); ctx.lineTo(pts[1][0], pts[1][1]); ctx.lineTo(pts[2][0], pts[2][1]);
-          if (area.farIsImageTop) ctx.lineTo(pts[3][0], pts[3][1]);
+          ctx.beginPath(); path(area.left, true); path(area.bottom, false); path(area.right, false);
+          if (area.farIsImageTop) path(area.top, false);
           ctx.stroke();
         }
         if (effective) {
-          const pts = effective.corners.map((c) => S(c.x, c.z));
           ctx.strokeStyle = colorWithAlpha(COL.best, "0.7");
           ctx.setLineDash([6, 5]);
-          ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); ctx.lineTo(pts[3][0], pts[3][1]); ctx.moveTo(pts[1][0], pts[1][1]); ctx.lineTo(pts[2][0], pts[2][1]); ctx.stroke();
+          ctx.beginPath(); path(effective.left, true); path(effective.right, true); ctx.stroke();
           ctx.setLineDash([]);
         }
       }

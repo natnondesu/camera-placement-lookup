@@ -23,6 +23,7 @@ import {
   solveHeight,
   cameraPose,
   floorFootprint,
+  lensFor,
 } from "./placement-rule.js";
 
 const rules = JSON.parse(readFileSync(new URL("../rules/scene-profiles.json", import.meta.url), "utf8"));
@@ -527,27 +528,28 @@ test("an off-centre face line is found along the middle of the entrance", () => 
   assert.notEqual(judgeFace(faceAngle(6, Math.hypot(2, d - 0.01), 1.5), openDoor), "best");
 });
 
-// The plan's view area: the image's corners carried down to the floor, the same projection as the 3D view.
-const footprintOf = (placement, share) => {
-  const r = evaluatePlacement({ profile: openDoor, camera: wideCamera, ...placement });
+// The plan's view area: the picture's outline carried down to the floor, the same projection as the 3D view.
+const dahua = JSON.parse(readFileSync(new URL("../rules/cameras.json", import.meta.url), "utf8")).cameras.find((c) => c.id === "dahua_hdbw2531r_zs_s2");
+const dahuaCamera = { sensorWidthMm: 4.8, focalLengthMm: 2.7, resolution: { w: 2592, h: 1944 }, datasheetFov: dahua.datasheetFov };
+const footprintOf = (placement, share, camera = wideCamera) => {
+  const r = evaluatePlacement({ profile: openDoor, camera, ...placement });
   const pose = cameraPose({ ...placement, tiltDeg: r.tilt.value });
-  return { r, fp: floorFootprint(pose, r.optics.horizontalFovDeg, r.optics.verticalFovDeg, share) };
+  return { r, fp: floorFootprint(pose, lensFor(camera), share) };
 };
-// Where the counting line (z = 0) crosses the footprint's outline: the lowest and highest x of the crossings.
-const lineThrough = (corners) => {
-  const xs = corners.flatMap((a, i) => {
-    const b = corners[(i + 1) % corners.length];
+// Where the counting line (z = 0) crosses an outline: the lowest and highest x of the crossings.
+const lineThrough = (points) => {
+  const xs = points.flatMap((a, i) => {
+    const b = points[(i + 1) % points.length];
     return (a.z > 0) === (b.z > 0) ? [] : [a.x + ((b.x - a.x) * a.z) / (a.z - b.z)];
   });
   return xs.length ? { leftM: Math.min(...xs), rightM: Math.max(...xs) } : null;
 };
-const near = (a, b) => Math.abs(a - b) < 1e-6;
+const near = (a, b, within = 1e-6) => Math.abs(a - b) < within;
 
 test("a centred camera's floor area is symmetric and crosses the line where the coverage says", () => {
   const { r, fp } = footprintOf({ heightM: 4, distanceM: 4.6, offsetM: 0 }, 1);
-  const [nearLeft, nearRight, farRight, farLeft] = fp.corners;
-  assert.ok(near(nearLeft.x, -nearRight.x) && near(farLeft.x, -farRight.x));
-  const span = lineThrough(fp.corners);
+  assert.ok(near(fp.bottom[0].x, -fp.bottom[fp.bottom.length - 1].x));
+  const span = lineThrough(fp.outline);
   assert.ok(near(span.leftM, r.optics.inView.leftM) && near(span.rightM, r.optics.inView.rightM));
 });
 
@@ -555,24 +557,65 @@ test("a camera turned hard toward the entrance sees the line from far to the lef
   const { r, fp } = footprintOf({ heightM: 4, distanceM: 2.44, offsetM: 3.9 }, 1);
   // To the left the line runs on toward the horizon until it leaves the top of the picture, hundreds of metres out.
   assert.ok(r.optics.inView.leftM < -100);
-  const [nearLeft, nearRight] = fp.corners;
   // The line leaves through the near edge (the bottom of the image), not the right side.
-  const bottomCrossing = nearLeft.x + ((nearRight.x - nearLeft.x) * nearLeft.z) / (nearLeft.z - nearRight.z);
-  assert.ok(near(r.optics.inView.rightM, bottomCrossing));
-  assert.ok(near(lineThrough(fp.corners).rightM, r.optics.inView.rightM));
+  const [a, b] = [fp.bottom[0], fp.bottom[fp.bottom.length - 1]];
+  assert.ok(near(r.optics.inView.rightM, a.x + ((b.x - a.x) * a.z) / (a.z - b.z)));
+  assert.ok(near(lineThrough(fp.outline).rightM, r.optics.inView.rightM));
   // It looks toward the entrance (to the left of a camera on the right), not straight ahead.
-  assert.ok((fp.corners[2].x + fp.corners[3].x) / 2 < 3.9);
+  assert.ok((fp.top[0].x + fp.top[fp.top.length - 1].x) / 2 < 3.9);
 });
 
 test("the effective share narrows the floor area to the same crossings as the effective coverage", () => {
   const { r, fp } = footprintOf({ heightM: 4, distanceM: 4.6, offsetM: 1 }, 0.8);
-  const span = lineThrough(fp.corners);
+  const span = lineThrough(fp.outline);
   assert.ok(near(span.leftM, r.optics.inEffective.leftM) && near(span.rightM, r.optics.inEffective.rightM));
 });
 
 test("an image reaching the horizon is cut at the range, and says so", () => {
   const { fp } = footprintOf({ heightM: 2.5, distanceM: 2.9, offsetM: 0, tiltDeg: 5 }, 1);
   assert.equal(fp.farIsImageTop, false);
-  const far = fp.corners[2];
+  const far = fp.top[0];
   assert.ok(Math.hypot(far.x, far.z - 2.9) > 30);
+});
+
+test("a camera known by its sensor is a pinhole lens", () => {
+  const lens = lensFor(wideCamera);
+  const half = (horizontalFov(wideCamera) / 2) * (Math.PI / 180);
+  assert.equal(lens.kind, "pinhole");
+  assert.ok(near(lens.toImage({ x: Math.sin(half), y: 0, z: Math.cos(half) }).x, 1));
+});
+
+test("a datasheet lens puts both quoted views exactly on the picture's edges", () => {
+  const lens = lensFor(dahuaCamera);
+  const ray = (deg, axis) => ({ x: axis === "x" ? Math.sin(deg * Math.PI / 180) : 0, y: axis === "y" ? Math.sin(deg * Math.PI / 180) : 0, z: Math.cos(deg * Math.PI / 180) });
+  assert.equal(lens.kind, "barrel");
+  assert.ok(lens.a < 0);
+  assert.ok(near(lens.toImage(ray(50, "x")).x, 1));
+  assert.ok(near(lens.toImage(ray(36, "y")).y, 0.75));
+  // A pinhole with the same 72 deg vertical view would reach only 44 deg sideways.
+  assert.ok(near(Math.atan(Math.tan(36 * Math.PI / 180) * 4 / 3) * 180 / Math.PI, 44.1, 0.1));
+});
+
+test("a direction through the lens and back comes out the same", () => {
+  const lens = lensFor(dahuaCamera);
+  for (const [x, y] of [[0.3, 0.2], [-1, 0.75], [0.9, -0.6], [0, -0.75]]) {
+    const ray = lens.toRay(x, y);
+    const back = lens.toImage(ray);
+    assert.ok(near(back.x, x, 1e-7) && near(back.y, y, 1e-7));
+  }
+});
+
+test("through a datasheet lens the plan's floor area crosses the line where the coverage says", () => {
+  for (const placement of [{ heightM: 3, distanceM: 3.45, offsetM: 0 }, { heightM: 4, distanceM: 2.44, offsetM: 3.9 }, { heightM: 3.4, distanceM: 3.3, offsetM: -1.45 }]) {
+    const { r, fp } = footprintOf(placement, 1, dahuaCamera);
+    const span = lineThrough(fp.outline);
+    if (Number.isFinite(r.optics.inView.rightM) && r.optics.inView.rightM < 40) assert.ok(near(span.rightM, r.optics.inView.rightM, 0.02));
+    if (Number.isFinite(r.optics.inView.leftM) && r.optics.inView.leftM > -40) assert.ok(near(span.leftM, r.optics.inView.leftM, 0.02));
+  }
+});
+
+test("the datasheet lens covers the width the datasheet promises, wider than a pinhole on its vertical view", () => {
+  const { r } = footprintOf({ heightM: 3, distanceM: 3.45, offsetM: 0, entranceWidthM: 5 }, 1, dahuaCamera);
+  // 8.7 m is what a pinhole with the 72 deg vertical view (88 deg across) would cover.
+  assert.ok(r.optics.coverageWidthM > 9.5);
 });
