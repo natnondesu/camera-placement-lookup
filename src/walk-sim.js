@@ -1254,14 +1254,30 @@ export function createWalkSim(THREE, ui) {
     syncWalking();
     start();
   });
-  ui.crowd.buttons.forEach((button) => button.addEventListener("click", () => {
-    crowd = button.dataset.crowd;
-    ui.crowd.buttons.forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+  function setCrowd(level) {
+    crowd = level;
+    ui.crowd.buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.crowd === level)));
     Object.keys(counts).forEach((k) => { counts[k] = 0; });
     seed = 7;
     if (input) respawnAll(input);
+  }
+  ui.crowd.buttons.forEach((button) => button.addEventListener("click", () => {
+    setCrowd(button.dataset.crowd);
     start();
   }));
+
+  // The view's own settings, for the console's Reset and its Undo.
+  function applyView(view) {
+    walking = view.walking;
+    paused = view.paused;
+    standLine = view.standLine;
+    standX = view.standX;
+    if (view.crowd !== crowd) setCrowd(view.crowd);
+    if (avatars && view.standingIndex !== standingIndex) standAvatar(view.standingIndex);
+    if (input) poseStanding(input);
+    syncWalking();
+    start();
+  }
   ui.pauseButton.addEventListener("click", () => {
     paused = !paused;
     syncWalking();
@@ -1414,6 +1430,9 @@ export function createWalkSim(THREE, ui) {
 
   return {
     snapshot,
+    viewState: () => ({ walking, paused, crowd, standingIndex, standLine, standX }),
+    resetView: () => applyView({ walking: false, paused: false, crowd: "light", standingIndex: 0, standLine: "count", standX: 0 }),
+    restoreView: applyView,
     // The orbit view: the same scene from outside, built the first time it is shown.
     setOrbit(canvas, OrbitControls, next) {
       if (next && !orbit) {

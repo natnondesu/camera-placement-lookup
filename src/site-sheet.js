@@ -211,10 +211,8 @@ function syncShareState(p) {
   if (!els.sheetView.hidden) renderSheet(p);
 }
 
-// A link opened on another device restores everything it carries, then says where it came from.
-function restoreSharedPlacement() {
-  const shared = decodePlacement(location.hash);
-  if (!shared) return;
+// Puts every control back to a placement a link carries (also Reset's Undo); returns what could not be restored.
+function applySharedPlacement(shared) {
   const notes = [];
   if (shared.scene && RULES.profiles.some((profile) => profile.id === shared.scene)) {
     state.profileId = shared.scene;
@@ -249,6 +247,14 @@ function restoreSharedPlacement() {
   if (shared.site !== null) state.site = shared.site;
   if (shared.location !== null) state.location = shared.location;
   setSolveMode(["distance", "height", "manual"].includes(shared.solve) ? shared.solve : "distance");
+  return notes;
+}
+
+// A link opened on another device restores everything it carries, then says where it came from.
+function restoreSharedPlacement() {
+  const shared = decodePlacement(location.hash);
+  if (!shared) return;
+  const notes = applySharedPlacement(shared);
 
   const now = currentPlacement().result.verdict;
   let warn = notes.length > 0;

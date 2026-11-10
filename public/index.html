@@ -2287,6 +2287,43 @@
       color: oklch(0.820 0.130 75);
     }
 
+    .panel-reset {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 30px;
+      padding: 0 10px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      background: none;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+      cursor: pointer;
+      transition: color 160ms var(--ease), border-color 160ms var(--ease), background 160ms var(--ease);
+    }
+
+    .panel-reset span {
+      color: inherit;
+      font-size: inherit;
+    }
+
+    .panel-reset svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .panel-reset:hover {
+      color: var(--ink);
+      border-color: var(--border);
+      background: var(--surface-2);
+    }
+
+    .panel-reset:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
     .stand-seg button {
       display: inline-flex;
       align-items: center;
@@ -4329,7 +4366,10 @@
         <section class="panel">
           <div class="panel-head">
             <h2 data-i18n="geometry">Geometry</h2>
-            <span data-i18n="dragOrType">drag or type</span>
+            <button type="button" class="panel-reset" id="resetAll" title="Back to the default: only the camera height is set. The scene, camera model and entrance width stay." data-i18n-attr="title:resetAllTitle">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"></path><path d="M3.5 4v4.5H8"></path></svg>
+              <span data-i18n="resetAll">Reset</span>
+            </button>
           </div>
           <div class="panel-body">
             <div class="solve">
@@ -5547,6 +5587,8 @@ function decodePlacement(hash) {
         entryTight: "edges at frame rim", entryTooWide: "too wide", allControls: "All controls", lower: "Lower", raise: "Raise", viewTabs: "View", visualizer: "Visualizer", ruleTable: "Rule table", language: "Language",
         placementControls: "Placement controls", scene: "Scene", rulesVersion: "rules {version}",
         cameraPreset: "Camera preset", optics: "optics", geometry: "Geometry", dragOrType: "drag or type",
+        resetAll: "Reset", resetAllTitle: "Back to the default: only the camera height is set. The scene, camera model and entrance width stay.",
+        resetDone: "Back to the default. Height, scene, camera and entrance width kept.", undo: "Undo",
         solveFor: "Solve for", manual: "Manual", distance: "Distance", height: "Height",
         mountingHeight: "Mounting height", solved: "solved", countingDistance: "Counting line distance",
         recommendedDistance: "recommended distance", useRecommended: "Use recommended distance",
@@ -5657,6 +5699,8 @@ function decodePlacement(hash) {
         entryTight: "ขอบอยู่ริมภาพ", entryTooWide: "กว้างเกินภาพ", allControls: "ตั้งค่าทั้งหมด", lower: "ลด", raise: "เพิ่ม", viewTabs: "มุมมอง", visualizer: "แผนภาพ", ruleTable: "ตารางกฎ", language: "ภาษา",
         placementControls: "ตั้งค่าตำแหน่ง", scene: "ลักษณะพื้นที่", rulesVersion: "กฎ {version}",
         cameraPreset: "รุ่นกล้อง", optics: "เลนส์", geometry: "ความสูงและระยะ", dragOrType: "ลากหรือพิมพ์",
+        resetAll: "รีเซ็ต", resetAllTitle: "กลับสู่ค่าเริ่มต้น: ตั้งเฉพาะความสูงกล้อง คงลักษณะพื้นที่ รุ่นกล้อง และความกว้างทางเข้าไว้",
+        resetDone: "กลับสู่ค่าเริ่มต้นแล้ว คงความสูง ลักษณะพื้นที่ รุ่นกล้อง และความกว้างทางเข้าไว้", undo: "เลิกทำ",
         solveFor: "คำนวณ", manual: "กำหนดเอง", distance: "ระยะ", height: "ความสูง",
         mountingHeight: "ความสูงติดตั้ง", solved: "คำนวณให้", countingDistance: "ระยะเส้นนับ",
         recommendedDistance: "ระยะที่แนะนำ", useRecommended: "ใช้ระยะที่แนะนำ",
@@ -7627,6 +7671,62 @@ function decodePlacement(hash) {
       document.getElementById("stageExpand").focus();
     });
 
+    // Reset: back to the default, where only the height is set (Distance solved, centred, pan and tilt on Auto, the
+    // preset's zoom, the 3D view still and light). The site's own facts stay: height, scene, camera, entrance width.
+    // No confirmation: a short note offers Undo instead.
+    let resetToast = null;
+    let resetUndo = null;
+    let resetTimer = 0;
+    const hideResetToast = () => {
+      window.clearTimeout(resetTimer);
+      if (resetToast) resetToast.hidden = true;
+      resetUndo = null;
+    };
+    // Built on first use: the close icon comes from the site sheet's script, which loads after this one.
+    function showResetToast() {
+      if (!resetToast) {
+        resetToast = document.createElement("div");
+        resetToast.className = "pwa-toast";
+        resetToast.id = "resetToast";
+        resetToast.setAttribute("role", "status");
+        resetToast.innerHTML = '<span id="resetText"></span>' +
+          '<button type="button" class="pwa-reload" id="resetUndo"></button>' +
+          '<button type="button" class="pwa-dismiss" id="resetDismiss">' + SHEET_ICON.close + "</button>";
+        document.body.appendChild(resetToast);
+        document.getElementById("resetUndo").addEventListener("click", () => {
+          if (resetUndo) resetUndo();
+          hideResetToast();
+          document.getElementById("resetAll").focus();
+        });
+        document.getElementById("resetDismiss").addEventListener("click", hideResetToast);
+      }
+      document.getElementById("resetText").textContent = t("resetDone");
+      document.getElementById("resetUndo").textContent = t("undo");
+      document.getElementById("resetDismiss").setAttribute("aria-label", t("hpClose"));
+      resetToast.hidden = false;
+      window.clearTimeout(resetTimer);
+      resetTimer = window.setTimeout(hideResetToast, 6000);
+    }
+    function resetToDefaults() {
+      const before = decodePlacement(encodePlacement(sharedPlacementFrom(currentPlacement())));
+      const viewBefore = window.walkSim ? window.walkSim.viewState() : null;
+      const preset = presetFor(state.presetId);
+      state.tiltUserAdjusted = false;
+      state.panUserAdjusted = false;
+      state.panDeg = 0;
+      state.offsetM = setFieldValue(els.offsetInput, els.offsetRange, 0, 2);
+      if (preset.lens !== "fisheye") setFieldValue(els.focalInput, els.focalRange, preset.focalDefaultMm, 1);
+      if (window.walkSim) window.walkSim.resetView();
+      setSolveMode("distance");
+      resetUndo = () => {
+        applySharedPlacement(before);
+        if (window.walkSim && viewBefore) window.walkSim.restoreView(viewBefore);
+        update();
+      };
+      showResetToast();
+    }
+    document.getElementById("resetAll").addEventListener("click", resetToDefaults);
+
     document.querySelectorAll("[data-topview]").forEach((button) => button.addEventListener("click", () => {
       state.topView = button.dataset.topview;
       document.querySelectorAll("[data-topview]").forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
@@ -7982,10 +8082,8 @@ function syncShareState(p) {
   if (!els.sheetView.hidden) renderSheet(p);
 }
 
-// A link opened on another device restores everything it carries, then says where it came from.
-function restoreSharedPlacement() {
-  const shared = decodePlacement(location.hash);
-  if (!shared) return;
+// Puts every control back to a placement a link carries (also Reset's Undo); returns what could not be restored.
+function applySharedPlacement(shared) {
   const notes = [];
   if (shared.scene && RULES.profiles.some((profile) => profile.id === shared.scene)) {
     state.profileId = shared.scene;
@@ -8020,6 +8118,14 @@ function restoreSharedPlacement() {
   if (shared.site !== null) state.site = shared.site;
   if (shared.location !== null) state.location = shared.location;
   setSolveMode(["distance", "height", "manual"].includes(shared.solve) ? shared.solve : "distance");
+  return notes;
+}
+
+// A link opened on another device restores everything it carries, then says where it came from.
+function restoreSharedPlacement() {
+  const shared = decodePlacement(location.hash);
+  if (!shared) return;
+  const notes = applySharedPlacement(shared);
 
   const now = currentPlacement().result.verdict;
   let warn = notes.length > 0;
@@ -10012,14 +10118,30 @@ function createWalkSim(THREE, ui) {
     syncWalking();
     start();
   });
-  ui.crowd.buttons.forEach((button) => button.addEventListener("click", () => {
-    crowd = button.dataset.crowd;
-    ui.crowd.buttons.forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+  function setCrowd(level) {
+    crowd = level;
+    ui.crowd.buttons.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.crowd === level)));
     Object.keys(counts).forEach((k) => { counts[k] = 0; });
     seed = 7;
     if (input) respawnAll(input);
+  }
+  ui.crowd.buttons.forEach((button) => button.addEventListener("click", () => {
+    setCrowd(button.dataset.crowd);
     start();
   }));
+
+  // The view's own settings, for the console's Reset and its Undo.
+  function applyView(view) {
+    walking = view.walking;
+    paused = view.paused;
+    standLine = view.standLine;
+    standX = view.standX;
+    if (view.crowd !== crowd) setCrowd(view.crowd);
+    if (avatars && view.standingIndex !== standingIndex) standAvatar(view.standingIndex);
+    if (input) poseStanding(input);
+    syncWalking();
+    start();
+  }
   ui.pauseButton.addEventListener("click", () => {
     paused = !paused;
     syncWalking();
@@ -10172,6 +10294,9 @@ function createWalkSim(THREE, ui) {
 
   return {
     snapshot,
+    viewState: () => ({ walking, paused, crowd, standingIndex, standLine, standX }),
+    resetView: () => applyView({ walking: false, paused: false, crowd: "light", standingIndex: 0, standLine: "count", standX: 0 }),
+    restoreView: applyView,
     // The orbit view: the same scene from outside, built the first time it is shown.
     setOrbit(canvas, OrbitControls, next) {
       if (next && !orbit) {
