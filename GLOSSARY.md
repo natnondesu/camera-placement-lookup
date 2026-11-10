@@ -16,8 +16,16 @@ _Avoid_: Preset, mode, rule tab
 A scene where people can also walk across the front of the counted doorway, so passers-by can be miscounted; for example a store entrance. The stricter scene profile and the default.
 
 **Corridor**:
-A scene where people can only move in one direction through the view, with no crossing path; for example a mall entrance or an escalator.
+A scene where people can only move in one direction through the view, with no crossing path; for example a mall entrance.
 _Avoid_: Corlidor
+
+**Escalator**:
+A scene where people step off one escalator onto a landing and leave by the other, so escalators come as a pair. People are counted on the flat landing, a few steps after they step off at the comb plate (where the steps meet the floor), with the Open door thresholds.
+_Avoid_: Stairs
+
+**Landing**:
+The flat floor where the escalators end and people step off, named for which end the camera is on. At the top landing the escalators drop away below the floor; at the bottom landing they rise away from it.
+_Avoid_: Direction, up/down mode
 
 **Target feet angle**:
 The feet angle a scene profile aims the counting line at. A deliberate setting, not the middle of the Best band.

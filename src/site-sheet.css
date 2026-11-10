@@ -584,6 +584,11 @@
       font-weight: 600;
     }
 
+    .se-esc { fill: none; stroke: var(--p-ink); stroke-linejoin: round; }
+    .se-esc-truss { stroke-width: 1; opacity: 0.35; }
+    .se-esc-steps { stroke-width: 1.1; opacity: 0.6; }
+    .se-esc-rail { stroke-width: 1.4; opacity: 0.45; stroke-linecap: round; }
+    .se-esc-comb { stroke-width: 2.5; }
     .se-floor { stroke: var(--p-ink); stroke-width: 1.5; }
     .se-band { stroke: var(--p-best); stroke-width: 5; stroke-linecap: round; }
     .se-mast { stroke: var(--p-muted); stroke-dasharray: 3 3; }

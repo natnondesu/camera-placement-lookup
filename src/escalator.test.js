@@ -10,6 +10,7 @@ import {
   stepUnder,
   faceLineSurface,
   floorWells,
+  sideOutline,
 } from "./escalator.js";
 
 const rules = JSON.parse(readFileSync(new URL("../rules/scene-profiles.json", import.meta.url), "utf8"));
@@ -165,4 +166,39 @@ test("the top landing opens a well in the floor under each escalator; the bottom
   }
   assert.ok(wells[0].maxX < wells[1].minX, "the divider keeps its floor");
   assert.deepEqual(floorWells(escalatorLayout({ widthM: 2.6, landing: "bottom" })), []);
+});
+
+test("the side outline starts at the comb plate, steps down or up with the incline and carries a handrail above it", () => {
+  for (const landing of LANDINGS) {
+    const layout = escalatorLayout({ widthM: 2.6, landing });
+    const { treads, handrail, underside } = sideOutline(layout);
+
+    near(treads[0].u, layout.combU);
+    assert.equal(treads[0].y, 0);
+    assert.ok(treads.every((point, i) => i === 0 || point.u >= treads[i - 1].u - 1e-9), "runs away from the line");
+    assert.ok(treads.every((point) => point.y * layout.direction >= -1e-9), "drops at the top landing, rises at the bottom");
+    near(handrail[0].y, ESCALATOR.handrailM);
+    near(handrail[handrail.length - 1].y, surfaceHeight(layout, layout.endU) + ESCALATOR.handrailM);
+    underside.forEach((point) => near(point.y, surfaceHeight(layout, point.u) - ESCALATOR.trussM));
+  }
+});
+
+test("the side outline's treads are level and joined by risers, so the incline reads as stairs", () => {
+  const rise = ESCALATOR.stepDepthM * Math.tan((ESCALATOR.inclineDeg * Math.PI) / 180);
+  for (const landing of LANDINGS) {
+    const layout = escalatorLayout({ widthM: 2.6, landing });
+    const { treads } = sideOutline(layout);
+    assert.equal(treads.length % 2, 0);
+    for (let i = 0; i < treads.length; i += 2) {
+      assert.equal(treads[i].y, treads[i + 1].y, "each tread is level");
+      near(treads[i + 1].u - treads[i].u, ESCALATOR.stepDepthM);
+    }
+    for (let i = 1; i + 1 < treads.length; i += 2) {
+      near(treads[i + 1].u, treads[i].u);
+      const step = treads[i + 1].y - treads[i].y;
+      assert.ok(Math.abs(step) <= rise + 1e-9, "a riser is never taller than one incline step");
+      if (treads[i - 1].u > layout.inclineU) near(step, layout.direction * rise);
+    }
+    assert.ok(treads.some((point, i) => i % 2 === 1 && i + 1 < treads.length && Math.abs(treads[i + 1].y - point.y) > 1e-6), "the incline has risers");
+  }
 });

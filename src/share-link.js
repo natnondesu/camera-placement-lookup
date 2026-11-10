@@ -5,10 +5,11 @@
  *   focalMm: number | null, resolution: { w: number, h: number } | null, sensor: string | null,
  *   solve: string | null, heightM: number | null, distanceM: number | null,
  *   tiltDeg: number | null, entranceM: number | null, offsetM: number | null, verdict: string | null,
- *   site: string | null, location: string | null
+ *   site: string | null, location: string | null, landing: "top" | "bottom"
  * }} SharedPlacement
  *   tiltDeg is set only when the tilt was set by hand; verdict is the verdict when the link was made.
  *   offsetM is the camera's distance right (+) or left (-) of the entrance centre line; links from before it decode null.
+ *   landing is the Escalator scene's landing, written to a link only for that scene; anything else decodes as "top".
  *   panDeg is a pan set by hand (+ to the camera's right); null when the camera aims at the middle of the entrance.
  */
 
@@ -31,6 +32,7 @@ const TEXTS = [
   ["site", "site"],
   ["loc", "location"],
 ];
+const LANDING_KEY = "l";
 
 const trimmed = (value, digits) => String(Number(value.toFixed(digits)));
 
@@ -47,6 +49,7 @@ export function encodePlacement(placement) {
     if (Number.isFinite(placement[field]) && !(field === "offsetM" && placement[field] === 0)) put(key, trimmed(placement[field], digits));
   });
   TEXTS.slice(5).forEach(([key, field]) => put(key, placement[field]));
+  if (placement.scene === "escalator") put(LANDING_KEY, placement.landing === "bottom" ? "bottom" : "top");
   return params.toString();
 }
 
@@ -61,6 +64,7 @@ export function decodePlacement(hash) {
     const value = Number(text);
     placement[field] = text !== null && text !== "" && Number.isFinite(value) ? value : null;
   });
+  placement.landing = params.get(LANDING_KEY) === "bottom" ? "bottom" : "top";
   const size = /^(\d+)x(\d+)$/.exec(params.get("r") || "");
   placement.resolution = size ? { w: Number(size[1]), h: Number(size[2]) } : null;
   return placement;

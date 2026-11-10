@@ -55,6 +55,7 @@ cameras.cameras.filter((camera) => camera.lens !== "fisheye").forEach((camera) =
 const engineSource = (await fs.readFile(path.join(__dirname, "src/placement-rule.js"), "utf8")).replace(/^export /gm, "");
 const simSource = (await fs.readFile(path.join(__dirname, "src/walk-sim.js"), "utf8")).replace(/^export /gm, "");
 const peopleSource = (await fs.readFile(path.join(__dirname, "src/people.js"), "utf8")).replace(/^export /gm, "");
+const escalatorSource = (await fs.readFile(path.join(__dirname, "src/escalator.js"), "utf8")).replace(/^export /gm, "");
 const shareSource = (await fs.readFile(path.join(__dirname, "src/share-link.js"), "utf8")).replace(/^export /gm, "");
 const sheetSource = await fs.readFile(path.join(__dirname, "src/site-sheet.js"), "utf8");
 const sheetCss = await fs.readFile(path.join(__dirname, "src/site-sheet.css"), "utf8");
@@ -3267,7 +3268,7 @@ ${pwaCss}
               </div>
             </div>
             <div>
-              <label class="quick-label" for="quickEntrance" data-i18n="entranceWidth">Entrance width</label>
+              <label class="quick-label" id="quickEntranceLabel" for="quickEntrance" data-i18n="entranceWidth">Entrance width</label>
               <div class="stepper">
                 <button type="button" data-quick="entrance" data-dir="-1" aria-label="Lower" data-i18n-attr="aria-label:lower"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
                 <span class="stepper-value"><input id="quickEntrance" type="number" inputmode="decimal" step="0.1" placeholder="none" data-i18n-attr="placeholder:none"><span>m</span></span>
@@ -3286,6 +3287,14 @@ ${pwaCss}
           <div class="panel-body">
             <div class="solve-seg scene-seg" role="group" aria-label="Scene profile" data-i18n-attr="aria-label:scene" id="sceneSeg"></div>
             <p class="preset-caption" id="sceneCaption"></p>
+            <div class="field" id="landingField" hidden>
+              <span class="solve-label" data-i18n="landing">Landing</span>
+              <div class="solve-seg scene-seg" role="group" aria-label="Landing" data-i18n-attr="aria-label:landing">
+                <button type="button" data-landing="top" aria-pressed="true" data-i18n="landingTop">Top landing</button>
+                <button type="button" data-landing="bottom" aria-pressed="false" data-i18n="landingBottom">Bottom landing</button>
+              </div>
+              <p class="field-hint" id="landingHint"></p>
+            </div>
           </div>
         </section>
         <section class="panel">
@@ -3303,7 +3312,7 @@ ${pwaCss}
         <section class="panel">
           <div class="panel-head">
             <h2 data-i18n="geometry">Geometry</h2>
-            <button type="button" class="panel-reset" id="resetAll" title="Back to the default: only the camera height is set. The scene, camera model and entrance width stay." data-i18n-attr="title:resetAllTitle">
+            <button type="button" class="panel-reset" id="resetAll" title="Back to the default: only the camera height is set. The scene, landing, camera model and entrance width stay." data-i18n-attr="title:resetAllTitle">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1"></path><path d="M3.5 4v4.5H8"></path></svg>
               <span data-i18n="resetAll">Reset</span>
             </button>
@@ -3350,7 +3359,7 @@ ${pwaCss}
             </div>
             <div class="field" id="entranceField">
               <div class="field-top">
-                <label class="field-label" for="entranceInput" data-i18n="entranceWidth">Entrance width</label>
+                <label class="field-label" id="entranceLabelText" for="entranceInput" data-i18n="entranceWidth">Entrance width</label>
                 <span class="value-edit">
                   <input id="entranceInput" type="number" inputmode="decimal" min="0" max="60" step="0.1" value="5" placeholder="none" aria-describedby="entranceHint" aria-label="Entrance width in meters" data-i18n-attr="placeholder:none;aria-label:entranceWidth">
                   <span class="unit">m</span>
@@ -3666,6 +3675,7 @@ ${pwaCss}
   </div>
   <script>
 ${engineSource}
+${escalatorSource}
 ${shareSource}
     const RULE = ${ruleJson};
     const RULES = ${rulesJson};
@@ -3722,8 +3732,8 @@ ${shareSource}
         entryTight: "edges at frame rim", entryTooWide: "too wide", allControls: "All controls", lower: "Lower", raise: "Raise", viewTabs: "View", visualizer: "Visualizer", ruleTable: "Rule table", language: "Language",
         placementControls: "Placement controls", scene: "Scene", rulesVersion: "rules {version}",
         cameraPreset: "Camera preset", optics: "optics", geometry: "Geometry", dragOrType: "drag or type",
-        resetAll: "Reset", resetAllTitle: "Back to the default: only the camera height is set. The scene, camera model and entrance width stay.",
-        resetDone: "Back to the default. Height, scene, camera and entrance width kept.", undo: "Undo",
+        resetAll: "Reset", resetAllTitle: "Back to the default: only the camera height is set. The scene, landing, camera model and entrance width stay.",
+        resetDone: "Back to the default. Height, scene, landing, camera and entrance width kept.", undo: "Undo",
         solveFor: "Solve for", manual: "Manual", distance: "Distance", height: "Height",
         mountingHeight: "Mounting height", solved: "solved", countingDistance: "Counting line distance",
         recommendedDistance: "recommended distance", useRecommended: "Use recommended distance",
@@ -3832,7 +3842,19 @@ ${shareSource}
         noPresetCustom: "No preset - custom",
         scene_open_door: "Open door", scene_corridor: "Corridor",
         sceneDesc_open_door: "People can also walk across the front of the counted doorway, e.g. a store entrance.",
-        sceneDesc_corridor: "People can only move in one direction through the view, e.g. a mall entrance or an escalator."
+        scene_escalator: "Escalator",
+        sceneDesc_escalator: "People step off one escalator onto the landing and leave by the other. Counted on the flat landing, with the Open door thresholds.",
+        sceneDesc_corridor: "People can only move in one direction through the view, e.g. a mall entrance.",
+        sceneLanding: "{scene}, {landing}",
+        landing: "Landing", landingTop: "Top landing", landingBottom: "Bottom landing",
+        landingTopLower: "top landing", landingBottomLower: "bottom landing",
+        landingHintTop: "The camera is on the upper floor. The escalators drop away below it.",
+        landingHintBottom: "The camera is on the lower floor. The escalators rise away from it.",
+        escalatorWidth: "Escalator pair width",
+        escalatorWidthHint: "Both escalators and the divider between them, outer step edge to outer step edge. A standard pair is 2.6 m.",
+        escalatorPairLabel: "escalator pair", escalatorPairStandard: "escalator pair (standard {width} m)", planCentrePair: "centre of the pair",
+        faceInclineTop: "The face line falls on the incline, where people ride lower than the landing floor, so this reading is approximate.",
+        faceInclineBottom: "The face line falls on the incline, where people ride higher than the landing floor, so this reading is approximate."
       },
       th: {
         mountAt: "ติดตั้งกล้องที่ความสูง {height} m (ค่าก่อนปัดเศษ {exact} m)", onRecommended: "อยู่ที่ระยะแนะนำแล้ว", editSolved: "แตะเพื่อกำหนดเอง (เปลี่ยนเป็นโหมดกำหนดเอง)",
@@ -3843,8 +3865,8 @@ ${shareSource}
         entryTight: "ขอบอยู่ริมภาพ", entryTooWide: "กว้างเกินภาพ", allControls: "ตั้งค่าทั้งหมด", lower: "ลด", raise: "เพิ่ม", viewTabs: "มุมมอง", visualizer: "แผนภาพ", ruleTable: "ตารางกฎ", language: "ภาษา",
         placementControls: "ตั้งค่าตำแหน่ง", scene: "ลักษณะพื้นที่", rulesVersion: "กฎ {version}",
         cameraPreset: "รุ่นกล้อง", optics: "เลนส์", geometry: "ความสูงและระยะ", dragOrType: "ลากหรือพิมพ์",
-        resetAll: "รีเซ็ต", resetAllTitle: "กลับสู่ค่าเริ่มต้น: ตั้งเฉพาะความสูงกล้อง คงลักษณะพื้นที่ รุ่นกล้อง และความกว้างทางเข้าไว้",
-        resetDone: "กลับสู่ค่าเริ่มต้นแล้ว คงความสูง ลักษณะพื้นที่ รุ่นกล้อง และความกว้างทางเข้าไว้", undo: "เลิกทำ",
+        resetAll: "รีเซ็ต", resetAllTitle: "กลับสู่ค่าเริ่มต้น: ตั้งเฉพาะความสูงกล้อง คงลักษณะพื้นที่ ชานพัก รุ่นกล้อง และความกว้างทางเข้าไว้",
+        resetDone: "กลับสู่ค่าเริ่มต้นแล้ว คงความสูง ลักษณะพื้นที่ ชานพัก รุ่นกล้อง และความกว้างทางเข้าไว้", undo: "เลิกทำ",
         solveFor: "คำนวณ", manual: "กำหนดเอง", distance: "ระยะ", height: "ความสูง",
         mountingHeight: "ความสูงติดตั้ง", solved: "คำนวณให้", countingDistance: "ระยะเส้นนับ",
         recommendedDistance: "ระยะที่แนะนำ", useRecommended: "ใช้ระยะที่แนะนำ",
@@ -3953,7 +3975,19 @@ ${shareSource}
         noPresetCustom: "ไม่ใช้รุ่น - กำหนดเอง",
         scene_open_door: "ประตูเปิด", scene_corridor: "ทางเดิน",
         sceneDesc_open_door: "มีคนเดินตัดผ่านหน้าประตูที่นับได้ด้วย เช่น ทางเข้าร้านค้า",
-        sceneDesc_corridor: "คนเดินผ่านภาพได้ทางเดียว ไม่มีคนเดินตัดผ่าน เช่น ทางเข้าห้าง หรือบันไดเลื่อน",
+        scene_escalator: "บันไดเลื่อน",
+        sceneDesc_escalator: "คนก้าวลงจากบันไดเลื่อนตัวหนึ่งมาที่ชานพัก และออกไปทางอีกตัวหนึ่ง นับบนพื้นราบของชานพัก ใช้เกณฑ์เดียวกับประตูเปิด",
+        sceneDesc_corridor: "คนเดินผ่านภาพได้ทางเดียว ไม่มีคนเดินตัดผ่าน เช่น ทางเข้าห้าง",
+        sceneLanding: "{scene} ({landing})",
+        landing: "ชานพัก", landingTop: "ชานพักบน", landingBottom: "ชานพักล่าง",
+        landingTopLower: "ชานพักบน", landingBottomLower: "ชานพักล่าง",
+        landingHintTop: "กล้องอยู่ชั้นบน บันไดเลื่อนทอดลงไปชั้นล่าง",
+        landingHintBottom: "กล้องอยู่ชั้นล่าง บันไดเลื่อนทอดขึ้นไปชั้นบน",
+        escalatorWidth: "ความกว้างบันไดเลื่อนทั้งคู่",
+        escalatorWidthHint: "รวมบันไดเลื่อนทั้งสองตัวและส่วนคั่นกลาง วัดจากขอบขั้นด้านนอกสุดทั้งสองข้าง คู่มาตรฐานกว้าง 2.6 m",
+        escalatorPairLabel: "บันไดเลื่อนทั้งคู่", escalatorPairStandard: "บันไดเลื่อนทั้งคู่ (มาตรฐาน {width} m)", planCentrePair: "แนวกึ่งกลางบันไดเลื่อนทั้งคู่",
+        faceInclineTop: "เส้นจับใบหน้าตกบนช่วงลาดเอียง ซึ่งคนยืนต่ำกว่าพื้นชานพัก ค่านี้จึงเป็นค่าประมาณ",
+        faceInclineBottom: "เส้นจับใบหน้าตกบนช่วงลาดเอียง ซึ่งคนยืนสูงกว่าพื้นชานพัก ค่านี้จึงเป็นค่าประมาณ",
         camDesc_custom: "กำหนดเอง ปรับขนาดเซนเซอร์ ความยาวโฟกัส และความละเอียดได้",
         camDesc_dahua_hdbw2531r_zs_s2: "โดม 5 MP เซนเซอร์ 1/2.7 นิ้ว เลนส์ซูมมอเตอร์ 2.7-13.5 mm",
         camDesc_hikvision_dome_2mp: "DS-2DE2A204IW-DE3(C) กล้อง PTZ ขนาดเล็ก เซนเซอร์ 1/2.8 นิ้ว 2 MP ซูมออปติคอล 4 เท่า 2.8-12 mm",
@@ -3993,6 +4027,17 @@ ${shareSource}
 
     function sceneDesc(profile) {
       return I18N.en["sceneDesc_" + profile.id] ? t("sceneDesc_" + profile.id) : profile.description;
+    }
+
+    // The pair behind the counting line for the width the entrance field holds (the standard pair when it is empty).
+    function escalatorFor(widthM) {
+      return escalatorLayout({ widthM: widthM, landing: state.landing });
+    }
+
+    // The scene as the sheet and the phone summary name it: the Escalator scene also says which landing.
+    function sceneLabel(profile) {
+      if (profile.id !== "escalator") return sceneName(profile);
+      return t("sceneLanding", { scene: sceneName(profile), landing: t(state.landing === "bottom" ? "landingBottomLower" : "landingTopLower") });
     }
 
     function cameraCaption(id, preset) {
@@ -4036,7 +4081,8 @@ ${shareSource}
     const els = {
       viewTabs: byId("viewTabs"), visualizerTab: byId("visualizerTab"), tableTab: byId("tableTab"),
       visualizerView: byId("visualizerView"), tableView: byId("tableView"),
-      sceneSeg: byId("sceneSeg"), sceneCaption: byId("sceneCaption"), sceneVersion: byId("sceneVersion"),
+      sceneSeg: byId("sceneSeg"), sceneCaption: byId("sceneCaption"), landingField: byId("landingField"), landingHint: byId("landingHint"),
+      entranceLabelText: byId("entranceLabelText"), quickEntranceLabel: byId("quickEntranceLabel"), entranceHint: byId("entranceHint"), sceneVersion: byId("sceneVersion"),
       presetSelect: byId("presetSelect"), presetCaption: byId("presetCaption"),
       heightField: byId("heightField"), heightRange: byId("heightRange"), heightInput: byId("heightInput"),
       distanceField: byId("distanceField"), distanceRange: byId("distanceRange"), distanceInput: byId("distanceInput"),
@@ -4101,6 +4147,9 @@ ${shareSource}
       const r = p.result;
       return {
         scene: p.profile.id,
+        landing: state.landing,
+        escalator: p.profile.id === "escalator" ? escalatorFor(state.entranceM) : null,
+        escalatorKit: { ESCALATOR: ESCALATOR, surfaceHeight: surfaceHeight, stepCentres: stepCentres, stepUnder: stepUnder, floorWells: floorWells },
         heightM: p.heightM,
         distanceM: p.distanceM,
         tiltDeg: r.tilt.value,
@@ -4137,6 +4186,8 @@ ${shareSource}
       profileId: RULES.defaultProfile,
       solveMode: "distance",
       entranceM: 5,
+      // Where the camera sits for the Escalator scene: "top" (escalators drop away below) or "bottom" (they rise away).
+      landing: "top",
       offsetM: 0,
       presetId: CAMERA_CATALOG.defaultCamera,
       topView: "camera",
@@ -4264,7 +4315,16 @@ ${shareSource}
       return { profile: profile, heightM: heightM, distanceM: distanceM, camera: camera, resolution: resolution, result: result };
     }
 
+    // On the incline people ride lower or higher than the flat floor the engine places the face line on.
     function faceLineCopy(p) {
+      const copy = faceLineBase(p);
+      const fl = p.result.faceLine;
+      if (p.profile.id !== "escalator" || !copy.visible || fl.distanceM === null) return copy;
+      if (faceLineSurface(escalatorFor(state.entranceM), fl.distanceM - p.distanceM) !== "incline") return copy;
+      return { ...copy, note: copy.note + " " + t(state.landing === "bottom" ? "faceInclineBottom" : "faceInclineTop") };
+    }
+
+    function faceLineBase(p) {
       const fl = p.result.faceLine;
       const vFov = p.result.optics.verticalFovDeg;
       if (fl.reason === "camera_below_face_point") return { visible: false, label: t("notVisible"), note: t("faceBelow", { face: fmt(p.profile.facePointM, 2) }) };
@@ -4333,9 +4393,19 @@ ${shareSource}
     }
 
     function setScene(id) {
+      // A door's width means nothing for an escalator pair, so choosing the scene starts from the standard pair.
+      if (id === "escalator" && state.profileId !== "escalator") {
+        state.entranceM = ESCALATOR.defaultWidthM;
+        els.entranceInput.value = String(ESCALATOR.defaultWidthM);
+      }
       state.profileId = id;
       if (state.solveMode === "manual") setFieldValue(els.distanceInput, els.distanceRange, solvedDistance(), 2);
       resolveSolved();
+      update();
+    }
+
+    function setLanding(landing) {
+      state.landing = landing === "bottom" ? "bottom" : "top";
       update();
     }
 
@@ -4633,6 +4703,55 @@ ${shareSource}
       ctx.fillText(text, x, y);
     }
 
+    // The escalator pair beyond the counting line, in muted tones under everything else: the steps with their teeth, the
+    // truss under them, the handrail and the comb plate. The diagram shows the rule's flat geometry; this is scenery.
+    // One scale for both axes, anchored at the comb plate, so the 30 deg incline keeps its slope at any mounting height.
+    function drawSideEscalator(ctx, layout, comb, groundY, k, clip) {
+      const outline = sideOutline(layout);
+      const at = (q) => [comb + (q.u - layout.combU) * k, groundY - q.y * k];
+      const trace = (points, close) => {
+        points.forEach((q, i) => { const c = at(q); if (i === 0) ctx.moveTo(c[0], c[1]); else ctx.lineTo(c[0], c[1]); });
+        if (close) ctx.closePath();
+      };
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(clip.x1, clip.y1, clip.x2 - clip.x1, clip.y2 - clip.y1);
+      ctx.clip();
+      ctx.lineJoin = "round";
+      const slope = [layout.combU, layout.inclineU, layout.endU].map((u) => ({ u: u, y: surfaceHeight(layout, u) }));
+      ctx.fillStyle = colorWithAlpha(COL.muted, "0.10");
+      ctx.beginPath();
+      trace(slope, false);
+      trace(outline.underside.slice().reverse(), false);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = colorWithAlpha(COL.muted, "0.45");
+      ctx.lineWidth = 1.25;
+      ctx.beginPath();
+      trace(outline.underside, false);
+      ctx.stroke();
+      ctx.strokeStyle = colorWithAlpha(COL.muted, "0.8");
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      trace(outline.treads, false);
+      ctx.stroke();
+      ctx.strokeStyle = colorWithAlpha(COL.muted, "0.33");
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      trace(outline.handrail, false);
+      ctx.stroke();
+      // The comb plate: a stub above the floor line, clear of the distance labels under it.
+      ctx.strokeStyle = COL.muted;
+      ctx.lineWidth = 2;
+      ctx.lineCap = "butt";
+      ctx.beginPath();
+      ctx.moveTo(comb, groundY - 7);
+      ctx.lineTo(comb, groundY);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     function drawSide(p) {
       const fit = fitCanvas(els.sideCanvas);
       if (!fit) return;
@@ -4645,10 +4764,13 @@ ${shareSource}
       const distanceM = slice.floorDistanceM;
       const fl = r.faceLine;
       const faceReach = fl.distanceM === null ? null : Math.hypot(line.offsetM, fl.distanceM);
-      const padL = 60, padR = 70, padB = 58, padT = 40;
+      const layout = profile.id === "escalator" ? escalatorFor(state.entranceM) : null;
+      // At the top landing the escalators drop below the floor line, so the diagram gets room under it for the drop.
+      const padL = 60, padR = 70, padB = 58 + (layout && layout.landing === "top" ? 72 : 0), padT = 40;
       const groundY = h - padB;
       const win = feetDistanceWindow(profile, heightM);
-      const maxX = Math.max(distanceM * 1.25, win.acceptableMax * 1.15, (faceReach || 0) * 1.12, 6);
+      // The escalator scene also shows the flat steps and a few metres of the incline past the counting line.
+      const maxX = Math.max(distanceM * 1.25, win.acceptableMax * 1.15, (faceReach || 0) * 1.12, 6, layout ? distanceM + layout.inclineU + 3 : 0);
       const maxY = Math.max(heightM * 1.25, profile.humanHeightM, 4);
       const sx = (w - padL - padR) / maxX;
       const sy = (groundY - padT) / maxY;
@@ -4658,6 +4780,12 @@ ${shareSource}
       state.sideGeom = { padL: padL, sx: sx, groundY: groundY, top: yFor(profile.humanHeightM) - 24, subX: subX, lateral: Math.abs(slice.xM - line.offsetM) };
       const feetColor = slice.status === "best" ? COL.best : slice.status === "acceptable" ? COL.ok : COL.bad;
       const personColor = slice.framed ? feetColor : COL.bad;
+
+      // Off-centre, the slice is the radial plane, so a point u past the line sits at hypot(offset, forward + u), not radial + u.
+      const forwardM = Math.sqrt(Math.max(0, distanceM * distanceM - line.offsetM * line.offsetM));
+      const combX = layout ? xFor(Math.hypot(line.offsetM, forwardM + layout.combU)) : 0;
+      const escK = Math.min(sx, sy);
+      if (layout) drawSideEscalator(ctx, layout, combX, groundY, escK, { x1: subX, x2: w, y1: padT - 8, y2: h });
 
       ctx.strokeStyle = COL.grid;
       ctx.lineWidth = 1;
@@ -4673,14 +4801,15 @@ ${shareSource}
         ctx.lineTo(xFor(gx), groundY);
         ctx.stroke();
         ctx.globalAlpha = 1;
-        if (gx > 0) ctx.fillText(gx + "m", xFor(gx), groundY + 8);
+        if (gx > 0) (layout ? plateText : (c, text, x, y) => c.fillText(text, x, y))(ctx, gx + "m", xFor(gx), groundY + 8);
       }
 
       ctx.strokeStyle = COL.muted;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(padL, groundY);
-      ctx.lineTo(w - padR + 10, groundY);
+      // The top landing's floor ends where the wells begin; the steps carry on from there.
+      ctx.lineTo(layout ? (layout.landing === "top" ? Math.min(w, combX + (layout.inclineU - layout.combU) * escK) : w) : w - padR + 10, groundY);
       ctx.stroke();
 
       ctx.strokeStyle = COL.faint;
@@ -4887,6 +5016,47 @@ ${shareSource}
 
     // Plan of the entrance: the counting line coloured by the feet angle at each point, the judged points, the camera
     // where it sits (drag it), its view and the two distances that place it.
+    // The pair of escalators beyond the counting line, seen from above: each lane from the comb plate outward with its
+    // step lines, the balustrades either side, the comb plate and an arrow for the way people go.
+    function drawTopEscalators(ctx, S, scale, layout) {
+      const far = layout.endU;
+      const strip = (x0, x1, u0, u1) => {
+        const a = S(x0, -u0), b = S(x1, -u1);
+        ctx.fillRect(Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
+      };
+      const innerX = layout.dividerM / 2, outerX = innerX + layout.stepWidthM;
+      ctx.fillStyle = colorWithAlpha(COL.muted, "0.26");
+      strip(-outerX - ESCALATOR.balustradeM, outerX + ESCALATOR.balustradeM, layout.combU, far);
+      layout.lanes.forEach((lane) => {
+        ctx.fillStyle = colorWithAlpha(COL.surface, "0.9");
+        strip(lane.minX, lane.maxX, layout.combU, far);
+        ctx.fillStyle = colorWithAlpha(COL.muted, "0.14");
+        strip(lane.minX, lane.maxX, layout.combU, far);
+        ctx.strokeStyle = colorWithAlpha(COL.muted, "0.4");
+        ctx.lineWidth = 1;
+        for (let u = layout.combU + ESCALATOR.stepDepthM; u < far; u += ESCALATOR.stepDepthM) {
+          const left = S(lane.minX, -u), right = S(lane.maxX, -u);
+          ctx.beginPath(); ctx.moveTo(left[0], left[1]); ctx.lineTo(right[0], right[1]); ctx.stroke();
+        }
+        ctx.fillStyle = colorWithAlpha(COL.ink, "0.5");
+        strip(lane.minX, lane.maxX, layout.combU - 0.06, layout.combU + 0.06);
+        // Arrive: toward the counting line (down the page). Leave: away from it.
+        const towardLine = lane.role === "arrive";
+        const tail = S(lane.centreX, -(layout.combU + (towardLine ? 2.3 : 1.0)));
+        const tip = S(lane.centreX, -(layout.combU + (towardLine ? 1.0 : 2.3)));
+        const dir = towardLine ? 1 : -1;
+        const head = Math.max(5, 0.18 * scale);
+        ctx.strokeStyle = colorWithAlpha(COL.ink, "0.6");
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(tail[0], tail[1]); ctx.lineTo(tip[0], tip[1]);
+        ctx.moveTo(tip[0] - head, tip[1] - dir * head); ctx.lineTo(tip[0], tip[1]); ctx.lineTo(tip[0] + head, tip[1] - dir * head);
+        ctx.stroke();
+        ctx.lineCap = "butt";
+      });
+    }
+
     function drawTop(p) {
       const fit = fitCanvas(els.topCanvas);
       if (!fit) return;
@@ -4895,13 +5065,16 @@ ${shareSource}
       const r = p.result, o = r.optics, line = r.countingLine;
       const fisheye = o.lens === "fisheye";
       const offset = state.offsetM, d = p.distanceM;
+      const layout = p.profile.id === "escalator" ? escalatorFor(state.entranceM) : null;
       const entranceHalf = r.entrance === null ? null : r.entrance.widthM / 2;
-      const shownHalf = entranceHalf === null ? 2.5 : entranceHalf;
+      const shownHalf = layout ? layout.widthM / 2 : entranceHalf === null ? 2.5 : entranceHalf;
       const faceD = r.faceLine.distanceM !== null && !r.faceLine.coincides ? r.faceLine.distanceM : null;
 
       // Fit the entrance, the camera and a margin; the entrance sits near the top, the camera below it.
       const xSpan = Math.max(shownHalf + 1.6, Math.abs(offset) + 1.4);
-      const yMin = Math.min(-1.6, faceD !== null ? d - faceD - 0.8 : -1.6);
+      // The escalator scene shows about 3 m of escalator past the comb plate.
+      const beyond = layout ? -(layout.combU + 3) : -1.6;
+      const yMin = Math.min(beyond, faceD !== null ? d - faceD - 0.8 : beyond);
       const yMax = d + 1.9;
       const pad = 26, padB = 34;
       // While the camera is dragged the plan holds still under the pointer; it re-fits once the camera is let go.
@@ -4926,8 +5099,9 @@ ${shareSource}
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
       }
 
-      // Walls: the door frames beyond the line for an open door, the side walls of a corridor.
-      if (entranceHalf !== null) {
+      // Walls: the door frames beyond the line for an open door, the side walls of a corridor, the pair for an escalator.
+      if (layout) drawTopEscalators(ctx, S, scale, layout);
+      else if (entranceHalf !== null) {
         ctx.fillStyle = colorWithAlpha(COL.muted, "0.45");
         if (p.profile.id === "corridor") {
           const top = S(0, yMin - 1)[1], bottom = S(0, yMax + 1)[1];
@@ -4986,9 +5160,10 @@ ${shareSource}
       ctx.setLineDash([]);
       ctx.fillStyle = COL.faint;
       ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
-      ctx.textAlign = "center";
+      // Beside the centre line, not over it: a pair's centre is its divider, and the label would sit on the lanes.
+      ctx.textAlign = layout ? "left" : "center";
       ctx.textBaseline = "top";
-      haloText(ctx, t("planCentreLine"), ox, 6);
+      haloText(ctx, t(layout ? "planCentrePair" : "planCentreLine"), layout ? ox + 5 : ox, 6);
 
       // Face line, dashed, along the same stretch.
       if (faceD !== null) {
@@ -5035,7 +5210,13 @@ ${shareSource}
           ctx.beginPath(); ctx.moveTo(q[0], q[1] - 9); ctx.lineTo(q[0], q[1] + 9); ctx.stroke();
         });
       }
-      if (entranceHalf !== null) {
+      if (layout) {
+        ctx.fillStyle = r.entrance === null ? COL.ink : r.entrance.status === "covered" ? COL.best : r.entrance.status === "tight" ? COL.ok : COL.bad;
+        ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        haloText(ctx, state.entranceM === null ? t("escalatorPairStandard", { width: fmt(layout.widthM, 1) }) : t("escalatorPairLabel") + " " + fmt(layout.widthM, 1, " m"), Math.abs(offset) < 0.05 || fisheye ? ox : S((offset < 0 ? 1 : -1) * layout.widthM / 4, 0)[0], S(0, 0)[1] + 12);
+      } else if (entranceHalf !== null) {
         const entryColor = r.entrance.status === "covered" ? COL.best : r.entrance.status === "tight" ? COL.ok : COL.bad;
         ctx.fillStyle = entryColor;
         ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
@@ -5538,6 +5719,16 @@ ${shareSource}
       els.offsetCentre.textContent = t(state.offsetM === 0 ? "centredStatus" : "centreButton");
       document.querySelectorAll("[data-scene]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.scene === profile.id)));
       els.sceneCaption.textContent = sceneDesc(profile);
+      const escalator = profile.id === "escalator";
+      els.landingField.hidden = !escalator;
+      document.querySelectorAll("[data-landing]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.landing === state.landing)));
+      els.landingHint.textContent = t(state.landing === "bottom" ? "landingHintBottom" : "landingHintTop");
+      [[els.entranceLabelText, "entranceWidth", "escalatorWidth"], [els.quickEntranceLabel, "entranceWidth", "escalatorWidth"], [els.entranceHint, "entranceHint", "escalatorWidthHint"]].forEach((row) => {
+        row[0].dataset.i18n = escalator ? row[2] : row[1];
+        row[0].textContent = t(row[0].dataset.i18n);
+      });
+      els.entranceInput.dataset.i18nAttr = "placeholder:none;aria-label:" + (escalator ? "escalatorWidth" : "entranceWidth");
+      els.entranceInput.setAttribute("aria-label", t(escalator ? "escalatorWidth" : "entranceWidth"));
 
       const face = faceLineCopy(p);
       const verdictLabel = STATUS_LABEL[r.verdict];
@@ -5677,7 +5868,7 @@ ${shareSource}
       const faceState = !r.faceLine.visible ? "not_visible" : r.faceLine.tooSmall ? "too_small" : "visible";
       els.answerFaceChip.dataset.state = faceState;
       els.answerFaceState.textContent = faceState === "visible" ? "" : t(faceState === "too_small" ? "tooSmall" : "notVisible");
-      els.sheetScene.textContent = sceneName(p.profile);
+      els.sheetScene.textContent = sceneLabel(p.profile);
       els.sheetCamera.textContent = els.presetSelect.selectedOptions[0] ? els.presetSelect.selectedOptions[0].textContent : "";
       if (document.activeElement !== els.quickHeight) els.quickHeight.value = fmt(p.heightM, 1);
       if (document.activeElement !== els.quickEntrance) els.quickEntrance.value = state.entranceM === null ? "" : String(state.entranceM);
@@ -5834,6 +6025,7 @@ ${shareSource}
       if (button) setScene(button.dataset.scene);
     });
     document.querySelectorAll("[data-solve]").forEach((button) => button.addEventListener("click", () => setSolveMode(button.dataset.solve)));
+    document.querySelectorAll("[data-landing]").forEach((button) => button.addEventListener("click", () => setLanding(button.dataset.landing)));
     document.querySelectorAll("[data-sidemode]").forEach((button) => button.addEventListener("click", () => {
       state.sideMode = button.dataset.sidemode;
       update();

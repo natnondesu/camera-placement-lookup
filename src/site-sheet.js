@@ -189,6 +189,7 @@ function sharedPlacementFrom(p) {
     distanceM: p.distanceM,
     tiltDeg: state.tiltUserAdjusted && preset.lens !== "fisheye" ? state.tiltDeg : null,
     entranceM: state.entranceM,
+    landing: state.landing,
     offsetM: state.offsetM,
     panDeg: state.panUserAdjusted && preset.lens !== "fisheye" ? state.panDeg : null,
     verdict: p.result.verdict,
@@ -218,6 +219,7 @@ function applySharedPlacement(shared) {
   const notes = [];
   if (shared.scene && RULES.profiles.some((profile) => profile.id === shared.scene)) {
     state.profileId = shared.scene;
+    if (shared.scene === "escalator") state.landing = shared.landing === "bottom" ? "bottom" : "top";
     populateScenes();
   }
   if (shared.camera) {
@@ -372,6 +374,20 @@ function sheetSteps(p) {
   ).join("") + "</ol>";
 }
 
+// The escalator pair behind the counting line for the sheet's side elevation. At the top landing the drop is cut just
+// under the floor line, above the face dimension line, so it stays clear of them.
+function escalatorSideSvg(layout, D, X, Y, floor) {
+  const outline = sideOutline(layout);
+  const path = (points) => "M" + points.map((q) => X(D + q.u) + " " + Y(q.y)).join(" L");
+  const bottom = layout.landing === "bottom";
+  const clipTop = bottom ? 8 : floor - 4, clipBottom = bottom ? floor + 4 : floor + 21;
+  const left = Number(X(D));
+  return '<clipPath id="seEscClip"><rect x="' + left + '" y="' + clipTop + '" width="' + (336 - left) + '" height="' + (clipBottom - clipTop) + '"></rect></clipPath>' +
+    '<g class="se-esc" clip-path="url(#seEscClip)"><path class="se-esc-truss" d="' + path(outline.underside) + '"></path>' +
+    '<path class="se-esc-steps" d="' + path(outline.treads) + '"></path><path class="se-esc-rail" d="' + path(outline.handrail) + '"></path>' +
+    '<line class="se-esc-comb" x1="' + X(D + layout.combU) + '" y1="' + (floor - 4) + '" x2="' + X(D + layout.combU) + '" y2="' + (floor + 4) + '"></line></g>';
+}
+
 // Side elevation drawn to scale from the placement, as an installer's dimensioned sketch.
 function sideElevationSvg(p) {
   const r = p.result;
@@ -403,6 +419,7 @@ function sideElevationSvg(p) {
       " M" + x + " " + (floor - tall * 0.45).toFixed(1) + " L" + (xf + tall * 0.11).toFixed(1) + " " + floor + '"></path></g>';
   };
   const parts = [];
+  if (profile.id === "escalator") parts.push(escalatorSideSvg(escalatorFor(state.entranceM), D, X, Y, floor));
   parts.push('<line class="se-floor" x1="' + left + '" y1="' + floor + '" x2="336" y2="' + floor + '"></line>');
   parts.push('<line class="se-band" x1="' + X(win.bestMin) + '" y1="' + floor + '" x2="' + X(win.bestMax) + '" y2="' + floor + '"></line>');
   parts.push('<line class="se-mast" x1="' + camX + '" y1="' + camY + '" x2="' + camX + '" y2="' + floor + '"></line>');
@@ -523,7 +540,7 @@ function renderSheet(p) {
       '<dl class="site-fields">' +
         "<dt>" + escapeHtml(t("shSite")) + '</dt><dd><input data-site-field="site" value="' + escapeHtml(state.site) + '" placeholder="' + escapeHtml(t("shSiteHint")) + '" aria-label="' + escapeHtml(t("shSite")) + '"></dd>' +
         "<dt>" + escapeHtml(t("shLocation")) + '</dt><dd><input data-site-field="location" value="' + escapeHtml(state.location) + '" placeholder="' + escapeHtml(t("shLocationHint")) + '" aria-label="' + escapeHtml(t("shLocation")) + '"></dd>' +
-        "<dt>" + escapeHtml(t("shScene")) + "</dt><dd>" + escapeHtml(sceneName(profile)) + "</dd>" +
+        "<dt>" + escapeHtml(t("shScene")) + "</dt><dd>" + escapeHtml(sceneLabel(profile)) + "</dd>" +
         "<dt>" + escapeHtml(t("shCamera")) + "</dt><dd>" + escapeHtml(cameraName) + ' <span class="fov">· ' + escapeHtml(fovText) + "</span></dd>" +
       "</dl></div>" +
       '<div class="meta-right"><span>' + escapeHtml(t("shPrepared")) + "</span><b>" + escapeHtml(prepared) + "</b><span>" + escapeHtml(t("shRules")) + "</span><b>" + escapeHtml(RULES.version) + "</b></div>" +

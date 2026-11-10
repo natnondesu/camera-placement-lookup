@@ -16,6 +16,7 @@ const full = {
   entranceM: 5,
   offsetM: -1.25,
   panDeg: null,
+  landing: "top",
   verdict: "best",
   site: "Central World",
   location: "ทางเข้า A, camera 1",
@@ -70,4 +71,17 @@ test("unreadable numbers are dropped rather than guessed", () => {
   const placement = decodePlacement("s=open_door&h=abc&d=4.6");
   assert.equal(placement.heightM, null);
   assert.equal(placement.distanceM, 4.6);
+});
+
+test("the landing is written only for the Escalator scene and survives the round trip", () => {
+  const escalator = { ...full, scene: "escalator", landing: "bottom", entranceM: 2.6 };
+  assert.match(encodePlacement(escalator), /(^|&)l=bottom(&|$)/);
+  assert.deepEqual(decodePlacement(encodePlacement(escalator)), escalator);
+  assert.doesNotMatch(encodePlacement({ ...full, landing: "bottom" }), /(^|&)l=/);
+});
+
+test("a landing that is missing or not top or bottom decodes as the top landing", () => {
+  assert.equal(decodePlacement("s=escalator&h=4&d=4.6").landing, "top");
+  assert.equal(decodePlacement("s=escalator&h=4&d=4.6&l=sideways").landing, "top");
+  assert.equal(decodePlacement("s=escalator&h=4&d=4.6&l=bottom").landing, "bottom");
 });

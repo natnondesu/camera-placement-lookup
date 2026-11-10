@@ -25,6 +25,8 @@ export const ESCALATOR = Object.freeze({
   /** Each side panel, outside the steps. */
   balustradeM: 0.15,
   handrailM: 1,
+  /** How far the truss hangs below the step tops. */
+  trussM: 0.4,
   beltSpeedMps: 0.5,
   /** Two one-metre escalators and their divider, outer step edge to outer step edge. */
   defaultWidthM: 2.6,
@@ -149,4 +151,20 @@ export function floorWells(layout) {
     minU: layout.inclineU,
     maxU: layout.endU + 0.5,
   }));
+}
+
+/**
+ * The escalator seen from the side, as polylines of { u, y }: the step treads with their risers (the teeth), the
+ * handrail above them and the underside of the truss. Shared by every flat drawing so they agree.
+ * @param {EscalatorLayout} layout
+ * @returns {{ treads: { u: number, y: number }[], handrail: { u: number, y: number }[], underside: { u: number, y: number }[] }}
+ */
+export function sideOutline(layout) {
+  const half = ESCALATOR.stepDepthM / 2;
+  const treads = stepCentres(layout, 0).flatMap((centre) => {
+    const y = surfaceHeight(layout, centre);
+    return [{ u: centre - half, y }, { u: centre + half, y }];
+  });
+  const along = (offset) => [layout.combU, layout.inclineU, layout.endU].map((u) => ({ u, y: surfaceHeight(layout, u) + offset }));
+  return { treads, handrail: along(ESCALATOR.handrailM), underside: along(-ESCALATOR.trussM) };
 }
