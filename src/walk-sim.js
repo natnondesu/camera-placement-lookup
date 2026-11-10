@@ -258,7 +258,7 @@ export function createWalkSim(THREE, ui) {
   const animating = () => walking && !paused;
 
   function makePerson(motion) {
-    if (avatars) {
+    if (avatars && avatars.complete) {
       avatarCount += 1;
       return avatars.make(avatarCount - 1, motion, random());
     }
@@ -293,6 +293,7 @@ export function createWalkSim(THREE, ui) {
     group.add(legL, legR, torso, armL, armR, head, cap);
     let phase = random() * Math.PI * 2;
     return {
+      isBox: true,
       group,
       head,
       animate(dt, speed) {
@@ -349,7 +350,7 @@ export function createWalkSim(THREE, ui) {
     ui.pauseButton.setAttribute("aria-pressed", String(paused));
     if (input) {
       ui.pauseButton.textContent = paused ? input.text.resume : input.text.pause;
-      if (avatars) ui.person.label.textContent = input.text.personOf.split("{i}").join(String(standingIndex + 1)).split("{n}").join(String(avatars.count));
+      if (avatars) ui.person.label.textContent = input.text.personOf.split("{i}").join(String(standingIndex + 1)).split("{n}").join(String(avatars.total));
     }
   }
 
@@ -362,17 +363,47 @@ export function createWalkSim(THREE, ui) {
     syncWalking();
   }
 
-  function usePeople(loaded) {
+  function usePeople(loaded, nextIndex = 0) {
     avatars = loaded;
-    standAvatar(0);
+    peopleStatus = loaded.complete ? "ready" : "first";
+    standAvatar(nextIndex);
     if (!input) return;
-    seed = 7;
-    respawnAll(input);
+    if (loaded.complete) {
+      seed = 7;
+      respawnAll(input);
+    }
     if (active || orbitActive) render();
   }
 
-  // The avatars are the heaviest part of the page, so they are fetched only once a 3D view is actually on screen.
+  // The avatars are the heaviest part of the page, so they are fetched only once a 3D view is actually on screen. A
+  // phone gets the standing person first and the rest when the crowd or another person is asked for. A failed load is
+  // tried again after a while; meanwhile the figures are boxes and the face window says so.
   let peopleRequested = false;
+  let peopleStatus = "idle";
+  let allRequested = false;
+  let pendingIndex = 0;
+  const RETRY_MS = 15000;
+  function requestPeople(scope) {
+    if (scope === "all") allRequested = true;
+    peopleStatus = avatars ? peopleStatus : "loading";
+    ui.loadPeople(scope)
+      .then((loaded) => usePeople(loaded, loaded.complete ? pendingIndex : 0))
+      .catch((error) => {
+        console.error("People models could not load; showing simple figures", error);
+        if (!avatars) peopleStatus = "failed";
+        window.setTimeout(() => {
+          if (scope === "all") allRequested = false; else peopleRequested = false;
+          if (peopleStatus === "failed") peopleStatus = "idle";
+          if (scope === "all") needAllPeople(); else wantPeople();
+        }, RETRY_MS);
+        if (active || orbitActive) render();
+      });
+  }
+  function needAllPeople(index) {
+    if (index !== undefined) pendingIndex = index;
+    if (!ui.loadPeople || allRequested || (avatars && avatars.complete)) return;
+    requestPeople("all");
+  }
   const onScreen = (canvas) => {
     const box = canvas.getBoundingClientRect();
     return box.width > 0 && box.bottom > 0 && box.top < window.innerHeight && box.right > 0 && box.left < window.innerWidth;
@@ -381,11 +412,8 @@ export function createWalkSim(THREE, ui) {
     if (peopleRequested || !ui.loadPeople) return;
     if (!((active && onScreen(ui.canvas)) || (orbitActive && orbit && onScreen(orbit.renderer.domElement)))) return;
     peopleRequested = true;
-    window.removeEventListener("scroll", wantPeople, true);
-    window.removeEventListener("resize", wantPeople);
-    ui.loadPeople()
-      .then(usePeople)
-      .catch((error) => console.error("People models could not load; showing box figures", error));
+    const phone = window.innerWidth < 760;
+    if (phone) requestPeople("first"); else needAllPeople();
   }
   // Capturing, so a scroll inside any panel counts too.
   window.addEventListener("scroll", wantPeople, { capture: true, passive: true });
@@ -793,15 +821,22 @@ export function createWalkSim(THREE, ui) {
     const lineLabels = [];
     const densityLabels = [];
     const label = (z, text, color) => {
-      const left = toScreen(-1.4, 0, z, w, h);
-      if (left.behind || left.y < 0 || left.y > h) return false;
+      let left = null;
+      for (let x = -30; x <= 30; x += 0.5) {
+        const s = toScreen(x, 0, z, w, h);
+        if (s.behind || s.x < 0 || s.x > w || s.y < 0 || s.y > h) continue;
+        if (left === null || s.x < left.x) left = s;
+      }
+      if (left === null) return false;
       let y = Math.min(h - 4, left.y - 4);
       // Lines a few centimetres apart land on the same row; stack the later label above the earlier one.
       lineLabels.forEach((prev) => { if (Math.abs(prev.y + 13 - y) < 14) y = prev.y - 1; });
       if (quiet) return true;
+      const width = ctx.measureText(text).width;
+      const x = Math.max(8, Math.min(w - width - 8, left.x + 4));
       ctx.fillStyle = color;
-      ctx.fillText(text, 8, y);
-      lineLabels.push({ x: 8, y: y - 13, w: ctx.measureText(text).width, h: 14 });
+      ctx.fillText(text, x, y);
+      lineLabels.push({ x, y: y - 13, w: width, h: 14 });
       return true;
     };
     const countingVisible = label(input.distanceM, input.text.countingLine + " " + input.distanceM.toFixed(2) + " m", input.colors.count);
@@ -1107,6 +1142,7 @@ export function createWalkSim(THREE, ui) {
   function captureFace() {
     const agent = faceSubject();
     if (!agent) { faceShot = { inView: false }; return; }
+    if (agent.body.isBox) { faceShot = { inView: false, box: true }; return; }
     agent.body.head.getWorldPosition(faceAnchor);
     const spot = toScreen(faceAnchor.x, faceAnchor.y, faceAnchor.z, 1, 1);
     if (spot.behind || spot.x < 0 || spot.x > 1 || spot.y < 0 || spot.y > 1) { faceShot = { inView: false }; return; }
@@ -1166,7 +1202,8 @@ export function createWalkSim(THREE, ui) {
       ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(input.text.faceViewNone, box.x + box.w / 2, box.y + 4 + inner / 2);
+      const note = faceShot && faceShot.box ? (peopleStatus === "failed" ? input.text.faceViewFailed : input.text.faceViewLoading) : input.text.faceViewNone;
+      ctx.fillText(note, box.x + box.w / 2, box.y + 4 + inner / 2);
     }
     ctx.strokeStyle = input.colors.face;
     ctx.lineWidth = 1;
@@ -1249,6 +1286,7 @@ export function createWalkSim(THREE, ui) {
   });
 
   ui.walkButton.addEventListener("click", () => {
+    needAllPeople();
     walking = !walking;
     paused = false;
     syncWalking();
@@ -1374,14 +1412,19 @@ export function createWalkSim(THREE, ui) {
     render();
   }));
 
-  ui.person.prev.addEventListener("click", () => {
-    standAvatar(standingIndex - 1);
+  // Stepping to another person needs the full set; until it arrives, the step waits.
+  const stepPerson = (delta) => {
+    const target = (standingIndex + delta + avatars.total) % avatars.total;
+    if (!avatars.complete) {
+      needAllPeople(target);
+      pendingIndex = target;
+      return;
+    }
+    standAvatar(target);
     render();
-  });
-  ui.person.next.addEventListener("click", () => {
-    standAvatar(standingIndex + 1);
-    render();
-  });
+  };
+  ui.person.prev.addEventListener("click", () => stepPerson(-1));
+  ui.person.next.addEventListener("click", () => stepPerson(1));
   ui.resetButton.addEventListener("click", () => {
     Object.keys(counts).forEach((k) => {
       counts[k] = 0;

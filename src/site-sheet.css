@@ -283,6 +283,22 @@
       color-scheme: light;
     }
 
+    .sheet.dense {
+      gap: 7px;
+      padding-top: 28px;
+      padding-bottom: 22px;
+    }
+
+    .sheet.dense .steps li {
+      padding-top: 3px;
+      padding-bottom: 3px;
+    }
+
+    .sheet.dense figure.draw svg,
+    .sheet.dense figure.cam img {
+      height: 140px;
+    }
+
     .sheet ::selection {
       background: oklch(0.715 0.150 256 / 0.25);
     }

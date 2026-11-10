@@ -2596,6 +2596,7 @@ function buildHtml() {
     }
 
     .answer-chips {
+      min-width: 0;
       display: flex;
       flex-wrap: nowrap;
       gap: 6px;
@@ -2675,6 +2676,7 @@ function buildHtml() {
 
     @media (max-width: 1200px) {
       .answer {
+        min-width: 0;
         position: sticky;
         top: var(--topbar-h, 64px);
         z-index: 19;
@@ -3388,6 +3390,7 @@ ${pwaCss}
               <div class="verdict-foot">
                 <div class="verdict-notes" id="verdictNotes">
                   <p class="warn-line edge-warn" id="edgeWarn" role="note" hidden></p>
+                  <p class="warn-line" id="aimWarn" hidden></p>
                   <p class="warn-line" id="densityWarn" hidden></p>
                   <p class="warn-line" id="heightWarn" hidden></p>
                   <p class="entrance-line" id="entranceLine" data-state="covered" hidden></p>
@@ -3644,6 +3647,7 @@ ${shareSource}
         notesNone: "Nothing to flag for this placement.", notesMore: "+{n} more", notesMoreAria: "Show the next note, {i} of {n}",
         offsetFromCentre: "From the centre line", centreButton: "Centre",
         faceViewPx: "{px} px face", faceViewBest: "best case", faceViewNone: "No face in view",
+        faceViewLoading: "Loading face…", faceViewFailed: "No face model",
         sideModeSide: "Side", sideModeOrbit: "Orbit", sideReadingsAria: "Current side-view readings",
         alongFloor: "{distance} m to the middle",
         orbitNote: "Drag to orbit, scroll or pinch to zoom. The view cone ends where it meets the floor.",
@@ -3654,6 +3658,10 @@ ${shareSource}
         offsetAria: "Camera offset from the entrance centre line in meters, positive to the right",
         offsetCentred: "On the entrance centre line. The camera aims at the middle of the entrance.",
         offsetSide: "{distance} m {side} of the entrance centre line, as the camera faces it. It turns {pan} deg to aim at the middle.",
+        offsetSideManual: "{distance} m {side} of the entrance centre line, as the camera faces it. Aiming at the middle would take a {pan} deg turn; the pan is set by hand (Advanced optics).",
+        aimOffEffective: "Turned this far, a person in the middle of the entrance reaches the outer 10% of the picture, where detection is weaker. Turn the camera back toward the middle (Pan angle, Aim at middle).",
+        entranceTurnedOut: "Entrance {width} m would fit the {covered} m view, but turned this way its {side} end is {miss} m out of it. Turn the camera toward that end, or move it closer to the entrance centre line.",
+        edgeBodySteep: "is steeper than the feet bands, so people walking there may be missed. Move the counting line farther out or mount the camera lower.",
         offsetSideFisheye: "{distance} m {side} of the entrance centre line. A ceiling fisheye looks straight down, so it does not turn.",
         sideLeft: "left", sideRight: "right",
         edgeLead: "{side} end at {angle}", edgeBody: "is outside the feet bands, so people walking there may be missed. Move the camera toward the centre line or mount it higher.",
@@ -3687,7 +3695,7 @@ ${shareSource}
         personOf: "Person {i} of {n}", personGroup: "Person standing on the line", personPrev: "Previous person", personNext: "Next person",
         simStillNote: "One person standing on the counting line, as this camera sees them. Walk people to watch the counting.",
         simNote: "Simulated people through this camera. Counts come from the simulation, not real traffic. Busy and Crowded add groups, people who stop near the line and groups talking; a dashed box is someone hidden behind a nearer person.",
-        simFallback: "The 3D view could not load. It needs an internet connection; this flat camera view is shown instead.",
+        simFallback: "The 3D view could not load: it needs WebGL, and an internet connection the first time. This flat camera view is shown instead; it does not show an off-centre or panned camera.",
         linesOnFloor: "Lines on the floor", countingLineLower: "counting line", faceLineLower: "face line",
         opticsFov: "Optics - field of view", horizontalFov: "horizontal FOV", verticalFov: "vertical FOV",
         coverageAtLine: "Coverage at counting line", fullWidth: "full width", effective80: "effective 80%",
@@ -3756,6 +3764,7 @@ ${shareSource}
         notesNone: "ตำแหน่งนี้ไม่มีข้อควรระวัง", notesMore: "อีก {n} ข้อ", notesMoreAria: "ดูข้อถัดไป {i} จาก {n}",
         offsetFromCentre: "ห่างจากแนวกึ่งกลาง", centreButton: "กึ่งกลาง",
         faceViewPx: "ใบหน้า {px} px", faceViewBest: "กรณีดีที่สุด", faceViewNone: "ไม่เห็นใบหน้า",
+        faceViewLoading: "กำลังโหลด…", faceViewFailed: "ไม่มีโมเดลใบหน้า",
         sideModeSide: "ด้านข้าง", sideModeOrbit: "หมุนดู", sideReadingsAria: "ค่าที่อ่านได้จากมุมมองด้านข้าง",
         alongFloor: "ถึงกลางทางเข้า {distance} m",
         orbitNote: "ลากเพื่อหมุนดู เลื่อนหรือถ่างนิ้วเพื่อซูม กรวยภาพจบตรงที่แตะพื้น",
@@ -3766,6 +3775,10 @@ ${shareSource}
         offsetAria: "ระยะกล้องจากแนวกึ่งกลางทางเข้า เป็นเมตร ค่าบวกคือทางขวา",
         offsetCentred: "อยู่บนแนวกึ่งกลางทางเข้า กล้องเล็งไปที่กลางทางเข้า",
         offsetSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า (มองจากกล้อง) กล้องหัน {pan} องศาเพื่อเล็งกลางทางเข้า",
+        offsetSideManual: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า (มองจากกล้อง) ถ้าจะเล็งกลางทางเข้าต้องหัน {pan} องศา ตอนนี้ตั้งมุมหันเอง (ตั้งค่าเลนส์ขั้นสูง)",
+        aimOffEffective: "หันกล้องไปมากขนาดนี้ คนที่ยืนกลางทางเข้าจะอยู่ในช่วง 10% ริมภาพซึ่งตรวจจับได้ไม่ดี หันกล้องกลับเข้าหากลางทางเข้า (มุมหัน เล็งกลางทางเข้า)",
+        entranceTurnedOut: "ทางเข้า {width} m แคบกว่าภาพ ({covered} m) แต่หันกล้องแบบนี้ ปลายด้าน{side}หลุดภาพไป {miss} m หันกล้องไปทางปลายนั้น หรือย้ายกล้องเข้าใกล้แนวกึ่งกลางทางเข้า",
+        edgeBodySteep: "ชันกว่าเกณฑ์มุมเท้า คนที่เดินตรงนั้นอาจนับไม่ได้ ย้ายเส้นนับออกไปไกลขึ้นหรือติดกล้องให้ต่ำลง",
         offsetSideFisheye: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า ฟิชอายติดเพดานมองลงตรงๆ จึงไม่ต้องหัน",
         sideLeft: "ซ้าย", sideRight: "ขวา",
         edgeLead: "ปลายด้าน{side} {angle}", edgeBody: "อยู่นอกเกณฑ์มุมเท้า คนที่เดินตรงนั้นอาจนับไม่ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น",
@@ -3799,7 +3812,7 @@ ${shareSource}
         personOf: "คนที่ {i} จาก {n}", personGroup: "คนที่ยืนบนเส้น", personPrev: "คนก่อนหน้า", personNext: "คนถัดไป",
         simStillNote: "คนหนึ่งคนยืนบนเส้นนับ ตามที่กล้องนี้มองเห็น กด ให้คนเดิน เพื่อดูการนับ",
         simNote: "คนจำลองที่มองผ่านกล้องนี้ ตัวเลขมาจากการจำลอง ไม่ใช่การนับจริง โหมดหนาแน่นและแออัดมีคนเดินเป็นกลุ่ม คนหยุดใกล้เส้น และกลุ่มยืนคุยกัน กรอบเส้นประคือคนที่ถูกคนใกล้กล้องกว่าบัง",
-        simFallback: "โหลดภาพ 3 มิติไม่ได้ ต้องใช้อินเทอร์เน็ต จึงแสดงภาพจากกล้องแบบแบนแทน",
+        simFallback: "โหลดภาพ 3 มิติไม่ได้ ต้องใช้ WebGL และอินเทอร์เน็ตในครั้งแรก จึงแสดงภาพจากกล้องแบบแบนแทน ซึ่งไม่แสดงกล้องที่ติดเยื้องหรือหันเอง",
         linesOnFloor: "เส้นบนพื้น", countingLineLower: "เส้นนับ", faceLineLower: "เส้นจับใบหน้า",
         opticsFov: "เลนส์ - มุมรับภาพ", horizontalFov: "มุมรับภาพแนวนอน", verticalFov: "มุมรับภาพแนวตั้ง",
         coverageAtLine: "ความกว้างที่เส้นนับ", fullWidth: "กว้างทั้งหมด", effective80: "ใช้งานได้ 80%",
@@ -3943,7 +3956,7 @@ ${shareSource}
       sensorField: byId("sensorField"), sensorSelect: byId("sensorSelect"), focalField: byId("focalField"),
       focalRange: byId("focalRange"), focalInput: byId("focalInput"), focalMinTick: byId("focalMinTick"), focalMaxTick: byId("focalMaxTick"),
       resolutionSelect: byId("resolutionSelect"),
-      verdict: byId("verdict"), verdictHeadline: byId("verdictHeadline"), verdictSub: byId("verdictSub"), heightWarn: byId("heightWarn"),
+      verdict: byId("verdict"), verdictHeadline: byId("verdictHeadline"), verdictSub: byId("verdictSub"), heightWarn: byId("heightWarn"), aimWarn: byId("aimWarn"),
       copyReadings: byId("copyReadings"), copyStatus: byId("copyStatus"), placementAnnouncement: byId("placementAnnouncement"),
       recommendedDistance: byId("recommendedDistance"), snapButton: byId("snapButton"), snapLabel: byId("snapLabel"), densityWarn: byId("densityWarn"),
       answerFaceChip: byId("answerFaceChip"), answerFaceState: byId("answerFaceState"), answerPpmChip: byId("answerPpmChip"),
@@ -4022,6 +4035,7 @@ ${shareSource}
           readCount: t("simReadCount"), readFace: t("simReadFace"),
           in: t("simIn"), out: t("simOut"), outsideFrame: t("simOutsideFrame"), effective: t("simEffective"),
           faceViewPx: t("faceViewPx"), faceViewBest: t("faceViewBest"), faceViewNone: t("faceViewNone"),
+          faceViewLoading: t("faceViewLoading"), faceViewFailed: t("faceViewFailed"),
           pause: t("pause"), resume: t("resume"), personOf: t("personOf"), fromCentre: t("fromCentre"),
           stillCount: t("simStillNote"), stillFace: t("simStillNoteFace")
         }
@@ -4037,6 +4051,7 @@ ${shareSource}
       topView: "camera",
       simFailed: false,
       tiltUserAdjusted: false,
+      tiltDeg: 30,
       // The camera's pan, from facing straight across the entrance (+ to its right); by default it aims at the middle.
       panUserAdjusted: false,
       panDeg: 0,
@@ -4150,7 +4165,7 @@ ${shareSource}
         heightM: heightM,
         distanceM: distanceM,
         camera: camera,
-        tiltDeg: state.tiltUserAdjusted ? Number(els.tiltInput.value) : undefined,
+        tiltDeg: state.tiltUserAdjusted ? state.tiltDeg : undefined,
         panDeg: state.panUserAdjusted ? state.panDeg : undefined,
         entranceWidthM: judgedEntrance(),
         offsetM: state.offsetM
@@ -4258,7 +4273,12 @@ ${shareSource}
       update();
     }
 
+    // A value equal to the automatic one, arriving while on Auto (a field emptied and left), keeps Auto.
     function setPan(value, typing) {
+      if (!typing && !state.panUserAdjusted && Math.abs(Number(value) - currentPlacement().result.pan.recommended) < 0.05) {
+        update();
+        return;
+      }
       state.panUserAdjusted = true;
       state.panDeg = setFieldValue(els.panInput, els.panRange, value, 1, typing);
       update();
@@ -4273,14 +4293,20 @@ ${shareSource}
     }
 
     function setTilt(value, typing) {
+      if (!typing && !state.tiltUserAdjusted && Math.abs(Number(value) - currentPlacement().result.tilt.recommended) < 0.05) {
+        update();
+        return;
+      }
       state.tiltUserAdjusted = true;
-      setFieldValue(els.tiltInput, els.tiltRange, value, 1, typing);
+      state.tiltDeg = setFieldValue(els.tiltInput, els.tiltRange, value, 1, typing);
       update();
     }
 
     function setEntrance(value) {
       const width = parseFloat(value);
-      state.entranceM = value === "" || Number.isNaN(width) || width <= 0 ? null : width;
+      const valid = !Number.isNaN(width) && width > 0 && width <= Number(els.entranceInput.max);
+      els.entranceInput.setAttribute("aria-invalid", String(value !== "" && !valid));
+      state.entranceM = valid ? width : null;
       update();
     }
 
@@ -4296,7 +4322,8 @@ ${shareSource}
     function offsetCopy(p) {
       if (state.offsetM === 0) return t("offsetCentred");
       if (p.result.optics.lens === "fisheye") return t("offsetSideFisheye", { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "sideRight" : "sideLeft") });
-      return t("offsetSide", { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "sideRight" : "sideLeft"), pan: fmt(Math.abs(p.result.pan.recommended), 1) });
+      const vars = { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "sideRight" : "sideLeft"), pan: fmt(Math.abs(p.result.pan.recommended), 1) };
+      return t(p.result.pan.manual ? "offsetSideManual" : "offsetSide", vars);
     }
 
 
@@ -4305,8 +4332,9 @@ ${shareSource}
       const edge = p.result.countingLine.edge;
       const side = t(edge.side === "right" ? "sideRightCap" : "sideLeftCap");
       const angle = fmt(edge.feetAngleDeg, 1) + " deg";
+      const steep = edge.feetAngleDeg > p.profile.feetAngleDeg.acceptable.max;
       return edge.framed
-        ? { lead: t("edgeLead", { side: side, angle: angleMarkup(angle) }), body: t("edgeBody") }
+        ? { lead: t("edgeLead", { side: side, angle: angleMarkup(angle) }), body: t(steep ? "edgeBodySteep" : "edgeBody") }
         : { lead: t("edgeCutLead", { side: side }), body: t("edgeCutBody") };
     }
 
@@ -4353,6 +4381,7 @@ ${shareSource}
 
     function entranceCopy(entrance, coverageWidthM) {
       const vars = { width: fmt(entrance.widthM, 2), covered: widthText(coverageWidthM), miss: fmt(entrance.uncoveredM, 2) };
+      if (entrance.status === "too_wide" && entrance.cause === "turned") return t("entranceTurnedOut", { ...vars, side: t(entrance.side === "right" ? "sideRight" : "sideLeft") });
       if (entrance.status === "too_wide") return t("entranceTooWide", vars);
       if (entrance.status === "tight") return t("entranceTight", vars);
       return t("entranceCovered", vars);
@@ -5382,16 +5411,15 @@ ${shareSource}
       // A ceiling fisheye always looks straight down, so its tilt cannot be changed.
       els.tiltInput.disabled = els.tiltRange.disabled = els.tiltAuto.disabled = fisheye;
       els.tiltHint.hidden = !fisheye;
-      if (fisheye || !state.tiltUserAdjusted) setFieldValue(els.tiltInput, els.tiltRange, r.tilt.value, 1);
+      // The fields show what is in use (90 deg and no pan for a fisheye) while a hand-set value waits in state.
+      setFieldValue(els.tiltInput, els.tiltRange, r.tilt.value, 1, document.activeElement === els.tiltInput);
       els.tiltAuto.setAttribute("aria-pressed", String(fisheye || !state.tiltUserAdjusted));
       // The pan's reach keeps the middle of the entrance in the picture, so the range moves with the placement.
-      els.panInput.min = els.panRange.min = String(Math.ceil(r.pan.range.min * 2) / 2);
-      els.panInput.max = els.panRange.max = String(Math.floor(r.pan.range.max * 2) / 2);
+      els.panInput.min = els.panRange.min = String(Math.floor(r.pan.range.min * 10) / 10);
+      els.panInput.max = els.panRange.max = String(Math.ceil(r.pan.range.max * 10) / 10);
       els.panInput.disabled = els.panRange.disabled = els.panAuto.disabled = fisheye;
-      if (fisheye || !state.panUserAdjusted || Math.abs(r.pan.value - state.panDeg) > 0.05) {
-        setFieldValue(els.panInput, els.panRange, r.pan.value, 1);
-        if (state.panUserAdjusted && !fisheye) state.panDeg = r.pan.value;
-      }
+      setFieldValue(els.panInput, els.panRange, r.pan.value, 1, document.activeElement === els.panInput);
+      if (state.panUserAdjusted && !fisheye) state.panDeg = r.pan.value;
       els.panAuto.setAttribute("aria-pressed", String(fisheye || !state.panUserAdjusted));
       els.panHint.textContent = panCopy(r);
       syncDistanceBounds(p);
@@ -5406,7 +5434,7 @@ ${shareSource}
       const verdictLabel = STATUS_LABEL[r.verdict];
       const visibleClass = face.tooSmall ? "too-small" : face.visible ? "visible" : "not-visible";
       const resolution = p.resolution;
-      const verticalSpanM = Math.max(0.001, 2 * Math.hypot(heightM, distanceM) * Math.tan(toRad(r.optics.verticalFovDeg / 2)));
+      const verticalSpanM = Math.max(0.001, 2 * Math.hypot(heightM, distanceM, state.offsetM) * Math.tan(toRad(r.optics.verticalFovDeg / 2)));
       const verticalPpm = fisheye ? r.optics.pixelsPerMetre : resolution.h / verticalSpanM;
 
       els.verdict.dataset.state = r.verdict;
@@ -5415,6 +5443,7 @@ ${shareSource}
       const outside = r.warnings.indexOf("height_outside_range") >= 0;
       const lowDensity = r.warnings.includes("low_pixel_density");
       els.edgeWarn.innerHTML = edgeHtml(p);
+      els.aimWarn.textContent = t("aimOffEffective");
       els.densityWarn.textContent = lowDensity ? t("densityWarn", { ppm: fmt(r.optics.pixelsPerMetre, 0), min: profile.minPixelsPerMetre.counting }) : "";
       els.heightWarn.textContent = outside ? t("heightWarn", { height: fmt(heightM, 1), scene: sceneName(profile), min: fmt(profile.heightRangeM.min, 1), max: fmt(profile.heightRangeM.max, 1) }) : "";
       if (r.entrance !== null) {
@@ -5423,6 +5452,7 @@ ${shareSource}
       }
       showNotes([
         [els.edgeWarn, r.countingLine.edge !== null],
+        [els.aimWarn, r.warnings.indexOf("aim_off_effective") >= 0],
         [els.densityWarn, lowDensity],
         [els.heightWarn, outside],
         [els.entranceLine, r.entrance !== null]
@@ -5757,6 +5787,8 @@ ${shareSource}
       resetTimer = window.setTimeout(hideResetToast, 6000);
     }
     function resetToDefaults() {
+      // A second Reset while Undo is still offered keeps the first Undo, which goes back to before both.
+      const keep = resetUndo;
       const before = decodePlacement(encodePlacement(sharedPlacementFrom(currentPlacement())));
       const viewBefore = window.walkSim ? window.walkSim.viewState() : null;
       const preset = presetFor(state.presetId);
@@ -5767,11 +5799,11 @@ ${shareSource}
       if (preset.lens !== "fisheye") setFieldValue(els.focalInput, els.focalRange, preset.focalDefaultMm, 1);
       if (window.walkSim) window.walkSim.resetView();
       setSolveMode("distance");
-      resetUndo = () => {
+      resetUndo = keep || (() => {
         applySharedPlacement(before);
         if (window.walkSim && viewBefore) window.walkSim.restoreView(viewBefore);
         update();
-      };
+      });
       showResetToast();
     }
     document.getElementById("resetAll").addEventListener("click", resetToDefaults);
@@ -5972,8 +6004,8 @@ ${peopleSource}
         },
         person: { row: document.getElementById("simPerson"), label: document.getElementById("simPersonLabel"), prev: document.getElementById("simPersonPrev"), next: document.getElementById("simPersonNext") },
         // The avatars are large and optional: the box figures stand in until they arrive, and for good if they fail.
-        loadPeople: () => Promise.all([import("${FBX_URL}"), import("${SKELETON_URL}")])
-          .then(([fbx, skeleton]) => loadPeople(THREE, { FBXLoader: fbx.FBXLoader, clone: skeleton.clone, base: "people/", heightM: MODEL_HEIGHT_M })),
+        loadPeople: (scope) => Promise.all([import("${FBX_URL}"), import("${SKELETON_URL}")])
+          .then(([fbx, skeleton]) => loadPeople(THREE, { FBXLoader: fbx.FBXLoader, clone: skeleton.clone, base: "people/", heightM: MODEL_HEIGHT_M, first: scope === "first" })),
         stillOnly: [document.getElementById("simStillNote")],
         resetButton: document.getElementById("simReset"),
         crossButton: document.getElementById("simCross"),

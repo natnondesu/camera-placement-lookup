@@ -61,25 +61,33 @@ export function inPlace(THREE, clip) {
 }
 
 /**
- * Loads every avatar and clip, then returns how many there are and a maker for walking or standing people.
+ * Loads the avatars and clips, then returns how many there are and a maker for walking or standing people.
  * @param {typeof import("three")} THREE
- * @param {{ FBXLoader: Function, clone: Function, base: string, heightM: number }} options
- *   base: the folder holding the avatar folders and anims/; heightM: the height a body is built at
+ * @param {{ FBXLoader: Function, clone: Function, base: string, heightM: number, first?: boolean }} options
+ *   base: the folder holding the avatar folders and anims/; heightM: the height a body is built at; first: only the
+ *   first avatar, standing (about a sixth of the download), for a phone until the crowd is needed
  */
-export async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
+export async function loadPeople(THREE, { FBXLoader, clone, base, heightM, first = false }) {
+  // Done only once its textures are in too: a still view draws once, and a body drawn before its images arrive stays
+  // black until something else redraws it. A texture that fails still settles (the body is drawn untextured).
   const loadFbx = (url, folder) => {
     const manager = new THREE.LoadingManager();
+    const settled = new Promise((resolve) => { manager.onLoad = resolve; });
     manager.setURLModifier((asked) => (asked === url ? asked : textureUrl(asked, folder)));
     manager.addHandler(/\.tga$/i, new THREE.TextureLoader(manager));
-    return new FBXLoader(manager).loadAsync(url);
+    return new FBXLoader(manager).loadAsync(url).then(async (model) => {
+      await settled;
+      return model;
+    });
   };
   const clipFor = async (name) => inPlace(THREE, (await loadFbx(base + "anims/" + name + ".max.fbx", base)).animations[0]);
   const [clips, templates] = await Promise.all([
-    Promise.all(Object.entries(PEOPLE_CLIPS).map(async ([sex, names]) => {
-      const loaded = await Promise.all(Object.entries(names).map(async ([motion, name]) => [motion, await clipFor(name)]));
+    Promise.all(Object.entries(PEOPLE_CLIPS).filter(([sex]) => !first || sex === PEOPLE[0].sex).map(async ([sex, names]) => {
+      const wanted = Object.entries(names).filter(([motion]) => !first || motion === "idle");
+      const loaded = await Promise.all(wanted.map(async ([motion, name]) => [motion, await clipFor(name)]));
       return [sex, Object.fromEntries(loaded)];
     })),
-    Promise.all(PEOPLE.map(async (person) => {
+    Promise.all((first ? PEOPLE.slice(0, 1) : PEOPLE).map(async (person) => {
       const folder = base + person.id + "/";
       return { ...person, model: prepare(THREE, await loadFbx(folder + person.id + ".fbx", folder), heightM) };
     })),
@@ -127,7 +135,7 @@ export async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
       },
     };
   }
-  return { count: templates.length, make };
+  return { count: templates.length, total: PEOPLE.length, complete: !first, make };
 }
 
 // One template: metres, a simple matte material, hair and lashes cut out by their alpha, and the face located.

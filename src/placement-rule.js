@@ -515,10 +515,19 @@ export function entranceCoverage(entranceWidthM, coverageWidthM, effectiveWidthM
 }
 
 // The entrance against the stretches of the counting line in view and in the effective 80%, which a panned camera shifts.
+// When part of it is out of view, cause says why: "width" (wider than the view) or "turned" (the view is wide enough but
+// aimed so one end, side, is left out), so the advice can be to widen the view or to turn the camera back.
 function entranceOnLine(entranceWidthM, inView, inEffective) {
   const half = entranceWidthM / 2;
   const overlap = Math.max(0, Math.min(inView.rightM, half) - Math.max(inView.leftM, -half));
-  if (overlap < entranceWidthM) return { widthM: entranceWidthM, status: "too_wide", uncoveredM: entranceWidthM - overlap };
+  if (overlap < entranceWidthM) {
+    const cutRight = Math.max(0, half - inView.rightM);
+    const cutLeft = Math.max(0, inView.leftM + half);
+    return {
+      widthM: entranceWidthM, status: "too_wide", uncoveredM: entranceWidthM - overlap,
+      cause: inView.rightM - inView.leftM >= entranceWidthM ? "turned" : "width", side: cutRight >= cutLeft ? "right" : "left",
+    };
+  }
   const inside = inEffective.leftM <= -half && inEffective.rightM >= half;
   return { widthM: entranceWidthM, status: inside ? "covered" : "tight", uncoveredM: 0 };
 }
@@ -624,6 +633,13 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
   const headAngleDeg = downwardAngle(heightM, profile.humanHeightM, aimReachM);
   const inView = lineInView(camera, pose, heightM, distanceM, offsetM, 1);
   const inEffective = lineInView(camera, pose, heightM, distanceM, offsetM, EFFECTIVE_COVERAGE);
+  // A hand-set pan can push the person in the middle of the entrance (shoulders, feet to head) into the outer tenth of
+  // the picture, where detection is weaker.
+  const aimReachX = fisheye ? 0 : Math.max(0, ...[-0.3, 0.3].flatMap((x) => [0, profile.humanHeightM / 2, profile.humanHeightM].map((y) => {
+    const image = lens.toImage(fromCamera(pose, { x, y, z: 0 }));
+    return image === null ? 1 : Math.abs(image.x);
+  })));
+  const aimOffEffective = aimReachX > EFFECTIVE_COVERAGE;
   const pixelsPerMetre = pixelDensity(camera, Math.hypot(heightM, aimReachM), 90 - points.aim.feetAngleDeg);
   const { min, max } = profile.heightRangeM;
 
@@ -654,6 +670,7 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
       (heightM < min || heightM > max) && "height_outside_range",
       pixelsPerMetre < profile.minPixelsPerMetre.counting && "low_pixel_density",
       edge !== null && "walkable_edge",
+      aimOffEffective && "aim_off_effective",
     ].filter(Boolean),
   };
 }

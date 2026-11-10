@@ -2511,6 +2511,7 @@
     }
 
     .answer-chips {
+      min-width: 0;
       display: flex;
       flex-wrap: nowrap;
       gap: 6px;
@@ -2590,6 +2591,7 @@
 
     @media (max-width: 1200px) {
       .answer {
+        min-width: 0;
         position: sticky;
         top: var(--topbar-h, 64px);
         z-index: 19;
@@ -3307,6 +3309,22 @@
       line-height: 1.4;
       box-shadow: 0 30px 70px oklch(0 0 0 / 0.55);
       color-scheme: light;
+    }
+
+    .sheet.dense {
+      gap: 7px;
+      padding-top: 28px;
+      padding-bottom: 22px;
+    }
+
+    .sheet.dense .steps li {
+      padding-top: 3px;
+      padding-bottom: 3px;
+    }
+
+    .sheet.dense figure.draw svg,
+    .sheet.dense figure.cam img {
+      height: 140px;
     }
 
     .sheet ::selection {
@@ -4542,6 +4560,7 @@
               <div class="verdict-foot">
                 <div class="verdict-notes" id="verdictNotes">
                   <p class="warn-line edge-warn" id="edgeWarn" role="note" hidden></p>
+                  <p class="warn-line" id="aimWarn" hidden></p>
                   <p class="warn-line" id="densityWarn" hidden></p>
                   <p class="warn-line" id="heightWarn" hidden></p>
                   <p class="entrance-line" id="entranceLine" data-state="covered" hidden></p>
@@ -5250,10 +5269,19 @@ function entranceCoverage(entranceWidthM, coverageWidthM, effectiveWidthM = cove
 }
 
 // The entrance against the stretches of the counting line in view and in the effective 80%, which a panned camera shifts.
+// When part of it is out of view, cause says why: "width" (wider than the view) or "turned" (the view is wide enough but
+// aimed so one end, side, is left out), so the advice can be to widen the view or to turn the camera back.
 function entranceOnLine(entranceWidthM, inView, inEffective) {
   const half = entranceWidthM / 2;
   const overlap = Math.max(0, Math.min(inView.rightM, half) - Math.max(inView.leftM, -half));
-  if (overlap < entranceWidthM) return { widthM: entranceWidthM, status: "too_wide", uncoveredM: entranceWidthM - overlap };
+  if (overlap < entranceWidthM) {
+    const cutRight = Math.max(0, half - inView.rightM);
+    const cutLeft = Math.max(0, inView.leftM + half);
+    return {
+      widthM: entranceWidthM, status: "too_wide", uncoveredM: entranceWidthM - overlap,
+      cause: inView.rightM - inView.leftM >= entranceWidthM ? "turned" : "width", side: cutRight >= cutLeft ? "right" : "left",
+    };
+  }
   const inside = inEffective.leftM <= -half && inEffective.rightM >= half;
   return { widthM: entranceWidthM, status: inside ? "covered" : "tight", uncoveredM: 0 };
 }
@@ -5359,6 +5387,13 @@ function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg, entra
   const headAngleDeg = downwardAngle(heightM, profile.humanHeightM, aimReachM);
   const inView = lineInView(camera, pose, heightM, distanceM, offsetM, 1);
   const inEffective = lineInView(camera, pose, heightM, distanceM, offsetM, EFFECTIVE_COVERAGE);
+  // A hand-set pan can push the person in the middle of the entrance (shoulders, feet to head) into the outer tenth of
+  // the picture, where detection is weaker.
+  const aimReachX = fisheye ? 0 : Math.max(0, ...[-0.3, 0.3].flatMap((x) => [0, profile.humanHeightM / 2, profile.humanHeightM].map((y) => {
+    const image = lens.toImage(fromCamera(pose, { x, y, z: 0 }));
+    return image === null ? 1 : Math.abs(image.x);
+  })));
+  const aimOffEffective = aimReachX > EFFECTIVE_COVERAGE;
   const pixelsPerMetre = pixelDensity(camera, Math.hypot(heightM, aimReachM), 90 - points.aim.feetAngleDeg);
   const { min, max } = profile.heightRangeM;
 
@@ -5389,6 +5424,7 @@ function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg, entra
       (heightM < min || heightM > max) && "height_outside_range",
       pixelsPerMetre < profile.minPixelsPerMetre.counting && "low_pixel_density",
       edge !== null && "walkable_edge",
+      aimOffEffective && "aim_off_effective",
     ].filter(Boolean),
   };
 }
@@ -5595,6 +5631,7 @@ function decodePlacement(hash) {
         notesNone: "Nothing to flag for this placement.", notesMore: "+{n} more", notesMoreAria: "Show the next note, {i} of {n}",
         offsetFromCentre: "From the centre line", centreButton: "Centre",
         faceViewPx: "{px} px face", faceViewBest: "best case", faceViewNone: "No face in view",
+        faceViewLoading: "Loading face…", faceViewFailed: "No face model",
         sideModeSide: "Side", sideModeOrbit: "Orbit", sideReadingsAria: "Current side-view readings",
         alongFloor: "{distance} m to the middle",
         orbitNote: "Drag to orbit, scroll or pinch to zoom. The view cone ends where it meets the floor.",
@@ -5605,6 +5642,10 @@ function decodePlacement(hash) {
         offsetAria: "Camera offset from the entrance centre line in meters, positive to the right",
         offsetCentred: "On the entrance centre line. The camera aims at the middle of the entrance.",
         offsetSide: "{distance} m {side} of the entrance centre line, as the camera faces it. It turns {pan} deg to aim at the middle.",
+        offsetSideManual: "{distance} m {side} of the entrance centre line, as the camera faces it. Aiming at the middle would take a {pan} deg turn; the pan is set by hand (Advanced optics).",
+        aimOffEffective: "Turned this far, a person in the middle of the entrance reaches the outer 10% of the picture, where detection is weaker. Turn the camera back toward the middle (Pan angle, Aim at middle).",
+        entranceTurnedOut: "Entrance {width} m would fit the {covered} m view, but turned this way its {side} end is {miss} m out of it. Turn the camera toward that end, or move it closer to the entrance centre line.",
+        edgeBodySteep: "is steeper than the feet bands, so people walking there may be missed. Move the counting line farther out or mount the camera lower.",
         offsetSideFisheye: "{distance} m {side} of the entrance centre line. A ceiling fisheye looks straight down, so it does not turn.",
         sideLeft: "left", sideRight: "right",
         edgeLead: "{side} end at {angle}", edgeBody: "is outside the feet bands, so people walking there may be missed. Move the camera toward the centre line or mount it higher.",
@@ -5638,7 +5679,7 @@ function decodePlacement(hash) {
         personOf: "Person {i} of {n}", personGroup: "Person standing on the line", personPrev: "Previous person", personNext: "Next person",
         simStillNote: "One person standing on the counting line, as this camera sees them. Walk people to watch the counting.",
         simNote: "Simulated people through this camera. Counts come from the simulation, not real traffic. Busy and Crowded add groups, people who stop near the line and groups talking; a dashed box is someone hidden behind a nearer person.",
-        simFallback: "The 3D view could not load. It needs an internet connection; this flat camera view is shown instead.",
+        simFallback: "The 3D view could not load: it needs WebGL, and an internet connection the first time. This flat camera view is shown instead; it does not show an off-centre or panned camera.",
         linesOnFloor: "Lines on the floor", countingLineLower: "counting line", faceLineLower: "face line",
         opticsFov: "Optics - field of view", horizontalFov: "horizontal FOV", verticalFov: "vertical FOV",
         coverageAtLine: "Coverage at counting line", fullWidth: "full width", effective80: "effective 80%",
@@ -5707,6 +5748,7 @@ function decodePlacement(hash) {
         notesNone: "ตำแหน่งนี้ไม่มีข้อควรระวัง", notesMore: "อีก {n} ข้อ", notesMoreAria: "ดูข้อถัดไป {i} จาก {n}",
         offsetFromCentre: "ห่างจากแนวกึ่งกลาง", centreButton: "กึ่งกลาง",
         faceViewPx: "ใบหน้า {px} px", faceViewBest: "กรณีดีที่สุด", faceViewNone: "ไม่เห็นใบหน้า",
+        faceViewLoading: "กำลังโหลด…", faceViewFailed: "ไม่มีโมเดลใบหน้า",
         sideModeSide: "ด้านข้าง", sideModeOrbit: "หมุนดู", sideReadingsAria: "ค่าที่อ่านได้จากมุมมองด้านข้าง",
         alongFloor: "ถึงกลางทางเข้า {distance} m",
         orbitNote: "ลากเพื่อหมุนดู เลื่อนหรือถ่างนิ้วเพื่อซูม กรวยภาพจบตรงที่แตะพื้น",
@@ -5717,6 +5759,10 @@ function decodePlacement(hash) {
         offsetAria: "ระยะกล้องจากแนวกึ่งกลางทางเข้า เป็นเมตร ค่าบวกคือทางขวา",
         offsetCentred: "อยู่บนแนวกึ่งกลางทางเข้า กล้องเล็งไปที่กลางทางเข้า",
         offsetSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า (มองจากกล้อง) กล้องหัน {pan} องศาเพื่อเล็งกลางทางเข้า",
+        offsetSideManual: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า (มองจากกล้อง) ถ้าจะเล็งกลางทางเข้าต้องหัน {pan} องศา ตอนนี้ตั้งมุมหันเอง (ตั้งค่าเลนส์ขั้นสูง)",
+        aimOffEffective: "หันกล้องไปมากขนาดนี้ คนที่ยืนกลางทางเข้าจะอยู่ในช่วง 10% ริมภาพซึ่งตรวจจับได้ไม่ดี หันกล้องกลับเข้าหากลางทางเข้า (มุมหัน เล็งกลางทางเข้า)",
+        entranceTurnedOut: "ทางเข้า {width} m แคบกว่าภาพ ({covered} m) แต่หันกล้องแบบนี้ ปลายด้าน{side}หลุดภาพไป {miss} m หันกล้องไปทางปลายนั้น หรือย้ายกล้องเข้าใกล้แนวกึ่งกลางทางเข้า",
+        edgeBodySteep: "ชันกว่าเกณฑ์มุมเท้า คนที่เดินตรงนั้นอาจนับไม่ได้ ย้ายเส้นนับออกไปไกลขึ้นหรือติดกล้องให้ต่ำลง",
         offsetSideFisheye: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า ฟิชอายติดเพดานมองลงตรงๆ จึงไม่ต้องหัน",
         sideLeft: "ซ้าย", sideRight: "ขวา",
         edgeLead: "ปลายด้าน{side} {angle}", edgeBody: "อยู่นอกเกณฑ์มุมเท้า คนที่เดินตรงนั้นอาจนับไม่ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น",
@@ -5750,7 +5796,7 @@ function decodePlacement(hash) {
         personOf: "คนที่ {i} จาก {n}", personGroup: "คนที่ยืนบนเส้น", personPrev: "คนก่อนหน้า", personNext: "คนถัดไป",
         simStillNote: "คนหนึ่งคนยืนบนเส้นนับ ตามที่กล้องนี้มองเห็น กด ให้คนเดิน เพื่อดูการนับ",
         simNote: "คนจำลองที่มองผ่านกล้องนี้ ตัวเลขมาจากการจำลอง ไม่ใช่การนับจริง โหมดหนาแน่นและแออัดมีคนเดินเป็นกลุ่ม คนหยุดใกล้เส้น และกลุ่มยืนคุยกัน กรอบเส้นประคือคนที่ถูกคนใกล้กล้องกว่าบัง",
-        simFallback: "โหลดภาพ 3 มิติไม่ได้ ต้องใช้อินเทอร์เน็ต จึงแสดงภาพจากกล้องแบบแบนแทน",
+        simFallback: "โหลดภาพ 3 มิติไม่ได้ ต้องใช้ WebGL และอินเทอร์เน็ตในครั้งแรก จึงแสดงภาพจากกล้องแบบแบนแทน ซึ่งไม่แสดงกล้องที่ติดเยื้องหรือหันเอง",
         linesOnFloor: "เส้นบนพื้น", countingLineLower: "เส้นนับ", faceLineLower: "เส้นจับใบหน้า",
         opticsFov: "เลนส์ - มุมรับภาพ", horizontalFov: "มุมรับภาพแนวนอน", verticalFov: "มุมรับภาพแนวตั้ง",
         coverageAtLine: "ความกว้างที่เส้นนับ", fullWidth: "กว้างทั้งหมด", effective80: "ใช้งานได้ 80%",
@@ -5894,7 +5940,7 @@ function decodePlacement(hash) {
       sensorField: byId("sensorField"), sensorSelect: byId("sensorSelect"), focalField: byId("focalField"),
       focalRange: byId("focalRange"), focalInput: byId("focalInput"), focalMinTick: byId("focalMinTick"), focalMaxTick: byId("focalMaxTick"),
       resolutionSelect: byId("resolutionSelect"),
-      verdict: byId("verdict"), verdictHeadline: byId("verdictHeadline"), verdictSub: byId("verdictSub"), heightWarn: byId("heightWarn"),
+      verdict: byId("verdict"), verdictHeadline: byId("verdictHeadline"), verdictSub: byId("verdictSub"), heightWarn: byId("heightWarn"), aimWarn: byId("aimWarn"),
       copyReadings: byId("copyReadings"), copyStatus: byId("copyStatus"), placementAnnouncement: byId("placementAnnouncement"),
       recommendedDistance: byId("recommendedDistance"), snapButton: byId("snapButton"), snapLabel: byId("snapLabel"), densityWarn: byId("densityWarn"),
       answerFaceChip: byId("answerFaceChip"), answerFaceState: byId("answerFaceState"), answerPpmChip: byId("answerPpmChip"),
@@ -5973,6 +6019,7 @@ function decodePlacement(hash) {
           readCount: t("simReadCount"), readFace: t("simReadFace"),
           in: t("simIn"), out: t("simOut"), outsideFrame: t("simOutsideFrame"), effective: t("simEffective"),
           faceViewPx: t("faceViewPx"), faceViewBest: t("faceViewBest"), faceViewNone: t("faceViewNone"),
+          faceViewLoading: t("faceViewLoading"), faceViewFailed: t("faceViewFailed"),
           pause: t("pause"), resume: t("resume"), personOf: t("personOf"), fromCentre: t("fromCentre"),
           stillCount: t("simStillNote"), stillFace: t("simStillNoteFace")
         }
@@ -5988,6 +6035,7 @@ function decodePlacement(hash) {
       topView: "camera",
       simFailed: false,
       tiltUserAdjusted: false,
+      tiltDeg: 30,
       // The camera's pan, from facing straight across the entrance (+ to its right); by default it aims at the middle.
       panUserAdjusted: false,
       panDeg: 0,
@@ -6101,7 +6149,7 @@ function decodePlacement(hash) {
         heightM: heightM,
         distanceM: distanceM,
         camera: camera,
-        tiltDeg: state.tiltUserAdjusted ? Number(els.tiltInput.value) : undefined,
+        tiltDeg: state.tiltUserAdjusted ? state.tiltDeg : undefined,
         panDeg: state.panUserAdjusted ? state.panDeg : undefined,
         entranceWidthM: judgedEntrance(),
         offsetM: state.offsetM
@@ -6209,7 +6257,12 @@ function decodePlacement(hash) {
       update();
     }
 
+    // A value equal to the automatic one, arriving while on Auto (a field emptied and left), keeps Auto.
     function setPan(value, typing) {
+      if (!typing && !state.panUserAdjusted && Math.abs(Number(value) - currentPlacement().result.pan.recommended) < 0.05) {
+        update();
+        return;
+      }
       state.panUserAdjusted = true;
       state.panDeg = setFieldValue(els.panInput, els.panRange, value, 1, typing);
       update();
@@ -6224,14 +6277,20 @@ function decodePlacement(hash) {
     }
 
     function setTilt(value, typing) {
+      if (!typing && !state.tiltUserAdjusted && Math.abs(Number(value) - currentPlacement().result.tilt.recommended) < 0.05) {
+        update();
+        return;
+      }
       state.tiltUserAdjusted = true;
-      setFieldValue(els.tiltInput, els.tiltRange, value, 1, typing);
+      state.tiltDeg = setFieldValue(els.tiltInput, els.tiltRange, value, 1, typing);
       update();
     }
 
     function setEntrance(value) {
       const width = parseFloat(value);
-      state.entranceM = value === "" || Number.isNaN(width) || width <= 0 ? null : width;
+      const valid = !Number.isNaN(width) && width > 0 && width <= Number(els.entranceInput.max);
+      els.entranceInput.setAttribute("aria-invalid", String(value !== "" && !valid));
+      state.entranceM = valid ? width : null;
       update();
     }
 
@@ -6247,7 +6306,8 @@ function decodePlacement(hash) {
     function offsetCopy(p) {
       if (state.offsetM === 0) return t("offsetCentred");
       if (p.result.optics.lens === "fisheye") return t("offsetSideFisheye", { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "sideRight" : "sideLeft") });
-      return t("offsetSide", { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "sideRight" : "sideLeft"), pan: fmt(Math.abs(p.result.pan.recommended), 1) });
+      const vars = { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "sideRight" : "sideLeft"), pan: fmt(Math.abs(p.result.pan.recommended), 1) };
+      return t(p.result.pan.manual ? "offsetSideManual" : "offsetSide", vars);
     }
 
 
@@ -6256,8 +6316,9 @@ function decodePlacement(hash) {
       const edge = p.result.countingLine.edge;
       const side = t(edge.side === "right" ? "sideRightCap" : "sideLeftCap");
       const angle = fmt(edge.feetAngleDeg, 1) + " deg";
+      const steep = edge.feetAngleDeg > p.profile.feetAngleDeg.acceptable.max;
       return edge.framed
-        ? { lead: t("edgeLead", { side: side, angle: angleMarkup(angle) }), body: t("edgeBody") }
+        ? { lead: t("edgeLead", { side: side, angle: angleMarkup(angle) }), body: t(steep ? "edgeBodySteep" : "edgeBody") }
         : { lead: t("edgeCutLead", { side: side }), body: t("edgeCutBody") };
     }
 
@@ -6304,6 +6365,7 @@ function decodePlacement(hash) {
 
     function entranceCopy(entrance, coverageWidthM) {
       const vars = { width: fmt(entrance.widthM, 2), covered: widthText(coverageWidthM), miss: fmt(entrance.uncoveredM, 2) };
+      if (entrance.status === "too_wide" && entrance.cause === "turned") return t("entranceTurnedOut", { ...vars, side: t(entrance.side === "right" ? "sideRight" : "sideLeft") });
       if (entrance.status === "too_wide") return t("entranceTooWide", vars);
       if (entrance.status === "tight") return t("entranceTight", vars);
       return t("entranceCovered", vars);
@@ -7333,16 +7395,15 @@ function decodePlacement(hash) {
       // A ceiling fisheye always looks straight down, so its tilt cannot be changed.
       els.tiltInput.disabled = els.tiltRange.disabled = els.tiltAuto.disabled = fisheye;
       els.tiltHint.hidden = !fisheye;
-      if (fisheye || !state.tiltUserAdjusted) setFieldValue(els.tiltInput, els.tiltRange, r.tilt.value, 1);
+      // The fields show what is in use (90 deg and no pan for a fisheye) while a hand-set value waits in state.
+      setFieldValue(els.tiltInput, els.tiltRange, r.tilt.value, 1, document.activeElement === els.tiltInput);
       els.tiltAuto.setAttribute("aria-pressed", String(fisheye || !state.tiltUserAdjusted));
       // The pan's reach keeps the middle of the entrance in the picture, so the range moves with the placement.
-      els.panInput.min = els.panRange.min = String(Math.ceil(r.pan.range.min * 2) / 2);
-      els.panInput.max = els.panRange.max = String(Math.floor(r.pan.range.max * 2) / 2);
+      els.panInput.min = els.panRange.min = String(Math.floor(r.pan.range.min * 10) / 10);
+      els.panInput.max = els.panRange.max = String(Math.ceil(r.pan.range.max * 10) / 10);
       els.panInput.disabled = els.panRange.disabled = els.panAuto.disabled = fisheye;
-      if (fisheye || !state.panUserAdjusted || Math.abs(r.pan.value - state.panDeg) > 0.05) {
-        setFieldValue(els.panInput, els.panRange, r.pan.value, 1);
-        if (state.panUserAdjusted && !fisheye) state.panDeg = r.pan.value;
-      }
+      setFieldValue(els.panInput, els.panRange, r.pan.value, 1, document.activeElement === els.panInput);
+      if (state.panUserAdjusted && !fisheye) state.panDeg = r.pan.value;
       els.panAuto.setAttribute("aria-pressed", String(fisheye || !state.panUserAdjusted));
       els.panHint.textContent = panCopy(r);
       syncDistanceBounds(p);
@@ -7357,7 +7418,7 @@ function decodePlacement(hash) {
       const verdictLabel = STATUS_LABEL[r.verdict];
       const visibleClass = face.tooSmall ? "too-small" : face.visible ? "visible" : "not-visible";
       const resolution = p.resolution;
-      const verticalSpanM = Math.max(0.001, 2 * Math.hypot(heightM, distanceM) * Math.tan(toRad(r.optics.verticalFovDeg / 2)));
+      const verticalSpanM = Math.max(0.001, 2 * Math.hypot(heightM, distanceM, state.offsetM) * Math.tan(toRad(r.optics.verticalFovDeg / 2)));
       const verticalPpm = fisheye ? r.optics.pixelsPerMetre : resolution.h / verticalSpanM;
 
       els.verdict.dataset.state = r.verdict;
@@ -7366,6 +7427,7 @@ function decodePlacement(hash) {
       const outside = r.warnings.indexOf("height_outside_range") >= 0;
       const lowDensity = r.warnings.includes("low_pixel_density");
       els.edgeWarn.innerHTML = edgeHtml(p);
+      els.aimWarn.textContent = t("aimOffEffective");
       els.densityWarn.textContent = lowDensity ? t("densityWarn", { ppm: fmt(r.optics.pixelsPerMetre, 0), min: profile.minPixelsPerMetre.counting }) : "";
       els.heightWarn.textContent = outside ? t("heightWarn", { height: fmt(heightM, 1), scene: sceneName(profile), min: fmt(profile.heightRangeM.min, 1), max: fmt(profile.heightRangeM.max, 1) }) : "";
       if (r.entrance !== null) {
@@ -7374,6 +7436,7 @@ function decodePlacement(hash) {
       }
       showNotes([
         [els.edgeWarn, r.countingLine.edge !== null],
+        [els.aimWarn, r.warnings.indexOf("aim_off_effective") >= 0],
         [els.densityWarn, lowDensity],
         [els.heightWarn, outside],
         [els.entranceLine, r.entrance !== null]
@@ -7708,6 +7771,8 @@ function decodePlacement(hash) {
       resetTimer = window.setTimeout(hideResetToast, 6000);
     }
     function resetToDefaults() {
+      // A second Reset while Undo is still offered keeps the first Undo, which goes back to before both.
+      const keep = resetUndo;
       const before = decodePlacement(encodePlacement(sharedPlacementFrom(currentPlacement())));
       const viewBefore = window.walkSim ? window.walkSim.viewState() : null;
       const preset = presetFor(state.presetId);
@@ -7718,11 +7783,11 @@ function decodePlacement(hash) {
       if (preset.lens !== "fisheye") setFieldValue(els.focalInput, els.focalRange, preset.focalDefaultMm, 1);
       if (window.walkSim) window.walkSim.resetView();
       setSolveMode("distance");
-      resetUndo = () => {
+      resetUndo = keep || (() => {
         applySharedPlacement(before);
         if (window.walkSim && viewBefore) window.walkSim.restoreView(viewBefore);
         update();
-      };
+      });
       showResetToast();
     }
     document.getElementById("resetAll").addEventListener("click", resetToDefaults);
@@ -7891,6 +7956,7 @@ const SHEET_TEXT = {
     shMount: "Mount the camera above the floor", shMountHint: "Measure to the centre of the lens.",
     shLine: "Mark the counting line out from the point below the camera", shLineHint: "Straight out, across the full entrance.",
     shTilt: "Tilt the camera down", shTiltHint: "It aims at {aim} m on a person standing on the line.",
+    shTiltHintMiddle: "Set for the middle of the entrance: {aim} m up a person standing there.", shToMiddle: "to middle",
     shMountHintOffset: "To the lens centre, {distance} m {side} of the entrance centre line; turn it {pan}° to the middle.",
     shMountHintPanned: "To the lens centre, {where}; turn it {pan}° to the {turn} from facing straight across the entrance.",
     shWhereCentre: "on the entrance centre line", shWhereSide: "{distance} m {side} of the entrance centre line",
@@ -7931,6 +7997,7 @@ const SHEET_TEXT = {
     shMount: "ติดตั้งกล้องสูงจากพื้น", shMountHint: "วัดถึงกึ่งกลางเลนส์",
     shLine: "ทำเครื่องหมายเส้นนับ ห่างจากจุดใต้กล้อง", shLineHint: "ตรงออกไป และยาวตลอดความกว้างทางเข้า",
     shTilt: "ก้มกล้องลง", shTiltHint: "เล็งที่ความสูง {aim} m ของคนที่ยืนบนเส้นนับ",
+    shTiltHintMiddle: "ตั้งสำหรับกลางทางเข้า: เล็งที่ความสูง {aim} m ของคนที่ยืนตรงนั้น", shToMiddle: "ถึงกลาง",
     shMountHintOffset: "วัดถึงกึ่งกลางเลนส์ ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า หันกล้อง {pan}° เข้าหากลางทางเข้า",
     shMountHintPanned: "วัดถึงกึ่งกลางเลนส์ {where} หันกล้องไปทาง{turn} {pan}° จากแนวตั้งฉากกับทางเข้า",
     shWhereCentre: "บนแนวกึ่งกลางทางเข้า", shWhereSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า",
@@ -8056,7 +8123,7 @@ function sharedPlacementFrom(p) {
     solve: state.solveMode,
     heightM: p.heightM,
     distanceM: p.distanceM,
-    tiltDeg: state.tiltUserAdjusted && preset.lens !== "fisheye" ? Number(els.tiltInput.value) : null,
+    tiltDeg: state.tiltUserAdjusted && preset.lens !== "fisheye" ? state.tiltDeg : null,
     entranceM: state.entranceM,
     offsetM: state.offsetM,
     panDeg: state.panUserAdjusted && preset.lens !== "fisheye" ? state.panDeg : null,
@@ -8106,12 +8173,12 @@ function applySharedPlacement(shared) {
   }
   if (shared.heightM !== null) setFieldValue(els.heightInput, els.heightRange, shared.heightM, 1);
   if (shared.distanceM !== null) setFieldValue(els.distanceInput, els.distanceRange, shared.distanceM, 2);
-  if (shared.tiltDeg !== null) {
-    state.tiltUserAdjusted = true;
-    setFieldValue(els.tiltInput, els.tiltRange, shared.tiltDeg, 1);
-  }
-  state.entranceM = shared.entranceM;
-  els.entranceInput.value = shared.entranceM === null ? "" : String(shared.entranceM);
+  // A link without a tilt or pan means Auto, so restoring it (or Undo) turns a hand-set one off again.
+  state.tiltUserAdjusted = Number.isFinite(shared.tiltDeg);
+  if (state.tiltUserAdjusted) state.tiltDeg = setFieldValue(els.tiltInput, els.tiltRange, shared.tiltDeg, 1);
+  const entrance = Number.isFinite(shared.entranceM) && shared.entranceM > 0 && shared.entranceM <= Number(els.entranceInput.max) ? shared.entranceM : null;
+  state.entranceM = entrance;
+  els.entranceInput.value = entrance === null ? "" : String(entrance);
   state.offsetM = setFieldValue(els.offsetInput, els.offsetRange, shared.offsetM === null ? 0 : shared.offsetM, 2);
   state.panUserAdjusted = Number.isFinite(shared.panDeg);
   state.panDeg = state.panUserAdjusted ? shared.panDeg : 0;
@@ -8233,7 +8300,7 @@ function sheetSteps(p) {
     [t("shLine"), t("shLineHint"), fmt(p.distanceM, 2), "m"],
     fisheye
       ? [t("shTiltFisheye"), t("shTiltFisheyeHint"), "90", "°"]
-      : [t("shTilt"), t("shTiltHint", { aim: fmt(aimM, 2) }), deg(r.tilt.value), "°"],
+      : [t("shTilt"), t(state.offsetM !== 0 || r.pan.manual ? "shTiltHintMiddle" : "shTiltHint", { aim: fmt(aimM, 2) }), deg(r.tilt.value), "°"],
     fisheye ? [t("shFisheyeLens"), stream, fmt(preset.fovDeg, 0), "°"] : [zoomText, stream, fmt(focal, 1), "mm"]
   ];
   return '<ol class="steps">' + steps.map((step, i) =>
@@ -8299,11 +8366,12 @@ function sideElevationSvg(p) {
   const midY = ((Number(camY) + floor) / 2).toFixed(1);
   parts.push('<text class="se-num se-ink" x="15" y="' + midY + '" text-anchor="middle" transform="rotate(-90 15 ' + midY + ')">' + fmt(H, 1) + " m</text>");
   parts.push('<line class="se-dim" x1="' + left + '" y1="' + (floor + 16) + '" x2="' + X(D) + '" y2="' + (floor + 16) + '" marker-start="url(#seArrow)" marker-end="url(#seArrow)"></line>');
-  parts.push('<text class="se-num se-ink" x="' + ((left + Number(X(D))) / 2).toFixed(1) + '" y="' + (floor + 12) + '" text-anchor="middle">' + fmt(D, 2) + " m</text>");
+  const toMiddle = state.offsetM !== 0 ? " " + t("shToMiddle") : "";
+  parts.push('<text class="se-num se-ink" x="' + ((left + Number(X(D))) / 2).toFixed(1) + '" y="' + (floor + 12) + '" text-anchor="middle">' + fmt(D, 2) + " m" + escapeHtml(toMiddle) + "</text>");
   parts.push('<line class="se-tick" x1="' + X(D) + '" y1="' + floor + '" x2="' + X(D) + '" y2="' + (floor + 22) + '"></line>');
   if (faceD !== null) {
     parts.push('<line class="se-dim se-face-dim" x1="' + left + '" y1="' + (floor + 30) + '" x2="' + X(faceD) + '" y2="' + (floor + 30) + '" marker-end="url(#seArrowFace)"></line>');
-    parts.push('<text class="se-num se-face-text" x="' + (Number(X(faceD)) + 6) + '" y="' + (floor + 33) + '">' + fmt(faceD, 2) + " m</text>");
+    parts.push('<text class="se-num se-face-text" x="' + (Number(X(faceD)) + 6) + '" y="' + (floor + 33) + '">' + fmt(faceD, 2) + " m" + escapeHtml(toMiddle) + "</text>");
     parts.push('<line class="se-tick" x1="' + X(faceD) + '" y1="' + floor + '" x2="' + X(faceD) + '" y2="' + (floor + 34) + '"></line>');
   }
   return '<svg viewBox="8 8 340 206" role="img" aria-label="' + escapeHtml(t("shSideTitle")) + '">' +
@@ -8353,7 +8421,8 @@ function sheetWarnings(p) {
   if (r.countingLine.edge !== null) lines.push(edgeCopy(p));
   if (r.warnings.includes("low_pixel_density")) lines.push(t("densityWarn", { ppm: fmt(r.optics.pixelsPerMetre, 0), min: profile.minPixelsPerMetre.counting }));
   if (r.faceLine.visible && r.faceLine.tooSmall) lines.push(t("shFaceWarn", { ppm: fmt(r.faceLine.pixelsPerMetre, 0), min: profile.minPixelsPerMetre.face }));
-  if (r.entrance !== null && r.entrance.status !== "covered") lines.push(entranceCopy(r.entrance, r.optics.coverageWidthM));
+  if (r.warnings.includes("aim_off_effective")) lines.push(t("aimOffEffective"));
+  // The entrance sentence is already in its own row of the table above.
   if (lines.length === 0) return "";
   return '<div class="warn" role="note">' + SHEET_ICON.warn + "<div>" + lines.map((line) => "<p>" + escapeHtml(line) + "</p>").join("") + "</div></div>";
 }
@@ -8383,6 +8452,8 @@ function renderSheet(p) {
     : "";
 
   els.sheetPage.lang = lang;
+  // With warnings the page is tighter, so it still prints on one A4 sheet.
+  els.sheetPage.classList.toggle("dense", sheetWarnings(p) !== "");
   els.sheetPage.innerHTML =
     '<header class="sheet-head"><div><h2 class="sheet-title">' + escapeHtml(t("shSheetTitle")) + "</h2>" +
       '<dl class="site-fields">' +
@@ -8488,7 +8559,7 @@ const HELP_TEXT = {
     g1s4: "Warnings appear here, the most important first: an end of the entrance outside the bands, too few pixels, a height outside the range. +N more steps through the rest.",
 
     g2Title: "Find the distance or the height", g2Sum: "Enter what you know; the console works out the rest.",
-    g2s1: "Choose what to solve. Distance: give the mounting height and get where the counting line goes. Height: give the distance you have and get the height to mount at.",
+    g2s1: "Choose what to solve. Distance: give the mounting height and get where the counting line goes. Height: give the distance you have and get the height to mount at. Reset (top right of this panel) goes back to the default, keeping the height and the entrance; Undo brings it all back.",
     g2s2: "Mounting height, from the floor to the centre of the lens. Type it or drag the slider.",
     g2s3: "Counting line distance, straight out from the point below the camera. Tap a solved value to set it yourself (Manual).",
     g2s4: "The feet distance window: where the counting line can go. Green is Best, amber is Acceptable, the thumb is your line.",
@@ -8496,12 +8567,12 @@ const HELP_TEXT = {
     g3Title: "Set the entrance and the camera position", g3Sum: "The doorway width, and a camera that is not on the centre line.",
     g3s1: "Entrance width: the doorway people walk through. Both ends are checked, 0.35 m in from each frame.",
     g3s2: "If the camera cannot sit on the entrance centre line, set how far left or right it is. It turns to aim at the middle.",
-    g3s3: "Or drag the camera on the Top view. The counting line is coloured by the feet angle along its length; the arc shows how far the camera turns.",
+    g3s3: "Or drag the camera on the Top view. The counting line is coloured by the feet angle along its length; the arc shows how far the camera turns. The dot in front of the camera turns it by hand (Pan angle under Advanced optics); near the middle it snaps back to aiming there.",
 
     g4Title: "Check the views", g4Sum: "The side elevation, the 3D scene and what the camera sees.",
     g4s1: "Side view: the camera's own slice down to the middle of the entrance, with the Best and Acceptable bands on the floor.",
     g4s2: "Orbit shows the same scene in 3D from outside: the camera, its view cone and the distances. Drag to look around.",
-    g4s3: "Camera view: what the camera itself sees. The window at the top right is one face at the camera's real resolution, a best case before blur and glare. Drag the standing person along the line, and the arrows change who it is. The corner button opens a bigger view. Walk people sends a crowd across the counting line; Pause holds it on one frame.",
+    g4s3: "Camera view: what the camera itself sees. The window at the top right is one face at the camera's real resolution, a best case before blur and glare. Drag the standing person along the line, and the arrows change who it is. The corner button opens a bigger view. Walk people sends a crowd across the counting line; Pause holds it on one frame. Busy and Crowded add groups and people who stop or talk; a dashed box is someone hidden behind a nearer person, and Hidden behind others keeps the share.",
 
     g5Title: "Share and print", g5Sum: "Keep a placement as a link or a printable site sheet.",
     g5s1: "Share makes a link that holds the whole placement; opening it later restores everything. In the Share window, add the site and location, then open the printable site sheet.",
@@ -8520,7 +8591,7 @@ const HELP_TEXT = {
     g1s4: "คำเตือนจะแสดงตรงนี้ เรื่องสำคัญที่สุดก่อน เช่น ปลายทางเข้าอยู่นอกเกณฑ์ พิกเซลน้อยเกินไป หรือความสูงอยู่นอกช่วง กด อีก N ข้อ เพื่อดูข้อถัดไป",
 
     g2Title: "หาระยะหรือความสูง", g2Sum: "ใส่ค่าที่รู้ โปรแกรมคำนวณที่เหลือให้",
-    g2s1: "เลือกสิ่งที่จะคำนวณ ระยะ: ใส่ความสูงติดตั้ง แล้วได้ตำแหน่งเส้นนับ ความสูง: ใส่ระยะที่มี แล้วได้ความสูงที่ควรติดตั้ง",
+    g2s1: "เลือกสิ่งที่จะคำนวณ ระยะ: ใส่ความสูงติดตั้ง แล้วได้ตำแหน่งเส้นนับ ความสูง: ใส่ระยะที่มี แล้วได้ความสูงที่ควรติดตั้ง ปุ่มรีเซ็ต (มุมขวาบนของแผงนี้) กลับสู่ค่าเริ่มต้นโดยคงความสูงและทางเข้าไว้ และเลิกทำได้",
     g2s2: "ความสูงติดตั้ง วัดจากพื้นถึงกึ่งกลางเลนส์ พิมพ์ค่าหรือเลื่อนแถบ",
     g2s3: "ระยะเส้นนับ วัดตรงออกไปจากจุดใต้กล้อง แตะค่าที่คำนวณไว้เพื่อกำหนดเอง (กำหนดเอง)",
     g2s4: "ช่วงระยะตามมุมเท้า: ตำแหน่งที่วางเส้นนับได้ สีเขียวคือดีที่สุด สีเหลืองคือพอใช้ ปุ่มกลมคือเส้นนับของคุณ",
@@ -8528,12 +8599,12 @@ const HELP_TEXT = {
     g3Title: "ตั้งทางเข้าและตำแหน่งกล้อง", g3Sum: "ความกว้างทางเข้า และกล้องที่ไม่ได้อยู่บนแนวกึ่งกลาง",
     g3s1: "ความกว้างทางเข้า: ช่องที่คนเดินผ่าน ปลายทั้งสองด้านจะถูกตรวจ โดยเว้นเข้ามาจากขอบประตูด้านละ 0.35 m",
     g3s2: "ถ้าติดกล้องบนแนวกึ่งกลางทางเข้าไม่ได้ ให้ใส่ระยะที่ห่างไปทางซ้ายหรือขวา กล้องจะหันไปเล็งกลางทางเข้า",
-    g3s3: "หรือลากกล้องในมุมมองจากด้านบน เส้นนับมีสีตามมุมเท้าตลอดแนว ส่วนโค้งบอกว่ากล้องหันไปกี่องศา",
+    g3s3: "หรือลากกล้องในมุมมองจากด้านบน เส้นนับมีสีตามมุมเท้าตลอดแนว ส่วนโค้งบอกว่ากล้องหันไปกี่องศา จุดหน้ากล้องใช้หมุนกล้องเอง (มุมหัน ในตั้งค่าเลนส์ขั้นสูง) ใกล้กลางทางเข้าจะกลับไปเล็งกลางเอง",
 
     g4Title: "ดูมุมมองต่าง ๆ", g4Sum: "มุมมองด้านข้าง ฉาก 3 มิติ และภาพที่กล้องเห็น",
     g4s1: "มุมมองด้านข้าง: ภาพตัดของกล้องลงไปถึงกลางทางเข้า พร้อมช่วงดีที่สุดและพอใช้บนพื้น",
     g4s2: "หมุนดู แสดงฉากเดียวกันแบบ 3 มิติจากด้านนอก: กล้อง กรวยภาพ และระยะต่าง ๆ ลากเพื่อหมุนดู",
-    g4s3: "ภาพจากกล้อง: สิ่งที่กล้องมองเห็นจริง หน้าต่างมุมขวาบนคือใบหน้าหนึ่งคนที่ความละเอียดจริงของกล้อง เป็นกรณีดีที่สุดก่อนภาพเบลอหรือแสงจ้า ลากคนที่ยืนไปตามเส้นได้ และปุ่มลูกศรเปลี่ยนคน ปุ่มมุมขวาบนขยายภาพให้ใหญ่ขึ้น กด ให้คนเดิน เพื่อดูคนเดินผ่านเส้นนับและการนับ และ หยุดชั่วคราว เพื่อหยุดภาพไว้",
+    g4s3: "ภาพจากกล้อง: สิ่งที่กล้องมองเห็นจริง หน้าต่างมุมขวาบนคือใบหน้าหนึ่งคนที่ความละเอียดจริงของกล้อง เป็นกรณีดีที่สุดก่อนภาพเบลอหรือแสงจ้า ลากคนที่ยืนไปตามเส้นได้ และปุ่มลูกศรเปลี่ยนคน ปุ่มมุมขวาบนขยายภาพให้ใหญ่ขึ้น กด ให้คนเดิน เพื่อดูคนเดินผ่านเส้นนับและการนับ และ หยุดชั่วคราว เพื่อหยุดภาพไว้ โหมดหนาแน่นและแออัดมีคนเดินเป็นกลุ่ม คนหยุดหรือคุยกัน กรอบเส้นประคือคนที่ถูกคนใกล้กล้องกว่าบัง และ ถูกคนอื่นบัง แสดงสัดส่วน",
 
     g5Title: "แชร์และพิมพ์", g5Sum: "เก็บตำแหน่งไว้เป็นลิงก์ หรือใบสรุปหน้างานที่พิมพ์ได้",
     g5s1: "แชร์ สร้างลิงก์ที่เก็บตำแหน่งทั้งหมด เปิดลิงก์ภายหลังจะได้ค่าเดิมครบ ในหน้าต่างแชร์ ใส่ชื่อสถานที่และจุดติดตั้ง แล้วเปิดใบสรุปหน้างานเพื่อพิมพ์",
@@ -8799,7 +8870,7 @@ Object.keys(PWA_TEXT).forEach((code) => Object.assign(I18N[code], PWA_TEXT[code]
     reload.hidden = !offerReload;
     toast.hidden = false;
     // The offline note is news, not a decision; it goes by itself.
-    if (!offerReload) hideTimer = window.setTimeout(() => { toast.hidden = true; }, 6000);
+    if (!offerReload) hideTimer = window.setTimeout(() => { toast.hidden = true; }, 4000);
   }
 
   reload.addEventListener("click", () => {
@@ -9122,7 +9193,7 @@ function createWalkSim(THREE, ui) {
   const animating = () => walking && !paused;
 
   function makePerson(motion) {
-    if (avatars) {
+    if (avatars && avatars.complete) {
       avatarCount += 1;
       return avatars.make(avatarCount - 1, motion, random());
     }
@@ -9157,6 +9228,7 @@ function createWalkSim(THREE, ui) {
     group.add(legL, legR, torso, armL, armR, head, cap);
     let phase = random() * Math.PI * 2;
     return {
+      isBox: true,
       group,
       head,
       animate(dt, speed) {
@@ -9213,7 +9285,7 @@ function createWalkSim(THREE, ui) {
     ui.pauseButton.setAttribute("aria-pressed", String(paused));
     if (input) {
       ui.pauseButton.textContent = paused ? input.text.resume : input.text.pause;
-      if (avatars) ui.person.label.textContent = input.text.personOf.split("{i}").join(String(standingIndex + 1)).split("{n}").join(String(avatars.count));
+      if (avatars) ui.person.label.textContent = input.text.personOf.split("{i}").join(String(standingIndex + 1)).split("{n}").join(String(avatars.total));
     }
   }
 
@@ -9226,17 +9298,47 @@ function createWalkSim(THREE, ui) {
     syncWalking();
   }
 
-  function usePeople(loaded) {
+  function usePeople(loaded, nextIndex = 0) {
     avatars = loaded;
-    standAvatar(0);
+    peopleStatus = loaded.complete ? "ready" : "first";
+    standAvatar(nextIndex);
     if (!input) return;
-    seed = 7;
-    respawnAll(input);
+    if (loaded.complete) {
+      seed = 7;
+      respawnAll(input);
+    }
     if (active || orbitActive) render();
   }
 
-  // The avatars are the heaviest part of the page, so they are fetched only once a 3D view is actually on screen.
+  // The avatars are the heaviest part of the page, so they are fetched only once a 3D view is actually on screen. A
+  // phone gets the standing person first and the rest when the crowd or another person is asked for. A failed load is
+  // tried again after a while; meanwhile the figures are boxes and the face window says so.
   let peopleRequested = false;
+  let peopleStatus = "idle";
+  let allRequested = false;
+  let pendingIndex = 0;
+  const RETRY_MS = 15000;
+  function requestPeople(scope) {
+    if (scope === "all") allRequested = true;
+    peopleStatus = avatars ? peopleStatus : "loading";
+    ui.loadPeople(scope)
+      .then((loaded) => usePeople(loaded, loaded.complete ? pendingIndex : 0))
+      .catch((error) => {
+        console.error("People models could not load; showing simple figures", error);
+        if (!avatars) peopleStatus = "failed";
+        window.setTimeout(() => {
+          if (scope === "all") allRequested = false; else peopleRequested = false;
+          if (peopleStatus === "failed") peopleStatus = "idle";
+          if (scope === "all") needAllPeople(); else wantPeople();
+        }, RETRY_MS);
+        if (active || orbitActive) render();
+      });
+  }
+  function needAllPeople(index) {
+    if (index !== undefined) pendingIndex = index;
+    if (!ui.loadPeople || allRequested || (avatars && avatars.complete)) return;
+    requestPeople("all");
+  }
   const onScreen = (canvas) => {
     const box = canvas.getBoundingClientRect();
     return box.width > 0 && box.bottom > 0 && box.top < window.innerHeight && box.right > 0 && box.left < window.innerWidth;
@@ -9245,11 +9347,8 @@ function createWalkSim(THREE, ui) {
     if (peopleRequested || !ui.loadPeople) return;
     if (!((active && onScreen(ui.canvas)) || (orbitActive && orbit && onScreen(orbit.renderer.domElement)))) return;
     peopleRequested = true;
-    window.removeEventListener("scroll", wantPeople, true);
-    window.removeEventListener("resize", wantPeople);
-    ui.loadPeople()
-      .then(usePeople)
-      .catch((error) => console.error("People models could not load; showing box figures", error));
+    const phone = window.innerWidth < 760;
+    if (phone) requestPeople("first"); else needAllPeople();
   }
   // Capturing, so a scroll inside any panel counts too.
   window.addEventListener("scroll", wantPeople, { capture: true, passive: true });
@@ -9657,15 +9756,22 @@ function createWalkSim(THREE, ui) {
     const lineLabels = [];
     const densityLabels = [];
     const label = (z, text, color) => {
-      const left = toScreen(-1.4, 0, z, w, h);
-      if (left.behind || left.y < 0 || left.y > h) return false;
+      let left = null;
+      for (let x = -30; x <= 30; x += 0.5) {
+        const s = toScreen(x, 0, z, w, h);
+        if (s.behind || s.x < 0 || s.x > w || s.y < 0 || s.y > h) continue;
+        if (left === null || s.x < left.x) left = s;
+      }
+      if (left === null) return false;
       let y = Math.min(h - 4, left.y - 4);
       // Lines a few centimetres apart land on the same row; stack the later label above the earlier one.
       lineLabels.forEach((prev) => { if (Math.abs(prev.y + 13 - y) < 14) y = prev.y - 1; });
       if (quiet) return true;
+      const width = ctx.measureText(text).width;
+      const x = Math.max(8, Math.min(w - width - 8, left.x + 4));
       ctx.fillStyle = color;
-      ctx.fillText(text, 8, y);
-      lineLabels.push({ x: 8, y: y - 13, w: ctx.measureText(text).width, h: 14 });
+      ctx.fillText(text, x, y);
+      lineLabels.push({ x, y: y - 13, w: width, h: 14 });
       return true;
     };
     const countingVisible = label(input.distanceM, input.text.countingLine + " " + input.distanceM.toFixed(2) + " m", input.colors.count);
@@ -9971,6 +10077,7 @@ function createWalkSim(THREE, ui) {
   function captureFace() {
     const agent = faceSubject();
     if (!agent) { faceShot = { inView: false }; return; }
+    if (agent.body.isBox) { faceShot = { inView: false, box: true }; return; }
     agent.body.head.getWorldPosition(faceAnchor);
     const spot = toScreen(faceAnchor.x, faceAnchor.y, faceAnchor.z, 1, 1);
     if (spot.behind || spot.x < 0 || spot.x > 1 || spot.y < 0 || spot.y > 1) { faceShot = { inView: false }; return; }
@@ -10030,7 +10137,8 @@ function createWalkSim(THREE, ui) {
       ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(input.text.faceViewNone, box.x + box.w / 2, box.y + 4 + inner / 2);
+      const note = faceShot && faceShot.box ? (peopleStatus === "failed" ? input.text.faceViewFailed : input.text.faceViewLoading) : input.text.faceViewNone;
+      ctx.fillText(note, box.x + box.w / 2, box.y + 4 + inner / 2);
     }
     ctx.strokeStyle = input.colors.face;
     ctx.lineWidth = 1;
@@ -10113,6 +10221,7 @@ function createWalkSim(THREE, ui) {
   });
 
   ui.walkButton.addEventListener("click", () => {
+    needAllPeople();
     walking = !walking;
     paused = false;
     syncWalking();
@@ -10238,14 +10347,19 @@ function createWalkSim(THREE, ui) {
     render();
   }));
 
-  ui.person.prev.addEventListener("click", () => {
-    standAvatar(standingIndex - 1);
+  // Stepping to another person needs the full set; until it arrives, the step waits.
+  const stepPerson = (delta) => {
+    const target = (standingIndex + delta + avatars.total) % avatars.total;
+    if (!avatars.complete) {
+      needAllPeople(target);
+      pendingIndex = target;
+      return;
+    }
+    standAvatar(target);
     render();
-  });
-  ui.person.next.addEventListener("click", () => {
-    standAvatar(standingIndex + 1);
-    render();
-  });
+  };
+  ui.person.prev.addEventListener("click", () => stepPerson(-1));
+  ui.person.next.addEventListener("click", () => stepPerson(1));
   ui.resetButton.addEventListener("click", () => {
     Object.keys(counts).forEach((k) => {
       counts[k] = 0;
@@ -10422,25 +10536,33 @@ function inPlace(THREE, clip) {
 }
 
 /**
- * Loads every avatar and clip, then returns how many there are and a maker for walking or standing people.
+ * Loads the avatars and clips, then returns how many there are and a maker for walking or standing people.
  * @param {typeof import("three")} THREE
- * @param {{ FBXLoader: Function, clone: Function, base: string, heightM: number }} options
- *   base: the folder holding the avatar folders and anims/; heightM: the height a body is built at
+ * @param {{ FBXLoader: Function, clone: Function, base: string, heightM: number, first?: boolean }} options
+ *   base: the folder holding the avatar folders and anims/; heightM: the height a body is built at; first: only the
+ *   first avatar, standing (about a sixth of the download), for a phone until the crowd is needed
  */
-async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
+async function loadPeople(THREE, { FBXLoader, clone, base, heightM, first = false }) {
+  // Done only once its textures are in too: a still view draws once, and a body drawn before its images arrive stays
+  // black until something else redraws it. A texture that fails still settles (the body is drawn untextured).
   const loadFbx = (url, folder) => {
     const manager = new THREE.LoadingManager();
+    const settled = new Promise((resolve) => { manager.onLoad = resolve; });
     manager.setURLModifier((asked) => (asked === url ? asked : textureUrl(asked, folder)));
     manager.addHandler(/\.tga$/i, new THREE.TextureLoader(manager));
-    return new FBXLoader(manager).loadAsync(url);
+    return new FBXLoader(manager).loadAsync(url).then(async (model) => {
+      await settled;
+      return model;
+    });
   };
   const clipFor = async (name) => inPlace(THREE, (await loadFbx(base + "anims/" + name + ".max.fbx", base)).animations[0]);
   const [clips, templates] = await Promise.all([
-    Promise.all(Object.entries(PEOPLE_CLIPS).map(async ([sex, names]) => {
-      const loaded = await Promise.all(Object.entries(names).map(async ([motion, name]) => [motion, await clipFor(name)]));
+    Promise.all(Object.entries(PEOPLE_CLIPS).filter(([sex]) => !first || sex === PEOPLE[0].sex).map(async ([sex, names]) => {
+      const wanted = Object.entries(names).filter(([motion]) => !first || motion === "idle");
+      const loaded = await Promise.all(wanted.map(async ([motion, name]) => [motion, await clipFor(name)]));
       return [sex, Object.fromEntries(loaded)];
     })),
-    Promise.all(PEOPLE.map(async (person) => {
+    Promise.all((first ? PEOPLE.slice(0, 1) : PEOPLE).map(async (person) => {
       const folder = base + person.id + "/";
       return { ...person, model: prepare(THREE, await loadFbx(folder + person.id + ".fbx", folder), heightM) };
     })),
@@ -10488,7 +10610,7 @@ async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
       },
     };
   }
-  return { count: templates.length, make };
+  return { count: templates.length, total: PEOPLE.length, complete: !first, make };
 }
 
 // One template: metres, a simple matte material, hair and lashes cut out by their alpha, and the face located.
@@ -10553,8 +10675,8 @@ function prepare(THREE, model, heightM) {
         },
         person: { row: document.getElementById("simPerson"), label: document.getElementById("simPersonLabel"), prev: document.getElementById("simPersonPrev"), next: document.getElementById("simPersonNext") },
         // The avatars are large and optional: the box figures stand in until they arrive, and for good if they fail.
-        loadPeople: () => Promise.all([import("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/FBXLoader.js"), import("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/SkeletonUtils.js")])
-          .then(([fbx, skeleton]) => loadPeople(THREE, { FBXLoader: fbx.FBXLoader, clone: skeleton.clone, base: "people/", heightM: MODEL_HEIGHT_M })),
+        loadPeople: (scope) => Promise.all([import("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/FBXLoader.js"), import("https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/utils/SkeletonUtils.js")])
+          .then(([fbx, skeleton]) => loadPeople(THREE, { FBXLoader: fbx.FBXLoader, clone: skeleton.clone, base: "people/", heightM: MODEL_HEIGHT_M, first: scope === "first" })),
         stillOnly: [document.getElementById("simStillNote")],
         resetButton: document.getElementById("simReset"),
         crossButton: document.getElementById("simCross"),

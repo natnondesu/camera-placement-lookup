@@ -15,7 +15,7 @@ const HELP_TEXT = {
     g1s4: "Warnings appear here, the most important first: an end of the entrance outside the bands, too few pixels, a height outside the range. +N more steps through the rest.",
 
     g2Title: "Find the distance or the height", g2Sum: "Enter what you know; the console works out the rest.",
-    g2s1: "Choose what to solve. Distance: give the mounting height and get where the counting line goes. Height: give the distance you have and get the height to mount at.",
+    g2s1: "Choose what to solve. Distance: give the mounting height and get where the counting line goes. Height: give the distance you have and get the height to mount at. Reset (top right of this panel) goes back to the default, keeping the height and the entrance; Undo brings it all back.",
     g2s2: "Mounting height, from the floor to the centre of the lens. Type it or drag the slider.",
     g2s3: "Counting line distance, straight out from the point below the camera. Tap a solved value to set it yourself (Manual).",
     g2s4: "The feet distance window: where the counting line can go. Green is Best, amber is Acceptable, the thumb is your line.",
@@ -23,12 +23,12 @@ const HELP_TEXT = {
     g3Title: "Set the entrance and the camera position", g3Sum: "The doorway width, and a camera that is not on the centre line.",
     g3s1: "Entrance width: the doorway people walk through. Both ends are checked, 0.35 m in from each frame.",
     g3s2: "If the camera cannot sit on the entrance centre line, set how far left or right it is. It turns to aim at the middle.",
-    g3s3: "Or drag the camera on the Top view. The counting line is coloured by the feet angle along its length; the arc shows how far the camera turns.",
+    g3s3: "Or drag the camera on the Top view. The counting line is coloured by the feet angle along its length; the arc shows how far the camera turns. The dot in front of the camera turns it by hand (Pan angle under Advanced optics); near the middle it snaps back to aiming there.",
 
     g4Title: "Check the views", g4Sum: "The side elevation, the 3D scene and what the camera sees.",
     g4s1: "Side view: the camera's own slice down to the middle of the entrance, with the Best and Acceptable bands on the floor.",
     g4s2: "Orbit shows the same scene in 3D from outside: the camera, its view cone and the distances. Drag to look around.",
-    g4s3: "Camera view: what the camera itself sees. The window at the top right is one face at the camera's real resolution, a best case before blur and glare. Drag the standing person along the line, and the arrows change who it is. The corner button opens a bigger view. Walk people sends a crowd across the counting line; Pause holds it on one frame.",
+    g4s3: "Camera view: what the camera itself sees. The window at the top right is one face at the camera's real resolution, a best case before blur and glare. Drag the standing person along the line, and the arrows change who it is. The corner button opens a bigger view. Walk people sends a crowd across the counting line; Pause holds it on one frame. Busy and Crowded add groups and people who stop or talk; a dashed box is someone hidden behind a nearer person, and Hidden behind others keeps the share.",
 
     g5Title: "Share and print", g5Sum: "Keep a placement as a link or a printable site sheet.",
     g5s1: "Share makes a link that holds the whole placement; opening it later restores everything. In the Share window, add the site and location, then open the printable site sheet.",
@@ -47,7 +47,7 @@ const HELP_TEXT = {
     g1s4: "คำเตือนจะแสดงตรงนี้ เรื่องสำคัญที่สุดก่อน เช่น ปลายทางเข้าอยู่นอกเกณฑ์ พิกเซลน้อยเกินไป หรือความสูงอยู่นอกช่วง กด อีก N ข้อ เพื่อดูข้อถัดไป",
 
     g2Title: "หาระยะหรือความสูง", g2Sum: "ใส่ค่าที่รู้ โปรแกรมคำนวณที่เหลือให้",
-    g2s1: "เลือกสิ่งที่จะคำนวณ ระยะ: ใส่ความสูงติดตั้ง แล้วได้ตำแหน่งเส้นนับ ความสูง: ใส่ระยะที่มี แล้วได้ความสูงที่ควรติดตั้ง",
+    g2s1: "เลือกสิ่งที่จะคำนวณ ระยะ: ใส่ความสูงติดตั้ง แล้วได้ตำแหน่งเส้นนับ ความสูง: ใส่ระยะที่มี แล้วได้ความสูงที่ควรติดตั้ง ปุ่มรีเซ็ต (มุมขวาบนของแผงนี้) กลับสู่ค่าเริ่มต้นโดยคงความสูงและทางเข้าไว้ และเลิกทำได้",
     g2s2: "ความสูงติดตั้ง วัดจากพื้นถึงกึ่งกลางเลนส์ พิมพ์ค่าหรือเลื่อนแถบ",
     g2s3: "ระยะเส้นนับ วัดตรงออกไปจากจุดใต้กล้อง แตะค่าที่คำนวณไว้เพื่อกำหนดเอง (กำหนดเอง)",
     g2s4: "ช่วงระยะตามมุมเท้า: ตำแหน่งที่วางเส้นนับได้ สีเขียวคือดีที่สุด สีเหลืองคือพอใช้ ปุ่มกลมคือเส้นนับของคุณ",
@@ -55,12 +55,12 @@ const HELP_TEXT = {
     g3Title: "ตั้งทางเข้าและตำแหน่งกล้อง", g3Sum: "ความกว้างทางเข้า และกล้องที่ไม่ได้อยู่บนแนวกึ่งกลาง",
     g3s1: "ความกว้างทางเข้า: ช่องที่คนเดินผ่าน ปลายทั้งสองด้านจะถูกตรวจ โดยเว้นเข้ามาจากขอบประตูด้านละ 0.35 m",
     g3s2: "ถ้าติดกล้องบนแนวกึ่งกลางทางเข้าไม่ได้ ให้ใส่ระยะที่ห่างไปทางซ้ายหรือขวา กล้องจะหันไปเล็งกลางทางเข้า",
-    g3s3: "หรือลากกล้องในมุมมองจากด้านบน เส้นนับมีสีตามมุมเท้าตลอดแนว ส่วนโค้งบอกว่ากล้องหันไปกี่องศา",
+    g3s3: "หรือลากกล้องในมุมมองจากด้านบน เส้นนับมีสีตามมุมเท้าตลอดแนว ส่วนโค้งบอกว่ากล้องหันไปกี่องศา จุดหน้ากล้องใช้หมุนกล้องเอง (มุมหัน ในตั้งค่าเลนส์ขั้นสูง) ใกล้กลางทางเข้าจะกลับไปเล็งกลางเอง",
 
     g4Title: "ดูมุมมองต่าง ๆ", g4Sum: "มุมมองด้านข้าง ฉาก 3 มิติ และภาพที่กล้องเห็น",
     g4s1: "มุมมองด้านข้าง: ภาพตัดของกล้องลงไปถึงกลางทางเข้า พร้อมช่วงดีที่สุดและพอใช้บนพื้น",
     g4s2: "หมุนดู แสดงฉากเดียวกันแบบ 3 มิติจากด้านนอก: กล้อง กรวยภาพ และระยะต่าง ๆ ลากเพื่อหมุนดู",
-    g4s3: "ภาพจากกล้อง: สิ่งที่กล้องมองเห็นจริง หน้าต่างมุมขวาบนคือใบหน้าหนึ่งคนที่ความละเอียดจริงของกล้อง เป็นกรณีดีที่สุดก่อนภาพเบลอหรือแสงจ้า ลากคนที่ยืนไปตามเส้นได้ และปุ่มลูกศรเปลี่ยนคน ปุ่มมุมขวาบนขยายภาพให้ใหญ่ขึ้น กด ให้คนเดิน เพื่อดูคนเดินผ่านเส้นนับและการนับ และ หยุดชั่วคราว เพื่อหยุดภาพไว้",
+    g4s3: "ภาพจากกล้อง: สิ่งที่กล้องมองเห็นจริง หน้าต่างมุมขวาบนคือใบหน้าหนึ่งคนที่ความละเอียดจริงของกล้อง เป็นกรณีดีที่สุดก่อนภาพเบลอหรือแสงจ้า ลากคนที่ยืนไปตามเส้นได้ และปุ่มลูกศรเปลี่ยนคน ปุ่มมุมขวาบนขยายภาพให้ใหญ่ขึ้น กด ให้คนเดิน เพื่อดูคนเดินผ่านเส้นนับและการนับ และ หยุดชั่วคราว เพื่อหยุดภาพไว้ โหมดหนาแน่นและแออัดมีคนเดินเป็นกลุ่ม คนหยุดหรือคุยกัน กรอบเส้นประคือคนที่ถูกคนใกล้กล้องกว่าบัง และ ถูกคนอื่นบัง แสดงสัดส่วน",
 
     g5Title: "แชร์และพิมพ์", g5Sum: "เก็บตำแหน่งไว้เป็นลิงก์ หรือใบสรุปหน้างานที่พิมพ์ได้",
     g5s1: "แชร์ สร้างลิงก์ที่เก็บตำแหน่งทั้งหมด เปิดลิงก์ภายหลังจะได้ค่าเดิมครบ ในหน้าต่างแชร์ ใส่ชื่อสถานที่และจุดติดตั้ง แล้วเปิดใบสรุปหน้างานเพื่อพิมพ์",

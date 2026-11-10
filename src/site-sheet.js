@@ -20,6 +20,7 @@ const SHEET_TEXT = {
     shMount: "Mount the camera above the floor", shMountHint: "Measure to the centre of the lens.",
     shLine: "Mark the counting line out from the point below the camera", shLineHint: "Straight out, across the full entrance.",
     shTilt: "Tilt the camera down", shTiltHint: "It aims at {aim} m on a person standing on the line.",
+    shTiltHintMiddle: "Set for the middle of the entrance: {aim} m up a person standing there.", shToMiddle: "to middle",
     shMountHintOffset: "To the lens centre, {distance} m {side} of the entrance centre line; turn it {pan}° to the middle.",
     shMountHintPanned: "To the lens centre, {where}; turn it {pan}° to the {turn} from facing straight across the entrance.",
     shWhereCentre: "on the entrance centre line", shWhereSide: "{distance} m {side} of the entrance centre line",
@@ -60,6 +61,7 @@ const SHEET_TEXT = {
     shMount: "ติดตั้งกล้องสูงจากพื้น", shMountHint: "วัดถึงกึ่งกลางเลนส์",
     shLine: "ทำเครื่องหมายเส้นนับ ห่างจากจุดใต้กล้อง", shLineHint: "ตรงออกไป และยาวตลอดความกว้างทางเข้า",
     shTilt: "ก้มกล้องลง", shTiltHint: "เล็งที่ความสูง {aim} m ของคนที่ยืนบนเส้นนับ",
+    shTiltHintMiddle: "ตั้งสำหรับกลางทางเข้า: เล็งที่ความสูง {aim} m ของคนที่ยืนตรงนั้น", shToMiddle: "ถึงกลาง",
     shMountHintOffset: "วัดถึงกึ่งกลางเลนส์ ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า หันกล้อง {pan}° เข้าหากลางทางเข้า",
     shMountHintPanned: "วัดถึงกึ่งกลางเลนส์ {where} หันกล้องไปทาง{turn} {pan}° จากแนวตั้งฉากกับทางเข้า",
     shWhereCentre: "บนแนวกึ่งกลางทางเข้า", shWhereSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า",
@@ -185,7 +187,7 @@ function sharedPlacementFrom(p) {
     solve: state.solveMode,
     heightM: p.heightM,
     distanceM: p.distanceM,
-    tiltDeg: state.tiltUserAdjusted && preset.lens !== "fisheye" ? Number(els.tiltInput.value) : null,
+    tiltDeg: state.tiltUserAdjusted && preset.lens !== "fisheye" ? state.tiltDeg : null,
     entranceM: state.entranceM,
     offsetM: state.offsetM,
     panDeg: state.panUserAdjusted && preset.lens !== "fisheye" ? state.panDeg : null,
@@ -235,12 +237,12 @@ function applySharedPlacement(shared) {
   }
   if (shared.heightM !== null) setFieldValue(els.heightInput, els.heightRange, shared.heightM, 1);
   if (shared.distanceM !== null) setFieldValue(els.distanceInput, els.distanceRange, shared.distanceM, 2);
-  if (shared.tiltDeg !== null) {
-    state.tiltUserAdjusted = true;
-    setFieldValue(els.tiltInput, els.tiltRange, shared.tiltDeg, 1);
-  }
-  state.entranceM = shared.entranceM;
-  els.entranceInput.value = shared.entranceM === null ? "" : String(shared.entranceM);
+  // A link without a tilt or pan means Auto, so restoring it (or Undo) turns a hand-set one off again.
+  state.tiltUserAdjusted = Number.isFinite(shared.tiltDeg);
+  if (state.tiltUserAdjusted) state.tiltDeg = setFieldValue(els.tiltInput, els.tiltRange, shared.tiltDeg, 1);
+  const entrance = Number.isFinite(shared.entranceM) && shared.entranceM > 0 && shared.entranceM <= Number(els.entranceInput.max) ? shared.entranceM : null;
+  state.entranceM = entrance;
+  els.entranceInput.value = entrance === null ? "" : String(entrance);
   state.offsetM = setFieldValue(els.offsetInput, els.offsetRange, shared.offsetM === null ? 0 : shared.offsetM, 2);
   state.panUserAdjusted = Number.isFinite(shared.panDeg);
   state.panDeg = state.panUserAdjusted ? shared.panDeg : 0;
@@ -362,7 +364,7 @@ function sheetSteps(p) {
     [t("shLine"), t("shLineHint"), fmt(p.distanceM, 2), "m"],
     fisheye
       ? [t("shTiltFisheye"), t("shTiltFisheyeHint"), "90", "°"]
-      : [t("shTilt"), t("shTiltHint", { aim: fmt(aimM, 2) }), deg(r.tilt.value), "°"],
+      : [t("shTilt"), t(state.offsetM !== 0 || r.pan.manual ? "shTiltHintMiddle" : "shTiltHint", { aim: fmt(aimM, 2) }), deg(r.tilt.value), "°"],
     fisheye ? [t("shFisheyeLens"), stream, fmt(preset.fovDeg, 0), "°"] : [zoomText, stream, fmt(focal, 1), "mm"]
   ];
   return '<ol class="steps">' + steps.map((step, i) =>
@@ -428,11 +430,12 @@ function sideElevationSvg(p) {
   const midY = ((Number(camY) + floor) / 2).toFixed(1);
   parts.push('<text class="se-num se-ink" x="15" y="' + midY + '" text-anchor="middle" transform="rotate(-90 15 ' + midY + ')">' + fmt(H, 1) + " m</text>");
   parts.push('<line class="se-dim" x1="' + left + '" y1="' + (floor + 16) + '" x2="' + X(D) + '" y2="' + (floor + 16) + '" marker-start="url(#seArrow)" marker-end="url(#seArrow)"></line>');
-  parts.push('<text class="se-num se-ink" x="' + ((left + Number(X(D))) / 2).toFixed(1) + '" y="' + (floor + 12) + '" text-anchor="middle">' + fmt(D, 2) + " m</text>");
+  const toMiddle = state.offsetM !== 0 ? " " + t("shToMiddle") : "";
+  parts.push('<text class="se-num se-ink" x="' + ((left + Number(X(D))) / 2).toFixed(1) + '" y="' + (floor + 12) + '" text-anchor="middle">' + fmt(D, 2) + " m" + escapeHtml(toMiddle) + "</text>");
   parts.push('<line class="se-tick" x1="' + X(D) + '" y1="' + floor + '" x2="' + X(D) + '" y2="' + (floor + 22) + '"></line>');
   if (faceD !== null) {
     parts.push('<line class="se-dim se-face-dim" x1="' + left + '" y1="' + (floor + 30) + '" x2="' + X(faceD) + '" y2="' + (floor + 30) + '" marker-end="url(#seArrowFace)"></line>');
-    parts.push('<text class="se-num se-face-text" x="' + (Number(X(faceD)) + 6) + '" y="' + (floor + 33) + '">' + fmt(faceD, 2) + " m</text>");
+    parts.push('<text class="se-num se-face-text" x="' + (Number(X(faceD)) + 6) + '" y="' + (floor + 33) + '">' + fmt(faceD, 2) + " m" + escapeHtml(toMiddle) + "</text>");
     parts.push('<line class="se-tick" x1="' + X(faceD) + '" y1="' + floor + '" x2="' + X(faceD) + '" y2="' + (floor + 34) + '"></line>');
   }
   return '<svg viewBox="8 8 340 206" role="img" aria-label="' + escapeHtml(t("shSideTitle")) + '">' +
@@ -482,7 +485,8 @@ function sheetWarnings(p) {
   if (r.countingLine.edge !== null) lines.push(edgeCopy(p));
   if (r.warnings.includes("low_pixel_density")) lines.push(t("densityWarn", { ppm: fmt(r.optics.pixelsPerMetre, 0), min: profile.minPixelsPerMetre.counting }));
   if (r.faceLine.visible && r.faceLine.tooSmall) lines.push(t("shFaceWarn", { ppm: fmt(r.faceLine.pixelsPerMetre, 0), min: profile.minPixelsPerMetre.face }));
-  if (r.entrance !== null && r.entrance.status !== "covered") lines.push(entranceCopy(r.entrance, r.optics.coverageWidthM));
+  if (r.warnings.includes("aim_off_effective")) lines.push(t("aimOffEffective"));
+  // The entrance sentence is already in its own row of the table above.
   if (lines.length === 0) return "";
   return '<div class="warn" role="note">' + SHEET_ICON.warn + "<div>" + lines.map((line) => "<p>" + escapeHtml(line) + "</p>").join("") + "</div></div>";
 }
@@ -512,6 +516,8 @@ function renderSheet(p) {
     : "";
 
   els.sheetPage.lang = lang;
+  // With warnings the page is tighter, so it still prints on one A4 sheet.
+  els.sheetPage.classList.toggle("dense", sheetWarnings(p) !== "");
   els.sheetPage.innerHTML =
     '<header class="sheet-head"><div><h2 class="sheet-title">' + escapeHtml(t("shSheetTitle")) + "</h2>" +
       '<dl class="site-fields">' +

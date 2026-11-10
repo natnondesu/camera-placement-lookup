@@ -292,7 +292,9 @@ test("an entrance wider than the view warns but never fails the verdict", () => 
   // A portrait stream with a 14 deg horizontal view covers about 3 m of a 6 m entrance
   const portrait = { sensorWidthMm: 2, focalLengthMm: 8, resolution: { w: 1080, h: 1920 } };
   const result = evaluatePlacement({ profile: openDoor, heightM: 8, distanceM: 9.2, camera: portrait, entranceWidthM: 6 });
-  assert.deepEqual(result.entrance, entranceCoverage(6, result.optics.coverageWidthM));
+  const { cause, side, ...coverage } = result.entrance;
+  assert.deepEqual(coverage, entranceCoverage(6, result.optics.coverageWidthM));
+  assert.equal(cause, "width");
   assert.equal(result.entrance.status, "too_wide");
   assert.equal(result.verdict, "best");
 });
@@ -708,4 +710,24 @@ test("the pose a placement is judged with is returned, facing where the pan says
   const area = floorFootprint(result.pose, lensFor(wideCamera), 1);
   const middleOfFar = area.top[Math.floor(area.top.length / 2)];
   assert.ok(middleOfFar.x < -1);
+});
+
+test("an entrance wider than the view says so; one turned partly out of view says which end", () => {
+  const wide = evaluatePlacement({ profile: openDoor, heightM: 2.5, distanceM: 2.9, entranceWidthM: 30, camera: wideCamera });
+  assert.equal(wide.entrance.status, "too_wide");
+  assert.equal(wide.entrance.cause, "width");
+  const turned = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, entranceWidthM: 5, camera: wideCamera, panDeg: 37 });
+  assert.equal(turned.entrance.status, "too_wide");
+  assert.equal(turned.entrance.cause, "turned");
+  // Turned to the right, it is the left end that drops out.
+  assert.equal(turned.entrance.side, "left");
+});
+
+test("a pan that leaves the middle of the entrance outside the effective 80% warns; the aimed camera never does", () => {
+  const aimed = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, entranceWidthM: 5, camera: wideCamera });
+  assert.ok(!aimed.warnings.includes("aim_off_effective"));
+  const turned = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, entranceWidthM: 5, camera: wideCamera, panDeg: 37 });
+  assert.ok(turned.warnings.includes("aim_off_effective"));
+  // The verdict is still the feet angle in the middle.
+  assert.equal(turned.verdict, aimed.verdict);
 });

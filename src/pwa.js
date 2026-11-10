@@ -37,7 +37,7 @@ Object.keys(PWA_TEXT).forEach((code) => Object.assign(I18N[code], PWA_TEXT[code]
     reload.hidden = !offerReload;
     toast.hidden = false;
     // The offline note is news, not a decision; it goes by itself.
-    if (!offerReload) hideTimer = window.setTimeout(() => { toast.hidden = true; }, 6000);
+    if (!offerReload) hideTimer = window.setTimeout(() => { toast.hidden = true; }, 4000);
   }
 
   reload.addEventListener("click", () => {
