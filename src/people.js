@@ -12,9 +12,10 @@ export const PEOPLE = [
   { id: "Male_Adult_12", sex: "m" },
 ];
 
+// walk: on the move; idle: standing still (the person on the line, someone who stops); chat: listening and nodding.
 export const PEOPLE_CLIPS = {
-  f: { walk: "f_walk_neutral", idle: "f_idle_breathe_01" },
-  m: { walk: "m_walk_neutral", idle: "m_idle_breathe_01" },
+  f: { walk: "f_walk_neutral", idle: "f_idle_breathe_01", chat: "f_gestic_listen_accept_01" },
+  m: { walk: "m_walk_neutral", idle: "m_idle_breathe_01", chat: "m_gestic_listen_accept_01" },
 };
 
 const BLANK_IMAGE = "data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=";
@@ -74,7 +75,10 @@ export async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
   };
   const clipFor = async (name) => inPlace(THREE, (await loadFbx(base + "anims/" + name + ".max.fbx", base)).animations[0]);
   const [clips, templates] = await Promise.all([
-    Promise.all(Object.entries(PEOPLE_CLIPS).map(async ([sex, names]) => [sex, { walk: await clipFor(names.walk), idle: await clipFor(names.idle) }])),
+    Promise.all(Object.entries(PEOPLE_CLIPS).map(async ([sex, names]) => {
+      const loaded = await Promise.all(Object.entries(names).map(async ([motion, name]) => [motion, await clipFor(name)]));
+      return [sex, Object.fromEntries(loaded)];
+    })),
     Promise.all(PEOPLE.map(async (person) => {
       const folder = base + person.id + "/";
       return { ...person, model: prepare(THREE, await loadFbx(folder + person.id + ".fbx", folder), heightM) };
@@ -84,7 +88,7 @@ export async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
 
   /**
    * @param {number} index which avatar, wrapping around the list
-   * @param {"walk" | "idle"} motion
+   * @param {"walk" | "idle" | "chat"} motion the one it starts in; setMotion changes it
    * @param {number} phase where in the cycle to start, 0 to 1
    */
   function make(index, motion, phase) {
@@ -93,10 +97,11 @@ export async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
     const group = new THREE.Group();
     group.add(model);
     const mixer = new THREE.AnimationMixer(model);
-    const { clip, speedMps } = clipsBySex[template.sex][motion];
-    const action = mixer.clipAction(clip);
-    action.time = phase * clip.duration;
-    action.play();
+    const motions = clipsBySex[template.sex];
+    const actions = Object.fromEntries(Object.entries(motions).map(([name, { clip }]) => [name, mixer.clipAction(clip)]));
+    let current = motion;
+    actions[current].time = phase * motions[current].clip.duration;
+    actions[current].play();
     mixer.update(0);
     // The face sits in front of and above the head bone's pivot, which is at the top of the neck.
     const head = new THREE.Object3D();
@@ -105,9 +110,20 @@ export async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
     return {
       group,
       head,
+      // Walking keeps pace with the person's speed so the feet do not slide; the others play as captured.
       animate(dt, speedNow) {
-        action.timeScale = speedNow / speedMps;
+        if (current === "walk") actions.walk.timeScale = speedNow / motions.walk.speedMps;
         mixer.update(dt);
+      },
+      setMotion(next) {
+        if (next === current) return;
+        const from = actions[current];
+        const to = actions[next];
+        to.reset();
+        to.timeScale = 1;
+        to.play();
+        from.crossFadeTo(to, 0.35, false);
+        current = next;
       },
     };
   }

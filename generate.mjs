@@ -2351,6 +2351,7 @@ function buildHtml() {
     }
 
     .sim-counts {
+      flex-basis: 100%;
       display: flex;
       flex-wrap: wrap;
       gap: 6px 14px;
@@ -2365,6 +2366,10 @@ function buildHtml() {
     .person-step .icon-button {
       width: 32px;
       height: 32px;
+    }
+
+    .sim-hidden b {
+      color: oklch(0.820 0.130 75);
     }
 
     .stand-seg button {
@@ -3437,6 +3442,12 @@ ${pwaCss}
                         <span><span data-i18n="out">Out</span> <b id="simOut">0</b></span>
                         <span><span data-i18n="faces">Faces</span> <b id="simFaces">0</b></span>
                         <span id="simPassersRow"><span data-i18n="passers">Passers-by, not counted</span> <b id="simPassers">0</b></span>
+                        <span class="sim-hidden" title="People in view whose head is more than half hidden behind someone nearer the camera, since the last reset" data-i18n-attr="title:hiddenTitle"><span data-i18n="hiddenOthers">Hidden behind others</span> <b id="simHidden">–</b></span>
+                      </span>
+                      <span class="solve-seg crowd-seg" id="simCrowd" role="group" aria-label="Crowd" data-i18n-attr="aria-label:crowd" hidden>
+                        <button type="button" data-crowd="light" aria-pressed="true" data-i18n="crowdLight">Light</button>
+                        <button type="button" data-crowd="busy" aria-pressed="false" data-i18n="crowdBusy">Busy</button>
+                        <button type="button" data-crowd="crowded" aria-pressed="false" data-i18n="crowdCrowded">Crowded</button>
                       </span>
                       <span class="sim-actions">
                         <button type="button" class="button sim-toggle" id="simCross" aria-pressed="true" title="People also walk left to right across the view, without crossing the counting line" data-i18n-attr="title:crossTitle" data-i18n="crossTraffic" hidden>Cross traffic</button>
@@ -3623,6 +3634,8 @@ ${shareSource}
         okFeet: "ok feet", bestFeet: "best feet", viewTop: "Top", viewCamera: "Camera",
         titleTop: "Top view", titleCamera: "Camera view",
         in: "In", out: "Out", faces: "Faces", passers: "Passers-by, not counted", crossTraffic: "Cross traffic",
+        hiddenOthers: "Hidden behind others", hiddenTitle: "People in view whose head is more than half hidden behind someone nearer the camera, since the last reset",
+        crowd: "Crowd", crowdLight: "Light", crowdBusy: "Busy", crowdCrowded: "Crowded",
         crossTitle: "People also walk left to right across the view, without crossing the counting line",
         walkPeople: "Walk people", reset: "Reset", pause: "Pause", resume: "Resume", fromCentre: "{m} m from centre",
         standGroup: "Where the person stands", standCount: "Counting line", standFace: "Face line",
@@ -3631,7 +3644,7 @@ ${shareSource}
         simAria: "Simulated camera view with people walking past. Drag the standing person, or use the arrow keys, to move them along the counting line.",
         personOf: "Person {i} of {n}", personGroup: "Person standing on the line", personPrev: "Previous person", personNext: "Next person",
         simStillNote: "One person standing on the counting line, as this camera sees them. Walk people to watch the counting.",
-        simNote: "Simulated people through this camera. Counts come from the simulation, not real traffic.",
+        simNote: "Simulated people through this camera. Counts come from the simulation, not real traffic. Busy and Crowded add groups, people who stop near the line and groups talking; a dashed box is someone hidden behind a nearer person.",
         simFallback: "The 3D view could not load. It needs an internet connection; this flat camera view is shown instead.",
         linesOnFloor: "Lines on the floor", countingLineLower: "counting line", faceLineLower: "face line",
         opticsFov: "Optics - field of view", horizontalFov: "horizontal FOV", verticalFov: "vertical FOV",
@@ -3731,6 +3744,8 @@ ${shareSource}
         okFeet: "พอใช้", bestFeet: "ดีที่สุด", viewTop: "บน", viewCamera: "กล้อง",
         titleTop: "มุมมองจากด้านบน", titleCamera: "ภาพจากกล้อง",
         in: "เข้า", out: "ออก", faces: "ใบหน้า", passers: "คนเดินผ่าน (ไม่นับ)", crossTraffic: "คนเดินตัดผ่าน",
+        hiddenOthers: "ถูกคนอื่นบัง", hiddenTitle: "สัดส่วนคนในภาพที่ศีรษะถูกคนที่อยู่ใกล้กล้องกว่าบังเกินครึ่ง นับตั้งแต่เริ่มใหม่",
+        crowd: "ความหนาแน่น", crowdLight: "เบาบาง", crowdBusy: "หนาแน่น", crowdCrowded: "แออัด",
         crossTitle: "ให้มีคนเดินซ้ายไปขวาผ่านภาพด้วย โดยไม่ข้ามเส้นนับ",
         walkPeople: "ให้คนเดิน", reset: "เริ่มใหม่", pause: "หยุดชั่วคราว", resume: "เดินต่อ", fromCentre: "ห่างจากกึ่งกลาง {m} m",
         standGroup: "ตำแหน่งที่คนยืน", standCount: "เส้นนับ", standFace: "เส้นจับใบหน้า",
@@ -3739,7 +3754,7 @@ ${shareSource}
         simAria: "ภาพจำลองจากกล้องพร้อมคนเดินผ่าน ลากคนที่ยืนอยู่ หรือใช้ปุ่มลูกศร เพื่อเลื่อนไปตามเส้นนับ",
         personOf: "คนที่ {i} จาก {n}", personGroup: "คนที่ยืนบนเส้น", personPrev: "คนก่อนหน้า", personNext: "คนถัดไป",
         simStillNote: "คนหนึ่งคนยืนบนเส้นนับ ตามที่กล้องนี้มองเห็น กด ให้คนเดิน เพื่อดูการนับ",
-        simNote: "คนจำลองที่มองผ่านกล้องนี้ ตัวเลขมาจากการจำลอง ไม่ใช่การนับจริง",
+        simNote: "คนจำลองที่มองผ่านกล้องนี้ ตัวเลขมาจากการจำลอง ไม่ใช่การนับจริง โหมดหนาแน่นและแออัดมีคนเดินเป็นกลุ่ม คนหยุดใกล้เส้น และกลุ่มยืนคุยกัน กรอบเส้นประคือคนที่ถูกคนใกล้กล้องกว่าบัง",
         simFallback: "โหลดภาพ 3 มิติไม่ได้ ต้องใช้อินเทอร์เน็ต จึงแสดงภาพจากกล้องแบบแบนแทน",
         linesOnFloor: "เส้นบนพื้น", countingLineLower: "เส้นนับ", faceLineLower: "เส้นจับใบหน้า",
         opticsFov: "เลนส์ - มุมรับภาพ", horizontalFov: "มุมรับภาพแนวนอน", verticalFov: "มุมรับภาพแนวตั้ง",
@@ -5846,7 +5861,8 @@ ${peopleSource}
         canvas: document.getElementById("simCanvas"),
         overlay: document.getElementById("simOverlay"),
         walkButton: document.getElementById("simWalk"),
-        walkOnly: ["simCounts", "simCross", "simReset", "simPause", "simNote"].map((id) => document.getElementById(id)),
+        walkOnly: ["simCounts", "simCrowd", "simCross", "simReset", "simPause", "simNote"].map((id) => document.getElementById(id)),
+        crowd: { buttons: Array.from(document.querySelectorAll("[data-crowd]")) },
         pauseButton: document.getElementById("simPause"),
         stillNote: document.getElementById("simStillNote"),
         stand: {
@@ -5866,7 +5882,8 @@ ${peopleSource}
           in: document.getElementById("simIn"),
           out: document.getElementById("simOut"),
           faces: document.getElementById("simFaces"),
-          passers: document.getElementById("simPassers")
+          passers: document.getElementById("simPassers"),
+          hidden: document.getElementById("simHidden")
         }
       });
       update();

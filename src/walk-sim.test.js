@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { crossingDirection, placeLabels } from "./walk-sim.js";
+import { crossingDirection, placeLabels, occlusionOf } from "./walk-sim.js";
 
 test("walking toward the camera across the line counts in", () => {
   assert.equal(crossingDirection(4.7, 4.55, 4.6), "in");
@@ -42,4 +42,28 @@ test("a label blocked above and below is left out", () => {
 test("a label never leaves the canvas", () => {
   const placed = placeLabels([label("edge", 10, 100, 160, 1)], [], 400);
   assert.equal(placed[0].x, 0);
+});
+
+const person = (x, y, depth, w = 20, h = 60) => ({ box: { x, y, w, h }, depth });
+
+test("someone standing right behind a nearer person, head covered, is hidden", () => {
+  // The nearer person is bigger in the picture and reaches up past the farther one's head.
+  const [near, far] = occlusionOf([person(100, -5, 3, 20, 80), person(100, 0, 6)]);
+  assert.equal(near, false);
+  assert.equal(far, true);
+});
+
+test("the nearer of two people is never hidden by the farther one", () => {
+  const [near] = occlusionOf([person(100, 0, 3), person(100, 10, 6)]);
+  assert.equal(near, false);
+});
+
+test("people side by side, heads clear of each other, are not hidden", () => {
+  assert.deepEqual(occlusionOf([person(100, 0, 3), person(125, 0, 3.2)]), [false, false]);
+});
+
+test("a nearer person's arm reach at the edge of their box does not count as covering", () => {
+  // Only the middle 60% of the nearer box covers; a head just inside its outer edge stays clear.
+  const [, far] = occlusionOf([person(100, -5, 3, 20, 80), person(114, 0, 6)]);
+  assert.equal(far, false);
 });

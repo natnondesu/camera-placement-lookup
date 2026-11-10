@@ -37,7 +37,41 @@ export function placeLabels(candidates, blocked, canvasWidth) {
   return placed;
 }
 
+/**
+ * Who is hidden behind others in the camera's picture: a person whose head (the top fifth of their box, the middle half
+ * of its width) is more than half covered by people nearer the camera. A nearer person covers the middle 60% of their
+ * box's width, about the width of a body rather than the arms' reach the box allows for.
+ * @param {{ box: { x: number, y: number, w: number, h: number }, depth: number }[]} people depth: distance from the camera
+ * @returns {boolean[]} hidden, in the same order
+ */
+export function occlusionOf(people) {
+  const bodies = people.map(({ box }) => ({ x: box.x + box.w * 0.2, y: box.y, w: box.w * 0.6, h: box.h }));
+  return people.map((person, index) => {
+    const nearer = bodies.filter((_, other) => other !== index && people[other].depth < person.depth);
+    if (nearer.length === 0) return false;
+    const { box } = person;
+    let covered = 0;
+    let total = 0;
+    for (let i = 0; i < 5; i += 1) {
+      for (let j = 0; j < 4; j += 1) {
+        const x = box.x + box.w * (0.25 + (0.5 * (i + 0.5)) / 5);
+        const y = box.y + box.h * ((0.2 * (j + 0.5)) / 4);
+        total += 1;
+        if (nearer.some((b) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h)) covered += 1;
+      }
+    }
+    return covered / total > 0.5;
+  });
+}
+
 export const MODEL_HEIGHT_M = 1.7;
+// How busy the scene is: how many people, how many walk in pairs or threes, and how often someone stops on the way
+// through or a group stands talking. Phones get a smaller crowd.
+const CROWDS = {
+  light: { door: 7, corridor: 6, pairs: 0, trios: 0, stopShare: 0, chatShare: 0 },
+  busy: { door: 14, corridor: 12, pairs: 2, trios: 1, stopShare: 0.25, chatShare: 0.15 },
+  crowded: { door: 22, corridor: 18, phone: 14, pairs: 3, trios: 2, stopShare: 0.35, chatShare: 0.22 },
+};
 // Matches the engine's 80% effective coverage: the outer 10% each side, or 20% of a fisheye's radius.
 const EFFECTIVE_SHARE = 0.8;
 const SKIN = ["#f1c7a5", "#d9a47c", "#b97b52", "#8d5a3b", "#5f3b26"];
@@ -195,6 +229,9 @@ export function createWalkSim(THREE, ui) {
   // The view opens still, on one person standing at the counting line; the crowd walks only when asked.
   let walking = false;
   let crossTraffic = true;
+  let crowd = "light";
+  // People hidden behind others, sampled a few times a second while walking: since the last reset.
+  const occlusion = { seen: 0, hidden: 0, sampledAt: 0 };
   // The site sheet's snapshot draws lines, bands and boxes but no text, which would shrink to smudges on paper.
   let quiet = false;
   let lastTime = 0;
@@ -260,12 +297,13 @@ export function createWalkSim(THREE, ui) {
       head,
       animate(dt, speed) {
         phase += speed * dt * 5.2;
-        const swing = Math.sin(phase);
+        const swing = speed > 0 ? Math.sin(phase) : 0;
         legL.rotation.x = swing * 0.55;
         legR.rotation.x = -swing * 0.55;
         armL.rotation.x = -swing * 0.45;
         armR.rotation.x = swing * 0.45;
       },
+      setMotion() {},
     };
   }
 
@@ -406,7 +444,14 @@ export function createWalkSim(THREE, ui) {
     scene.add(props);
   }
 
+  // A group's leader decides where the group goes; the others keep beside it (see step).
   function spawn(agent, lay, p, fresh) {
+    const style = CROWDS[crowd];
+    agent.stopAt = null;
+    agent.stopLeft = 0;
+    agent.chatAt = null;
+    agent.chatLeft = 0;
+    agent.followers.forEach((f) => Object.assign(f, { lastZ: null, flash: 0, flashDirection: null, faceFlash: 0 }));
     const roll = random();
     const kind = crossTraffic && roll < 0.35
       ? "cross"
@@ -450,19 +495,59 @@ export function createWalkSim(THREE, ui) {
       faceFlash: 0,
     });
     agent.body.group.scale.setScalar((p.humanHeightM / MODEL_HEIGHT_M) * (0.94 + random() * 0.1));
+    // A group walking in or out may stop about a metre past the counting line to talk, then carry on the same way.
+    if ((kind === "in" || kind === "out") && agent.followers.length > 0 && random() < style.chatShare) {
+      const target = p.distanceM + (kind === "in" ? -1 : 1);
+      const t = (from.z - target) / (from.z - to.z);
+      if (t > 0.05 && t < 0.95 && agent.travelled < t * length) {
+        agent.chatAt = t * length;
+        agent.chatLeft = 6 + random() * 7;
+        return;
+      }
+    }
+    // Someone walking in or out may stop just short of the counting line (looking at a phone, waiting), then carry on.
+    if ((kind === "in" || kind === "out") && random() < style.stopShare) {
+      const target = p.distanceM + (kind === "in" ? 0.45 : -0.45);
+      const t = (from.z - target) / (from.z - to.z);
+      if (t > 0.05 && t < 0.95 && agent.travelled < t * length) {
+        agent.stopAt = t * length;
+        agent.stopLeft = 2 + random() * 3.5;
+      }
+    }
   }
+
+
 
   function respawnAll(p) {
     agents.forEach((a) => scene.remove(a.body.group));
     const lay = layout(p);
+    const style = CROWDS[crowd];
+    const phone = typeof window !== "undefined" && window.innerWidth < 760 && style.phone;
+    const total = phone ? style.phone : lay.doorZ !== null ? style.door : style.corridor;
     // The crowd always starts from the same avatar, so a reset replays the same people.
     avatarCount = 1;
-    agents = Array.from({ length: lay.doorZ !== null ? 7 : 6 }, () => {
-      const agent = { body: makePerson("walk") };
+    agents = Array.from({ length: total }, () => {
+      const agent = { body: makePerson("walk"), leader: null, side: 0, followers: [] };
       scene.add(agent.body.group);
-      spawn(agent, lay, p, true);
       return agent;
     });
+    // Groups: the first agents are leaders, each with one or two companions beside them.
+    let next = 0;
+    const team = (size) => {
+      const leader = agents[next];
+      next += 1;
+      for (let i = 1; i < size && next < agents.length; i += 1, next += 1) {
+        const member = agents[next];
+        member.leader = leader;
+        member.side = size === 2 ? 1 : i === 1 ? -1 : 1;
+        leader.followers.push(member);
+      }
+    };
+    for (let i = 0; i < style.trios; i += 1) team(3);
+    for (let i = 0; i < style.pairs; i += 1) team(2);
+    agents.filter((a) => !a.leader).forEach((agent) => spawn(agent, lay, p, true));
+    agents.filter((a) => a.leader).forEach((member) => member.body.group.scale.setScalar((p.humanHeightM / MODEL_HEIGHT_M) * (0.94 + random() * 0.1)));
+    Object.assign(occlusion, { seen: 0, hidden: 0, sampledAt: 0 });
     syncWalking();
   }
 
@@ -485,21 +570,68 @@ export function createWalkSim(THREE, ui) {
     ui.overlay.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
+  // Where a leader and its companions stand this frame: walking side by side, or in a small circle while talking.
+  function placeGroup(agent, dt, lay) {
+    const g = agent.body.group;
+    let speedNow = agent.speed;
+    // Talking: the group stands in a small circle where the leader stopped, then falls back into step and walks on.
+    if (agent.chatAt !== null && agent.travelled >= agent.chatAt && agent.chatLeft > 0) {
+      agent.chatLeft -= dt;
+      const ring = agent.followers.length;
+      agent.followers.forEach((member, i) => {
+        const angle = (Math.PI * 2 * (i + 1)) / (ring + 1);
+        const m = member.body.group;
+        m.position.set(g.position.x + Math.sin(angle) * 0.75, 0, g.position.z + Math.cos(angle) * 0.75);
+        m.rotation.y = Math.atan2(g.position.x - m.position.x, g.position.z - m.position.z);
+      });
+      const centre = agent.followers.reduce((sum, m) => ({ x: sum.x + m.body.group.position.x, z: sum.z + m.body.group.position.z }), { x: 0, z: 0 });
+      g.rotation.y = Math.atan2(centre.x / ring - g.position.x, centre.z / ring - g.position.z);
+      [agent, ...agent.followers].forEach((a) => {
+        a.body.setMotion(a === agent ? "idle" : "chat");
+        a.body.animate(dt, 0);
+      });
+      // Stepping out of the circle is not a crossing: counting picks up again from where each one walks on.
+      if (agent.chatLeft <= 0) agent.followers.forEach((member) => { member.lastZ = null; });
+      return;
+    }
+    if (agent.stopAt !== null && agent.travelled >= agent.stopAt && agent.stopLeft > 0) {
+      agent.stopLeft -= dt;
+      speedNow = 0;
+    } else {
+      agent.travelled += agent.speed * dt;
+    }
+    if (agent.travelled >= agent.length) {
+      if (agent.kind === "pass" || agent.kind === "cross") counts.passers += 1 + agent.followers.length;
+      spawn(agent, lay, input, false);
+    }
+    const t = agent.length > 0 ? agent.travelled / agent.length : 0;
+    const x = agent.from.x + (agent.to.x - agent.from.x) * t;
+    const z = agent.from.z + (agent.to.z - agent.from.z) * t;
+    const heading = Math.atan2(agent.to.x - agent.from.x, agent.to.z - agent.from.z);
+    g.position.set(x, 0, z);
+    g.rotation.y = heading;
+    // Companions walk abreast, about 0.55 m apart; inside the entrance they keep within its width.
+    const reach = (lay.doorZ !== null ? lay.doorHalf : lay.corridorHalf) - 0.25;
+    agent.followers.forEach((member) => {
+      const m = member.body.group;
+      let mx = x + Math.cos(heading) * 0.55 * member.side;
+      const mz = z - Math.sin(heading) * 0.55 * member.side;
+      if (agent.kind === "in" || agent.kind === "out") mx = Math.max(-reach, Math.min(reach, mx));
+      m.position.set(mx, 0, mz);
+      m.rotation.y = heading;
+    });
+    [agent, ...agent.followers].forEach((a) => {
+      a.body.setMotion(speedNow > 0 ? "walk" : "idle");
+      a.body.animate(dt, speedNow);
+    });
+  }
+
   function step(dt) {
     const lay = layout(input);
+    agents.filter((a) => !a.leader).forEach((agent) => placeGroup(agent, dt, lay));
     for (const agent of agents) {
-      agent.travelled += agent.speed * dt;
-      if (agent.travelled >= agent.length) {
-        if (agent.kind === "pass" || agent.kind === "cross") counts.passers += 1;
-        spawn(agent, lay, input, false);
-      }
-      const t = agent.travelled / agent.length;
-      const x = agent.from.x + (agent.to.x - agent.from.x) * t;
-      const z = agent.from.z + (agent.to.z - agent.from.z) * t;
-      const g = agent.body.group;
-      g.position.set(x, 0, z);
-      g.rotation.y = Math.atan2(agent.to.x - agent.from.x, agent.to.z - agent.from.z);
-      agent.body.animate(dt, agent.speed);
+      if (agent.leader) agent.kind = agent.leader.kind;
+      const z = agent.body.group.position.z;
 
       if (agent.kind !== "pass" && agent.kind !== "cross" && agent.lastZ !== null) {
         const crossed = crossingDirection(agent.lastZ, z, input.distanceM);
@@ -676,6 +808,7 @@ export function createWalkSim(THREE, ui) {
     if (input.faceLineDistanceM !== null && Math.abs(input.faceLineDistanceM - input.distanceM) > 0.02) {
       label(input.faceLineDistanceM, input.text.faceLine + " " + input.faceLineDistanceM.toFixed(2) + " m", input.colors.face);
     }
+    const seen = [];
     for (const agent of shownAgents()) {
       const g = agent.body.group;
       const behindWall = lay.doorZ !== null && g.position.z > lay.doorZ + 0.1 && Math.abs(g.position.x) > lay.doorHalf - 0.1;
@@ -683,11 +816,25 @@ export function createWalkSim(THREE, ui) {
       const tall = MODEL_HEIGHT_M * g.scale.x;
       const box = personBox(g, tall, w, h);
       if (!box) continue;
+      seen.push({ agent, box, tall, depth: Math.hypot(g.position.x - cameraX(), tall * 0.6 - input.heightM, g.position.z) });
+    }
+    const hidden = walking ? occlusionOf(seen) : seen.map(() => false);
+    const now = performance.now();
+    if (walking && !paused && !quiet && now - occlusion.sampledAt > 250) {
+      occlusion.sampledAt = now;
+      occlusion.seen += seen.length;
+      occlusion.hidden += hidden.filter(Boolean).length;
+    }
+    seen.forEach(({ agent, box, tall }, index) => {
+      const g = agent.body.group;
       const counted = agent.flash > 0;
       const countColor = agent.flashDirection === "out" ? input.colors.out : input.colors.count;
-      ctx.strokeStyle = counted ? countColor : "rgba(230, 236, 245, 0.55)";
-      ctx.lineWidth = counted ? 2 : 1;
+      // Someone hidden behind nearer people is boxed dashed: the camera may not see their head to count them.
+      ctx.strokeStyle = counted ? countColor : hidden[index] ? "rgba(240, 190, 90, 0.95)" : "rgba(230, 236, 245, 0.55)";
+      ctx.lineWidth = counted ? 2 : hidden[index] ? 1.5 : 1;
+      if (hidden[index] && !counted) ctx.setLineDash([4, 3]);
       ctx.strokeRect(box.x, box.y, box.w, box.h);
+      ctx.setLineDash([]);
       const centreX = box.x + box.w / 2;
       // Density at this person's face, the figure demographics depend on.
       if (box.h >= 28) {
@@ -721,7 +868,7 @@ export function createWalkSim(THREE, ui) {
         ctx.fillStyle = input.colors.face;
         ctx.fillText(input.text.face, centreX + head / 2 + 3, box.y + head);
       }
-    }
+    });
     if (quiet) return;
     // Density labels go last, placed around each other, the line labels and the readout box.
     ctx.font = "600 11px JetBrains Mono, monospace";
@@ -1070,6 +1217,7 @@ export function createWalkSim(THREE, ui) {
     ui.counts.out.textContent = String(counts.out);
     ui.counts.faces.textContent = String(counts.faces);
     ui.counts.passers.textContent = String(counts.passers);
+    ui.counts.hidden.textContent = occlusion.seen > 0 ? Math.round((100 * occlusion.hidden) / occlusion.seen) + "%" : "–";
   }
 
   function frame(time) {
@@ -1106,6 +1254,14 @@ export function createWalkSim(THREE, ui) {
     syncWalking();
     start();
   });
+  ui.crowd.buttons.forEach((button) => button.addEventListener("click", () => {
+    crowd = button.dataset.crowd;
+    ui.crowd.buttons.forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+    Object.keys(counts).forEach((k) => { counts[k] = 0; });
+    seed = 7;
+    if (input) respawnAll(input);
+    start();
+  }));
   ui.pauseButton.addEventListener("click", () => {
     paused = !paused;
     syncWalking();
@@ -1214,6 +1370,7 @@ export function createWalkSim(THREE, ui) {
     Object.keys(counts).forEach((k) => {
       counts[k] = 0;
     });
+    Object.assign(occlusion, { seen: 0, hidden: 0, sampledAt: 0 });
     seed = 7;
     if (input) respawnAll(input);
     start();

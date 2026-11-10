@@ -2266,6 +2266,7 @@
     }
 
     .sim-counts {
+      flex-basis: 100%;
       display: flex;
       flex-wrap: wrap;
       gap: 6px 14px;
@@ -2280,6 +2281,10 @@
     .person-step .icon-button {
       width: 32px;
       height: 32px;
+    }
+
+    .sim-hidden b {
+      color: oklch(0.820 0.130 75);
     }
 
     .stand-seg button {
@@ -4591,6 +4596,12 @@
                         <span><span data-i18n="out">Out</span> <b id="simOut">0</b></span>
                         <span><span data-i18n="faces">Faces</span> <b id="simFaces">0</b></span>
                         <span id="simPassersRow"><span data-i18n="passers">Passers-by, not counted</span> <b id="simPassers">0</b></span>
+                        <span class="sim-hidden" title="People in view whose head is more than half hidden behind someone nearer the camera, since the last reset" data-i18n-attr="title:hiddenTitle"><span data-i18n="hiddenOthers">Hidden behind others</span> <b id="simHidden">–</b></span>
+                      </span>
+                      <span class="solve-seg crowd-seg" id="simCrowd" role="group" aria-label="Crowd" data-i18n-attr="aria-label:crowd" hidden>
+                        <button type="button" data-crowd="light" aria-pressed="true" data-i18n="crowdLight">Light</button>
+                        <button type="button" data-crowd="busy" aria-pressed="false" data-i18n="crowdBusy">Busy</button>
+                        <button type="button" data-crowd="crowded" aria-pressed="false" data-i18n="crowdCrowded">Crowded</button>
                       </span>
                       <span class="sim-actions">
                         <button type="button" class="button sim-toggle" id="simCross" aria-pressed="true" title="People also walk left to right across the view, without crossing the counting line" data-i18n-attr="title:crossTitle" data-i18n="crossTraffic" hidden>Cross traffic</button>
@@ -5572,6 +5583,8 @@ function decodePlacement(hash) {
         okFeet: "ok feet", bestFeet: "best feet", viewTop: "Top", viewCamera: "Camera",
         titleTop: "Top view", titleCamera: "Camera view",
         in: "In", out: "Out", faces: "Faces", passers: "Passers-by, not counted", crossTraffic: "Cross traffic",
+        hiddenOthers: "Hidden behind others", hiddenTitle: "People in view whose head is more than half hidden behind someone nearer the camera, since the last reset",
+        crowd: "Crowd", crowdLight: "Light", crowdBusy: "Busy", crowdCrowded: "Crowded",
         crossTitle: "People also walk left to right across the view, without crossing the counting line",
         walkPeople: "Walk people", reset: "Reset", pause: "Pause", resume: "Resume", fromCentre: "{m} m from centre",
         standGroup: "Where the person stands", standCount: "Counting line", standFace: "Face line",
@@ -5580,7 +5593,7 @@ function decodePlacement(hash) {
         simAria: "Simulated camera view with people walking past. Drag the standing person, or use the arrow keys, to move them along the counting line.",
         personOf: "Person {i} of {n}", personGroup: "Person standing on the line", personPrev: "Previous person", personNext: "Next person",
         simStillNote: "One person standing on the counting line, as this camera sees them. Walk people to watch the counting.",
-        simNote: "Simulated people through this camera. Counts come from the simulation, not real traffic.",
+        simNote: "Simulated people through this camera. Counts come from the simulation, not real traffic. Busy and Crowded add groups, people who stop near the line and groups talking; a dashed box is someone hidden behind a nearer person.",
         simFallback: "The 3D view could not load. It needs an internet connection; this flat camera view is shown instead.",
         linesOnFloor: "Lines on the floor", countingLineLower: "counting line", faceLineLower: "face line",
         opticsFov: "Optics - field of view", horizontalFov: "horizontal FOV", verticalFov: "vertical FOV",
@@ -5680,6 +5693,8 @@ function decodePlacement(hash) {
         okFeet: "พอใช้", bestFeet: "ดีที่สุด", viewTop: "บน", viewCamera: "กล้อง",
         titleTop: "มุมมองจากด้านบน", titleCamera: "ภาพจากกล้อง",
         in: "เข้า", out: "ออก", faces: "ใบหน้า", passers: "คนเดินผ่าน (ไม่นับ)", crossTraffic: "คนเดินตัดผ่าน",
+        hiddenOthers: "ถูกคนอื่นบัง", hiddenTitle: "สัดส่วนคนในภาพที่ศีรษะถูกคนที่อยู่ใกล้กล้องกว่าบังเกินครึ่ง นับตั้งแต่เริ่มใหม่",
+        crowd: "ความหนาแน่น", crowdLight: "เบาบาง", crowdBusy: "หนาแน่น", crowdCrowded: "แออัด",
         crossTitle: "ให้มีคนเดินซ้ายไปขวาผ่านภาพด้วย โดยไม่ข้ามเส้นนับ",
         walkPeople: "ให้คนเดิน", reset: "เริ่มใหม่", pause: "หยุดชั่วคราว", resume: "เดินต่อ", fromCentre: "ห่างจากกึ่งกลาง {m} m",
         standGroup: "ตำแหน่งที่คนยืน", standCount: "เส้นนับ", standFace: "เส้นจับใบหน้า",
@@ -5688,7 +5703,7 @@ function decodePlacement(hash) {
         simAria: "ภาพจำลองจากกล้องพร้อมคนเดินผ่าน ลากคนที่ยืนอยู่ หรือใช้ปุ่มลูกศร เพื่อเลื่อนไปตามเส้นนับ",
         personOf: "คนที่ {i} จาก {n}", personGroup: "คนที่ยืนบนเส้น", personPrev: "คนก่อนหน้า", personNext: "คนถัดไป",
         simStillNote: "คนหนึ่งคนยืนบนเส้นนับ ตามที่กล้องนี้มองเห็น กด ให้คนเดิน เพื่อดูการนับ",
-        simNote: "คนจำลองที่มองผ่านกล้องนี้ ตัวเลขมาจากการจำลอง ไม่ใช่การนับจริง",
+        simNote: "คนจำลองที่มองผ่านกล้องนี้ ตัวเลขมาจากการจำลอง ไม่ใช่การนับจริง โหมดหนาแน่นและแออัดมีคนเดินเป็นกลุ่ม คนหยุดใกล้เส้น และกลุ่มยืนคุยกัน กรอบเส้นประคือคนที่ถูกคนใกล้กล้องกว่าบัง",
         simFallback: "โหลดภาพ 3 มิติไม่ได้ ต้องใช้อินเทอร์เน็ต จึงแสดงภาพจากกล้องแบบแบนแทน",
         linesOnFloor: "เส้นบนพื้น", countingLineLower: "เส้นนับ", faceLineLower: "เส้นจับใบหน้า",
         opticsFov: "เลนส์ - มุมรับภาพ", horizontalFov: "มุมรับภาพแนวนอน", verticalFov: "มุมรับภาพแนวตั้ง",
@@ -8778,7 +8793,41 @@ function placeLabels(candidates, blocked, canvasWidth) {
   return placed;
 }
 
+/**
+ * Who is hidden behind others in the camera's picture: a person whose head (the top fifth of their box, the middle half
+ * of its width) is more than half covered by people nearer the camera. A nearer person covers the middle 60% of their
+ * box's width, about the width of a body rather than the arms' reach the box allows for.
+ * @param {{ box: { x: number, y: number, w: number, h: number }, depth: number }[]} people depth: distance from the camera
+ * @returns {boolean[]} hidden, in the same order
+ */
+function occlusionOf(people) {
+  const bodies = people.map(({ box }) => ({ x: box.x + box.w * 0.2, y: box.y, w: box.w * 0.6, h: box.h }));
+  return people.map((person, index) => {
+    const nearer = bodies.filter((_, other) => other !== index && people[other].depth < person.depth);
+    if (nearer.length === 0) return false;
+    const { box } = person;
+    let covered = 0;
+    let total = 0;
+    for (let i = 0; i < 5; i += 1) {
+      for (let j = 0; j < 4; j += 1) {
+        const x = box.x + box.w * (0.25 + (0.5 * (i + 0.5)) / 5);
+        const y = box.y + box.h * ((0.2 * (j + 0.5)) / 4);
+        total += 1;
+        if (nearer.some((b) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h)) covered += 1;
+      }
+    }
+    return covered / total > 0.5;
+  });
+}
+
 const MODEL_HEIGHT_M = 1.7;
+// How busy the scene is: how many people, how many walk in pairs or threes, and how often someone stops on the way
+// through or a group stands talking. Phones get a smaller crowd.
+const CROWDS = {
+  light: { door: 7, corridor: 6, pairs: 0, trios: 0, stopShare: 0, chatShare: 0 },
+  busy: { door: 14, corridor: 12, pairs: 2, trios: 1, stopShare: 0.25, chatShare: 0.15 },
+  crowded: { door: 22, corridor: 18, phone: 14, pairs: 3, trios: 2, stopShare: 0.35, chatShare: 0.22 },
+};
 // Matches the engine's 80% effective coverage: the outer 10% each side, or 20% of a fisheye's radius.
 const EFFECTIVE_SHARE = 0.8;
 const SKIN = ["#f1c7a5", "#d9a47c", "#b97b52", "#8d5a3b", "#5f3b26"];
@@ -8936,6 +8985,9 @@ function createWalkSim(THREE, ui) {
   // The view opens still, on one person standing at the counting line; the crowd walks only when asked.
   let walking = false;
   let crossTraffic = true;
+  let crowd = "light";
+  // People hidden behind others, sampled a few times a second while walking: since the last reset.
+  const occlusion = { seen: 0, hidden: 0, sampledAt: 0 };
   // The site sheet's snapshot draws lines, bands and boxes but no text, which would shrink to smudges on paper.
   let quiet = false;
   let lastTime = 0;
@@ -9001,12 +9053,13 @@ function createWalkSim(THREE, ui) {
       head,
       animate(dt, speed) {
         phase += speed * dt * 5.2;
-        const swing = Math.sin(phase);
+        const swing = speed > 0 ? Math.sin(phase) : 0;
         legL.rotation.x = swing * 0.55;
         legR.rotation.x = -swing * 0.55;
         armL.rotation.x = -swing * 0.45;
         armR.rotation.x = swing * 0.45;
       },
+      setMotion() {},
     };
   }
 
@@ -9147,7 +9200,14 @@ function createWalkSim(THREE, ui) {
     scene.add(props);
   }
 
+  // A group's leader decides where the group goes; the others keep beside it (see step).
   function spawn(agent, lay, p, fresh) {
+    const style = CROWDS[crowd];
+    agent.stopAt = null;
+    agent.stopLeft = 0;
+    agent.chatAt = null;
+    agent.chatLeft = 0;
+    agent.followers.forEach((f) => Object.assign(f, { lastZ: null, flash: 0, flashDirection: null, faceFlash: 0 }));
     const roll = random();
     const kind = crossTraffic && roll < 0.35
       ? "cross"
@@ -9191,19 +9251,59 @@ function createWalkSim(THREE, ui) {
       faceFlash: 0,
     });
     agent.body.group.scale.setScalar((p.humanHeightM / MODEL_HEIGHT_M) * (0.94 + random() * 0.1));
+    // A group walking in or out may stop about a metre past the counting line to talk, then carry on the same way.
+    if ((kind === "in" || kind === "out") && agent.followers.length > 0 && random() < style.chatShare) {
+      const target = p.distanceM + (kind === "in" ? -1 : 1);
+      const t = (from.z - target) / (from.z - to.z);
+      if (t > 0.05 && t < 0.95 && agent.travelled < t * length) {
+        agent.chatAt = t * length;
+        agent.chatLeft = 6 + random() * 7;
+        return;
+      }
+    }
+    // Someone walking in or out may stop just short of the counting line (looking at a phone, waiting), then carry on.
+    if ((kind === "in" || kind === "out") && random() < style.stopShare) {
+      const target = p.distanceM + (kind === "in" ? 0.45 : -0.45);
+      const t = (from.z - target) / (from.z - to.z);
+      if (t > 0.05 && t < 0.95 && agent.travelled < t * length) {
+        agent.stopAt = t * length;
+        agent.stopLeft = 2 + random() * 3.5;
+      }
+    }
   }
+
+
 
   function respawnAll(p) {
     agents.forEach((a) => scene.remove(a.body.group));
     const lay = layout(p);
+    const style = CROWDS[crowd];
+    const phone = typeof window !== "undefined" && window.innerWidth < 760 && style.phone;
+    const total = phone ? style.phone : lay.doorZ !== null ? style.door : style.corridor;
     // The crowd always starts from the same avatar, so a reset replays the same people.
     avatarCount = 1;
-    agents = Array.from({ length: lay.doorZ !== null ? 7 : 6 }, () => {
-      const agent = { body: makePerson("walk") };
+    agents = Array.from({ length: total }, () => {
+      const agent = { body: makePerson("walk"), leader: null, side: 0, followers: [] };
       scene.add(agent.body.group);
-      spawn(agent, lay, p, true);
       return agent;
     });
+    // Groups: the first agents are leaders, each with one or two companions beside them.
+    let next = 0;
+    const team = (size) => {
+      const leader = agents[next];
+      next += 1;
+      for (let i = 1; i < size && next < agents.length; i += 1, next += 1) {
+        const member = agents[next];
+        member.leader = leader;
+        member.side = size === 2 ? 1 : i === 1 ? -1 : 1;
+        leader.followers.push(member);
+      }
+    };
+    for (let i = 0; i < style.trios; i += 1) team(3);
+    for (let i = 0; i < style.pairs; i += 1) team(2);
+    agents.filter((a) => !a.leader).forEach((agent) => spawn(agent, lay, p, true));
+    agents.filter((a) => a.leader).forEach((member) => member.body.group.scale.setScalar((p.humanHeightM / MODEL_HEIGHT_M) * (0.94 + random() * 0.1)));
+    Object.assign(occlusion, { seen: 0, hidden: 0, sampledAt: 0 });
     syncWalking();
   }
 
@@ -9226,21 +9326,68 @@ function createWalkSim(THREE, ui) {
     ui.overlay.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
+  // Where a leader and its companions stand this frame: walking side by side, or in a small circle while talking.
+  function placeGroup(agent, dt, lay) {
+    const g = agent.body.group;
+    let speedNow = agent.speed;
+    // Talking: the group stands in a small circle where the leader stopped, then falls back into step and walks on.
+    if (agent.chatAt !== null && agent.travelled >= agent.chatAt && agent.chatLeft > 0) {
+      agent.chatLeft -= dt;
+      const ring = agent.followers.length;
+      agent.followers.forEach((member, i) => {
+        const angle = (Math.PI * 2 * (i + 1)) / (ring + 1);
+        const m = member.body.group;
+        m.position.set(g.position.x + Math.sin(angle) * 0.75, 0, g.position.z + Math.cos(angle) * 0.75);
+        m.rotation.y = Math.atan2(g.position.x - m.position.x, g.position.z - m.position.z);
+      });
+      const centre = agent.followers.reduce((sum, m) => ({ x: sum.x + m.body.group.position.x, z: sum.z + m.body.group.position.z }), { x: 0, z: 0 });
+      g.rotation.y = Math.atan2(centre.x / ring - g.position.x, centre.z / ring - g.position.z);
+      [agent, ...agent.followers].forEach((a) => {
+        a.body.setMotion(a === agent ? "idle" : "chat");
+        a.body.animate(dt, 0);
+      });
+      // Stepping out of the circle is not a crossing: counting picks up again from where each one walks on.
+      if (agent.chatLeft <= 0) agent.followers.forEach((member) => { member.lastZ = null; });
+      return;
+    }
+    if (agent.stopAt !== null && agent.travelled >= agent.stopAt && agent.stopLeft > 0) {
+      agent.stopLeft -= dt;
+      speedNow = 0;
+    } else {
+      agent.travelled += agent.speed * dt;
+    }
+    if (agent.travelled >= agent.length) {
+      if (agent.kind === "pass" || agent.kind === "cross") counts.passers += 1 + agent.followers.length;
+      spawn(agent, lay, input, false);
+    }
+    const t = agent.length > 0 ? agent.travelled / agent.length : 0;
+    const x = agent.from.x + (agent.to.x - agent.from.x) * t;
+    const z = agent.from.z + (agent.to.z - agent.from.z) * t;
+    const heading = Math.atan2(agent.to.x - agent.from.x, agent.to.z - agent.from.z);
+    g.position.set(x, 0, z);
+    g.rotation.y = heading;
+    // Companions walk abreast, about 0.55 m apart; inside the entrance they keep within its width.
+    const reach = (lay.doorZ !== null ? lay.doorHalf : lay.corridorHalf) - 0.25;
+    agent.followers.forEach((member) => {
+      const m = member.body.group;
+      let mx = x + Math.cos(heading) * 0.55 * member.side;
+      const mz = z - Math.sin(heading) * 0.55 * member.side;
+      if (agent.kind === "in" || agent.kind === "out") mx = Math.max(-reach, Math.min(reach, mx));
+      m.position.set(mx, 0, mz);
+      m.rotation.y = heading;
+    });
+    [agent, ...agent.followers].forEach((a) => {
+      a.body.setMotion(speedNow > 0 ? "walk" : "idle");
+      a.body.animate(dt, speedNow);
+    });
+  }
+
   function step(dt) {
     const lay = layout(input);
+    agents.filter((a) => !a.leader).forEach((agent) => placeGroup(agent, dt, lay));
     for (const agent of agents) {
-      agent.travelled += agent.speed * dt;
-      if (agent.travelled >= agent.length) {
-        if (agent.kind === "pass" || agent.kind === "cross") counts.passers += 1;
-        spawn(agent, lay, input, false);
-      }
-      const t = agent.travelled / agent.length;
-      const x = agent.from.x + (agent.to.x - agent.from.x) * t;
-      const z = agent.from.z + (agent.to.z - agent.from.z) * t;
-      const g = agent.body.group;
-      g.position.set(x, 0, z);
-      g.rotation.y = Math.atan2(agent.to.x - agent.from.x, agent.to.z - agent.from.z);
-      agent.body.animate(dt, agent.speed);
+      if (agent.leader) agent.kind = agent.leader.kind;
+      const z = agent.body.group.position.z;
 
       if (agent.kind !== "pass" && agent.kind !== "cross" && agent.lastZ !== null) {
         const crossed = crossingDirection(agent.lastZ, z, input.distanceM);
@@ -9417,6 +9564,7 @@ function createWalkSim(THREE, ui) {
     if (input.faceLineDistanceM !== null && Math.abs(input.faceLineDistanceM - input.distanceM) > 0.02) {
       label(input.faceLineDistanceM, input.text.faceLine + " " + input.faceLineDistanceM.toFixed(2) + " m", input.colors.face);
     }
+    const seen = [];
     for (const agent of shownAgents()) {
       const g = agent.body.group;
       const behindWall = lay.doorZ !== null && g.position.z > lay.doorZ + 0.1 && Math.abs(g.position.x) > lay.doorHalf - 0.1;
@@ -9424,11 +9572,25 @@ function createWalkSim(THREE, ui) {
       const tall = MODEL_HEIGHT_M * g.scale.x;
       const box = personBox(g, tall, w, h);
       if (!box) continue;
+      seen.push({ agent, box, tall, depth: Math.hypot(g.position.x - cameraX(), tall * 0.6 - input.heightM, g.position.z) });
+    }
+    const hidden = walking ? occlusionOf(seen) : seen.map(() => false);
+    const now = performance.now();
+    if (walking && !paused && !quiet && now - occlusion.sampledAt > 250) {
+      occlusion.sampledAt = now;
+      occlusion.seen += seen.length;
+      occlusion.hidden += hidden.filter(Boolean).length;
+    }
+    seen.forEach(({ agent, box, tall }, index) => {
+      const g = agent.body.group;
       const counted = agent.flash > 0;
       const countColor = agent.flashDirection === "out" ? input.colors.out : input.colors.count;
-      ctx.strokeStyle = counted ? countColor : "rgba(230, 236, 245, 0.55)";
-      ctx.lineWidth = counted ? 2 : 1;
+      // Someone hidden behind nearer people is boxed dashed: the camera may not see their head to count them.
+      ctx.strokeStyle = counted ? countColor : hidden[index] ? "rgba(240, 190, 90, 0.95)" : "rgba(230, 236, 245, 0.55)";
+      ctx.lineWidth = counted ? 2 : hidden[index] ? 1.5 : 1;
+      if (hidden[index] && !counted) ctx.setLineDash([4, 3]);
       ctx.strokeRect(box.x, box.y, box.w, box.h);
+      ctx.setLineDash([]);
       const centreX = box.x + box.w / 2;
       // Density at this person's face, the figure demographics depend on.
       if (box.h >= 28) {
@@ -9462,7 +9624,7 @@ function createWalkSim(THREE, ui) {
         ctx.fillStyle = input.colors.face;
         ctx.fillText(input.text.face, centreX + head / 2 + 3, box.y + head);
       }
-    }
+    });
     if (quiet) return;
     // Density labels go last, placed around each other, the line labels and the readout box.
     ctx.font = "600 11px JetBrains Mono, monospace";
@@ -9811,6 +9973,7 @@ function createWalkSim(THREE, ui) {
     ui.counts.out.textContent = String(counts.out);
     ui.counts.faces.textContent = String(counts.faces);
     ui.counts.passers.textContent = String(counts.passers);
+    ui.counts.hidden.textContent = occlusion.seen > 0 ? Math.round((100 * occlusion.hidden) / occlusion.seen) + "%" : "–";
   }
 
   function frame(time) {
@@ -9847,6 +10010,14 @@ function createWalkSim(THREE, ui) {
     syncWalking();
     start();
   });
+  ui.crowd.buttons.forEach((button) => button.addEventListener("click", () => {
+    crowd = button.dataset.crowd;
+    ui.crowd.buttons.forEach((b) => b.setAttribute("aria-pressed", String(b === button)));
+    Object.keys(counts).forEach((k) => { counts[k] = 0; });
+    seed = 7;
+    if (input) respawnAll(input);
+    start();
+  }));
   ui.pauseButton.addEventListener("click", () => {
     paused = !paused;
     syncWalking();
@@ -9955,6 +10126,7 @@ function createWalkSim(THREE, ui) {
     Object.keys(counts).forEach((k) => {
       counts[k] = 0;
     });
+    Object.assign(occlusion, { seen: 0, hidden: 0, sampledAt: 0 });
     seed = 7;
     if (input) respawnAll(input);
     start();
@@ -10074,9 +10246,10 @@ const PEOPLE = [
   { id: "Male_Adult_12", sex: "m" },
 ];
 
+// walk: on the move; idle: standing still (the person on the line, someone who stops); chat: listening and nodding.
 const PEOPLE_CLIPS = {
-  f: { walk: "f_walk_neutral", idle: "f_idle_breathe_01" },
-  m: { walk: "m_walk_neutral", idle: "m_idle_breathe_01" },
+  f: { walk: "f_walk_neutral", idle: "f_idle_breathe_01", chat: "f_gestic_listen_accept_01" },
+  m: { walk: "m_walk_neutral", idle: "m_idle_breathe_01", chat: "m_gestic_listen_accept_01" },
 };
 
 const BLANK_IMAGE = "data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAA=";
@@ -10136,7 +10309,10 @@ async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
   };
   const clipFor = async (name) => inPlace(THREE, (await loadFbx(base + "anims/" + name + ".max.fbx", base)).animations[0]);
   const [clips, templates] = await Promise.all([
-    Promise.all(Object.entries(PEOPLE_CLIPS).map(async ([sex, names]) => [sex, { walk: await clipFor(names.walk), idle: await clipFor(names.idle) }])),
+    Promise.all(Object.entries(PEOPLE_CLIPS).map(async ([sex, names]) => {
+      const loaded = await Promise.all(Object.entries(names).map(async ([motion, name]) => [motion, await clipFor(name)]));
+      return [sex, Object.fromEntries(loaded)];
+    })),
     Promise.all(PEOPLE.map(async (person) => {
       const folder = base + person.id + "/";
       return { ...person, model: prepare(THREE, await loadFbx(folder + person.id + ".fbx", folder), heightM) };
@@ -10146,7 +10322,7 @@ async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
 
   /**
    * @param {number} index which avatar, wrapping around the list
-   * @param {"walk" | "idle"} motion
+   * @param {"walk" | "idle" | "chat"} motion the one it starts in; setMotion changes it
    * @param {number} phase where in the cycle to start, 0 to 1
    */
   function make(index, motion, phase) {
@@ -10155,10 +10331,11 @@ async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
     const group = new THREE.Group();
     group.add(model);
     const mixer = new THREE.AnimationMixer(model);
-    const { clip, speedMps } = clipsBySex[template.sex][motion];
-    const action = mixer.clipAction(clip);
-    action.time = phase * clip.duration;
-    action.play();
+    const motions = clipsBySex[template.sex];
+    const actions = Object.fromEntries(Object.entries(motions).map(([name, { clip }]) => [name, mixer.clipAction(clip)]));
+    let current = motion;
+    actions[current].time = phase * motions[current].clip.duration;
+    actions[current].play();
     mixer.update(0);
     // The face sits in front of and above the head bone's pivot, which is at the top of the neck.
     const head = new THREE.Object3D();
@@ -10167,9 +10344,20 @@ async function loadPeople(THREE, { FBXLoader, clone, base, heightM }) {
     return {
       group,
       head,
+      // Walking keeps pace with the person's speed so the feet do not slide; the others play as captured.
       animate(dt, speedNow) {
-        action.timeScale = speedNow / speedMps;
+        if (current === "walk") actions.walk.timeScale = speedNow / motions.walk.speedMps;
         mixer.update(dt);
+      },
+      setMotion(next) {
+        if (next === current) return;
+        const from = actions[current];
+        const to = actions[next];
+        to.reset();
+        to.timeScale = 1;
+        to.play();
+        from.crossFadeTo(to, 0.35, false);
+        current = next;
       },
     };
   }
@@ -10227,7 +10415,8 @@ function prepare(THREE, model, heightM) {
         canvas: document.getElementById("simCanvas"),
         overlay: document.getElementById("simOverlay"),
         walkButton: document.getElementById("simWalk"),
-        walkOnly: ["simCounts", "simCross", "simReset", "simPause", "simNote"].map((id) => document.getElementById(id)),
+        walkOnly: ["simCounts", "simCrowd", "simCross", "simReset", "simPause", "simNote"].map((id) => document.getElementById(id)),
+        crowd: { buttons: Array.from(document.querySelectorAll("[data-crowd]")) },
         pauseButton: document.getElementById("simPause"),
         stillNote: document.getElementById("simStillNote"),
         stand: {
@@ -10247,7 +10436,8 @@ function prepare(THREE, model, heightM) {
           in: document.getElementById("simIn"),
           out: document.getElementById("simOut"),
           faces: document.getElementById("simFaces"),
-          passers: document.getElementById("simPassers")
+          passers: document.getElementById("simPassers"),
+          hidden: document.getElementById("simHidden")
         }
       });
       update();
