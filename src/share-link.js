@@ -9,6 +9,7 @@
  * }} SharedPlacement
  *   tiltDeg is set only when the tilt was set by hand; verdict is the verdict when the link was made.
  *   offsetM is the camera's distance right (+) or left (-) of the entrance centre line; links from before it decode null.
+ *   panDeg is a pan set by hand (+ to the camera's right); null when the camera aims at the middle of the entrance.
  */
 
 const NUMBERS = [
@@ -18,6 +19,7 @@ const NUMBERS = [
   ["t", "tiltDeg", 1],
   ["e", "entranceM", 2],
   ["o", "offsetM", 2],
+  ["p", "panDeg", 1],
 ];
 const TEXTS = [
   ["v", "rulesVersion"],

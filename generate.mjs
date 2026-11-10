@@ -3251,6 +3251,19 @@ ${pwaCss}
                   <div class="ticks"><span data-i18n="level">level</span><span data-i18n="down">down</span></div>
                   <p class="field-hint" id="tiltHint" data-i18n="tiltHint" hidden>Ceiling fisheye: always 90 deg, straight down.</p>
                 </div>
+                <div class="field" id="panField">
+                  <div class="field-top">
+                    <label class="field-label" for="panRange" data-i18n="panAngle">Pan angle</label>
+                    <button type="button" class="tilt-auto" id="panAuto" aria-pressed="true" data-i18n="panAimMiddle">Aim at middle</button>
+                    <span class="value-edit">
+                      <input id="panInput" type="number" inputmode="decimal" min="-60" max="60" step="0.5" value="0" aria-label="Pan angle in degrees" data-i18n-attr="aria-label:panAngle">
+                      <span class="unit">deg</span>
+                    </span>
+                  </div>
+                  <input id="panRange" type="range" min="-60" max="60" step="0.5" value="0">
+                  <div class="ticks"><span data-i18n="panLeft">left</span><span data-i18n="panRight">right</span></div>
+                  <p class="field-hint" id="panHint"></p>
+                </div>
                 <div class="field" id="sensorField">
                   <div class="field-top">
                     <label class="field-label" for="sensorSelect"><span data-i18n="sensorFormat">Sensor format</span> <span class="driven-badge" data-i18n="presetBadge">preset</span></label>
@@ -3583,7 +3596,7 @@ ${shareSource}
         orbitNote: "Drag to orbit, scroll or pinch to zoom. The view cone ends where it meets the floor.",
         orbitAria: "The scene from outside: the entrance, the counting line and the camera's view. Drag to orbit.",
         planCentreLine: "entrance centre line", planToLine: "{distance} m to counting line", planRight: "{distance} m right of centre", planLeft: "{distance} m left of centre",
-        planCamera: "camera, {height} m up", planDragSideways: "drag the camera sideways; the distance is solved", planDragAnywhere: "drag the camera",
+        planCamera: "camera, {height} m up", planDragSideways: "drag the camera sideways (the distance is solved); turn it by the dot", planDragAnywhere: "drag the camera; turn it by the dot",
         planWidths: "view {width} m wide at the line, effective {effective} m", planEffectiveOnly: "effective {effective} m at the line", leftTick: "left", rightTick: "right",
         offsetAria: "Camera offset from the entrance centre line in meters, positive to the right",
         offsetCentred: "On the entrance centre line. The camera aims at the middle of the entrance.",
@@ -3598,6 +3611,10 @@ ${shareSource}
         entranceWidth: "Entrance width", none: "none",
         entranceHint: "Optional. Width of the door or entrance people pass through, checked against what the camera covers at the counting line.",
         advancedOptics: "Advanced optics", tiltAngle: "Tilt angle", recommended: "Recommended", level: "level", down: "down",
+        panAngle: "Pan angle", panAimMiddle: "Aim at middle", panLeft: "left", panRight: "right",
+        panStraight: "Facing straight across the entrance.", panTurned: "Turned {deg} deg to the {side}.",
+        panAuto: "Aimed at the middle of the entrance.", panOffMiddle: "{deg} deg off the middle of the entrance; the middle stays in the picture.",
+        panFisheye: "A ceiling fisheye looks straight down; it is not panned.",
         tiltHint: "Ceiling fisheye: always 90 deg, straight down.", sensorFormat: "Sensor format", presetBadge: "preset",
         focalLength: "Focal length", resolution: "Resolution",
         placementVerdict: "Placement verdict", copyReadings: "Copy readings", countingLine: "Counting line", verdictTag: "verdict",
@@ -3687,7 +3704,7 @@ ${shareSource}
         orbitNote: "ลากเพื่อหมุนดู เลื่อนหรือถ่างนิ้วเพื่อซูม กรวยภาพจบตรงที่แตะพื้น",
         orbitAria: "ฉากจากด้านนอก: ทางเข้า เส้นนับ และมุมมองของกล้อง ลากเพื่อหมุนดู",
         planCentreLine: "แนวกึ่งกลางทางเข้า", planToLine: "ห่างเส้นนับ {distance} m", planRight: "ขวาของกึ่งกลาง {distance} m", planLeft: "ซ้ายของกึ่งกลาง {distance} m",
-        planCamera: "กล้อง สูง {height} m", planDragSideways: "ลากกล้องไปด้านข้างได้ ระยะคำนวณให้", planDragAnywhere: "ลากกล้องได้",
+        planCamera: "กล้อง สูง {height} m", planDragSideways: "ลากกล้องไปด้านข้างได้ (ระยะคำนวณให้) หมุนกล้องด้วยจุดหน้ากล้อง", planDragAnywhere: "ลากกล้องได้ หมุนกล้องด้วยจุดหน้ากล้อง",
         planWidths: "ภาพกว้าง {width} m ที่เส้นนับ ใช้งานได้ {effective} m", planEffectiveOnly: "ใช้งานได้ {effective} m ที่เส้นนับ", leftTick: "ซ้าย", rightTick: "ขวา",
         offsetAria: "ระยะกล้องจากแนวกึ่งกลางทางเข้า เป็นเมตร ค่าบวกคือทางขวา",
         offsetCentred: "อยู่บนแนวกึ่งกลางทางเข้า กล้องเล็งไปที่กลางทางเข้า",
@@ -3702,6 +3719,10 @@ ${shareSource}
         entranceWidth: "ความกว้างทางเข้า", none: "ไม่มี",
         entranceHint: "ไม่บังคับ ความกว้างของประตูหรือทางเข้าที่คนเดินผ่าน ใช้ตรวจว่ากล้องมองเห็นครบที่เส้นนับหรือไม่",
         advancedOptics: "ตั้งค่าเลนส์ขั้นสูง", tiltAngle: "มุมก้ม", recommended: "ค่าแนะนำ", level: "ระดับ", down: "ก้มลง",
+        panAngle: "มุมหัน", panAimMiddle: "เล็งกลางทางเข้า", panLeft: "ซ้าย", panRight: "ขวา",
+        panStraight: "หันตรงตั้งฉากกับทางเข้า", panTurned: "หันไปทาง{side} {deg} deg",
+        panAuto: "เล็งกลางทางเข้า", panOffMiddle: "ห่างจากกลางทางเข้า {deg} deg กลางทางเข้ายังอยู่ในภาพ",
+        panFisheye: "ฟิชอายติดเพดานมองตรงลง ไม่ต้องหัน",
         tiltHint: "ฟิชอายติดเพดาน: ก้ม 90 deg ตรงลงเสมอ", sensorFormat: "ขนาดเซนเซอร์", presetBadge: "ตามรุ่น",
         focalLength: "ความยาวโฟกัส", resolution: "ความละเอียด",
         placementVerdict: "ผลการประเมิน", copyReadings: "คัดลอกค่า", countingLine: "เส้นนับ", verdictTag: "ตัดสินผล",
@@ -3859,6 +3880,7 @@ ${shareSource}
       distanceMaxTick: byId("distanceMaxTick"),
       entranceInput: byId("entranceInput"), entranceLine: byId("entranceLine"),
       tiltRange: byId("tiltRange"), tiltHint: byId("tiltHint"), tiltInput: byId("tiltInput"), tiltAuto: byId("tiltAuto"),
+      panRange: byId("panRange"), panInput: byId("panInput"), panAuto: byId("panAuto"), panHint: byId("panHint"),
       sensorField: byId("sensorField"), sensorSelect: byId("sensorSelect"), focalField: byId("focalField"),
       focalRange: byId("focalRange"), focalInput: byId("focalInput"), focalMinTick: byId("focalMinTick"), focalMaxTick: byId("focalMaxTick"),
       resolutionSelect: byId("resolutionSelect"),
@@ -3921,6 +3943,7 @@ ${shareSource}
         tiltDeg: r.tilt.value,
         vFovDeg: r.optics.verticalFovDeg,
         aspect: p.resolution.w / p.resolution.h,
+        panDeg: r.pan.value,
         // The same lens the plan and the coverage use; the 3D view renders through it.
         lensModel: r.optics.lens === "fisheye" ? null : lensFor(p.camera),
         faceLineDistanceM: r.faceLine.distanceM,
@@ -3955,6 +3978,10 @@ ${shareSource}
       topView: "camera",
       simFailed: false,
       tiltUserAdjusted: false,
+      // The camera's pan, from facing straight across the entrance (+ to its right); by default it aims at the middle.
+      panUserAdjusted: false,
+      panDeg: 0,
+      planTurning: false,
       tableProfileId: null,
       tableSelectedHeightKey: null,
       announceTimer: null,
@@ -4065,6 +4092,7 @@ ${shareSource}
         distanceM: distanceM,
         camera: camera,
         tiltDeg: state.tiltUserAdjusted ? Number(els.tiltInput.value) : undefined,
+        panDeg: state.panUserAdjusted ? state.panDeg : undefined,
         entranceWidthM: judgedEntrance(),
         offsetM: state.offsetM
       });
@@ -4171,6 +4199,20 @@ ${shareSource}
       update();
     }
 
+    function setPan(value, typing) {
+      state.panUserAdjusted = true;
+      state.panDeg = setFieldValue(els.panInput, els.panRange, value, 1, typing);
+      update();
+    }
+
+    function panCopy(r) {
+      if (r.optics.lens === "fisheye") return t("panFisheye");
+      const facing = Math.abs(r.pan.value) < 0.05 ? t("panStraight") : t("panTurned", { deg: fmt(Math.abs(r.pan.value), 1), side: t(r.pan.value > 0 ? "panRight" : "panLeft") });
+      if (!r.pan.manual) return facing + " " + t("panAuto");
+      const off = Math.abs(r.pan.value - r.pan.recommended);
+      return facing + " " + (off < 0.05 ? t("panAuto") : t("panOffMiddle", { deg: fmt(off, 1) }));
+    }
+
     function setTilt(value, typing) {
       state.tiltUserAdjusted = true;
       setFieldValue(els.tiltInput, els.tiltRange, value, 1, typing);
@@ -4195,7 +4237,7 @@ ${shareSource}
     function offsetCopy(p) {
       if (state.offsetM === 0) return t("offsetCentred");
       if (p.result.optics.lens === "fisheye") return t("offsetSideFisheye", { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "sideRight" : "sideLeft") });
-      return t("offsetSide", { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "sideRight" : "sideLeft"), pan: fmt(p.result.pan.deg, 1) });
+      return t("offsetSide", { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "sideRight" : "sideLeft"), pan: fmt(Math.abs(p.result.pan.recommended), 1) });
     }
 
 
@@ -4712,7 +4754,9 @@ ${shareSource}
       }
 
       const cam = S(offset, d);
-      const aimAngle = Math.atan2(-d, -offset);
+      // Which way the camera faces, as drawn: the pan turns it from straight across (+ to its right).
+      const pan = toRad(r.pan.value);
+      const aimAngle = Math.atan2(-Math.cos(pan), Math.sin(pan));
       if (fisheye) {
         const radius = p.heightM * Math.tan(toRad((o.horizontalFovDeg / 2) * 0.8)) * scale;
         ctx.fillStyle = colorWithAlpha(COL.accent, "0.08");
@@ -4814,16 +4858,17 @@ ${shareSource}
         haloText(ctx, t("entranceLabel") + " " + fmt(r.entrance.widthM, 1, " m"), entranceX, S(0, 0)[1] + 12);
       }
 
-      // Aim line from the camera to the middle of the entrance.
+      // Aim line along the way the camera faces, to the counting line (the middle of the entrance when aimed there).
       if (!fisheye) {
         ctx.strokeStyle = colorWithAlpha(COL.accent, "0.8");
         ctx.setLineDash([3, 4]);
         ctx.lineWidth = 1.2;
-        const aim = S(0, 0);
+        const meetsLine = Math.cos(pan) > 0.05;
+        const aim = meetsLine ? S(offset + d * Math.tan(pan), 0) : [cam[0] + Math.cos(aimAngle) * 3 * d * scale, cam[1] + Math.sin(aimAngle) * 3 * d * scale];
         ctx.beginPath(); ctx.moveTo(cam[0], cam[1]); ctx.lineTo(aim[0], aim[1]); ctx.stroke();
         ctx.setLineDash([]);
-        // How far the camera turns: the angle at the middle of the entrance between the centre line and the aim line.
-        if (Math.abs(offset) >= 0.05) {
+        // How far the camera turns: the angle where the aim line meets the counting line, from the straight-across.
+        if (meetsLine && Math.abs(r.pan.value) >= 0.05) {
           const along = Math.PI / 2;
           const toCamera = Math.atan2(cam[1] - aim[1], cam[0] - aim[0]);
           const radius = 34;
@@ -4944,6 +4989,21 @@ ${shareSource}
       ctx.strokeStyle = colorWithAlpha(COL.accent, state.planDragging ? "0.95" : "0.4");
       ctx.lineWidth = 1.5;
       ctx.stroke();
+      // The turning knob, out in front of the camera on its facing line.
+      state.planKnob = null;
+      if (!fisheye) {
+        const knob = [cam[0] + Math.cos(aimAngle) * 36, cam[1] + Math.sin(aimAngle) * 36];
+        ctx.strokeStyle = colorWithAlpha(COL.accent, state.planTurning ? "0.95" : "0.55");
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(cam[0] + Math.cos(aimAngle) * 20, cam[1] + Math.sin(aimAngle) * 20); ctx.lineTo(knob[0], knob[1]); ctx.stroke();
+        ctx.beginPath(); ctx.arc(knob[0], knob[1], 6.5, 0, Math.PI * 2);
+        ctx.fillStyle = state.planTurning || r.pan.manual ? COL.accent : COL.surface;
+        ctx.fill();
+        ctx.strokeStyle = COL.accent;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        state.planKnob = knob;
+      }
       ctx.fillStyle = COL.muted;
       ctx.font = "600 11px Inter, 'Noto Sans Thai', sans-serif";
       ctx.textAlign = "center";
@@ -4973,6 +5033,25 @@ ${shareSource}
       return Math.hypot(point[0] - cx, point[1] - cy) <= 28;
     }
 
+    function onTurnKnob(point) {
+      if (!state.planKnob || state.topView !== "top") return false;
+      return Math.hypot(point[0] - state.planKnob[0], point[1] - state.planKnob[1]) <= 13;
+    }
+
+    // Turning by the knob: the pan points the camera at the pointer; near the middle of the entrance it snaps back to Auto.
+    function turnCamera(point) {
+      const view = state.planView;
+      const cx = view.ox + state.offsetM * view.scale, cy = view.oy + Number(els.distanceInput.value) * view.scale;
+      const deg = Math.atan2(point[0] - cx, -(point[1] - cy)) * (180 / Math.PI);
+      const recommended = currentPlacement().result.pan.recommended;
+      if (Math.abs(deg - recommended) < 1.5) {
+        state.panUserAdjusted = false;
+        update();
+        return;
+      }
+      setPan(Math.round(deg * 2) / 2);
+    }
+
     function dragCamera(point) {
       const view = state.planView;
       const x = (point[0] - view.ox) / view.scale;
@@ -4989,7 +5068,9 @@ ${shareSource}
 
     els.topCanvas.addEventListener("pointerdown", (event) => {
       const point = planPoint(event);
-      if (!onCameraHandle(point)) return;
+      const turning = onTurnKnob(point);
+      if (!turning && !onCameraHandle(point)) return;
+      state.planTurning = turning;
       state.planDragging = true;
       state.planFrozen = { ox: state.planView.ox, oy: state.planView.oy, scale: state.planView.scale };
       els.topCanvas.classList.add("dragging");
@@ -4997,12 +5078,16 @@ ${shareSource}
     });
     els.topCanvas.addEventListener("pointermove", (event) => {
       const point = planPoint(event);
-      if (state.planDragging) { dragCamera(point); return; }
-      els.topCanvas.classList.toggle("grab", onCameraHandle(point));
+      if (state.planDragging) {
+        if (state.planTurning) turnCamera(point); else dragCamera(point);
+        return;
+      }
+      els.topCanvas.classList.toggle("grab", onCameraHandle(point) || onTurnKnob(point));
     });
     const endPlanDrag = () => {
       if (!state.planDragging) return;
       state.planDragging = false;
+      state.planTurning = false;
       state.planFrozen = null;
       els.topCanvas.classList.remove("dragging");
       update();
@@ -5013,7 +5098,8 @@ ${shareSource}
     els.topCanvas.addEventListener("touchstart", (event) => {
       const touch = event.touches[0];
       const rect = els.topCanvas.getBoundingClientRect();
-      if (touch && onCameraHandle([touch.clientX - rect.left, touch.clientY - rect.top])) event.preventDefault();
+      const point = touch ? [touch.clientX - rect.left, touch.clientY - rect.top] : null;
+      if (point && (onCameraHandle(point) || onTurnKnob(point))) event.preventDefault();
     }, { passive: false });
 
     // What the camera sees: the frame at the current tilt, with both lines and a person on each.
@@ -5239,8 +5325,18 @@ ${shareSource}
       els.tiltHint.hidden = !fisheye;
       if (fisheye || !state.tiltUserAdjusted) setFieldValue(els.tiltInput, els.tiltRange, r.tilt.value, 1);
       els.tiltAuto.setAttribute("aria-pressed", String(fisheye || !state.tiltUserAdjusted));
+      // The pan's reach keeps the middle of the entrance in the picture, so the range moves with the placement.
+      els.panInput.min = els.panRange.min = String(Math.ceil(r.pan.range.min * 2) / 2);
+      els.panInput.max = els.panRange.max = String(Math.floor(r.pan.range.max * 2) / 2);
+      els.panInput.disabled = els.panRange.disabled = els.panAuto.disabled = fisheye;
+      if (fisheye || !state.panUserAdjusted || Math.abs(r.pan.value - state.panDeg) > 0.05) {
+        setFieldValue(els.panInput, els.panRange, r.pan.value, 1);
+        if (state.panUserAdjusted && !fisheye) state.panDeg = r.pan.value;
+      }
+      els.panAuto.setAttribute("aria-pressed", String(fisheye || !state.panUserAdjusted));
+      els.panHint.textContent = panCopy(r);
       syncDistanceBounds(p);
-      [els.heightRange, els.distanceRange, els.tiltRange, els.focalRange, els.offsetRange].forEach(setRangeFill);
+      [els.heightRange, els.distanceRange, els.tiltRange, els.panRange, els.focalRange, els.offsetRange].forEach(setRangeFill);
       els.offsetCaption.textContent = offsetCopy(p);
       els.offsetCentre.setAttribute("aria-pressed", String(state.offsetM === 0));
       els.offsetCentre.disabled = state.offsetM === 0;
@@ -5611,6 +5707,9 @@ ${shareSource}
     els.tiltRange.addEventListener("input", (event) => setTilt(event.target.value));
     whileTyping(els.tiltInput, setTilt);
     els.tiltAuto.addEventListener("click", () => { state.tiltUserAdjusted = false; update(); });
+    els.panRange.addEventListener("input", (event) => setPan(event.target.value));
+    whileTyping(els.panInput, setPan);
+    els.panAuto.addEventListener("click", () => { state.panUserAdjusted = false; update(); });
     els.sensorSelect.addEventListener("change", update);
     els.focalRange.addEventListener("input", (event) => { setFieldValue(els.focalInput, els.focalRange, event.target.value, 1); update(); });
     whileTyping(els.focalInput, (value, typing) => { setFieldValue(els.focalInput, els.focalRange, value, 1, typing); update(); });

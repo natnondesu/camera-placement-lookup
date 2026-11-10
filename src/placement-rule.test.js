@@ -661,3 +661,39 @@ test("a direction through the blended lens and back comes out the same at any zo
     }
   }
 });
+
+// Pan set by hand (the camera's real aim).
+test("a pan set by hand turns the camera, and the coverage follows it", () => {
+  const auto = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, entranceWidthM: 5, camera: wideCamera });
+  const turned = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, entranceWidthM: 5, camera: wideCamera, panDeg: 15 });
+  assert.equal(auto.pan.manual, false);
+  assert.equal(turned.pan.manual, true);
+  close(turned.pan.value, 15, 1e-9);
+  assert.equal(turned.pan.toward, "right");
+  // Turned right, the camera sees more of the line to the right and less to the left.
+  assert.ok(turned.optics.inView.rightM > auto.optics.inView.rightM);
+  assert.ok(turned.optics.inView.leftM > auto.optics.inView.leftM);
+  // The verdict is still the feet angle in the middle of the entrance.
+  assert.equal(turned.verdict, auto.verdict);
+});
+
+test("a pan set by hand never turns the middle of the entrance out of the picture", () => {
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: wideCamera, panDeg: 80 });
+  close(result.pan.value, result.pan.range.max, 1e-9);
+  close(result.pan.range.max, (horizontalFov(wideCamera) / 2) * 0.9, 1e-9);
+  assert.ok(result.countingLine.framed);
+});
+
+test("the recommended pan aims at the middle of the entrance, and setting it by hand changes nothing else", () => {
+  const auto = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4, offsetM: 3, camera: wideCamera });
+  close(auto.pan.value, -36.87, 0.01);
+  const same = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4, offsetM: 3, camera: wideCamera, panDeg: auto.pan.value });
+  close(same.optics.inView.leftM, auto.optics.inView.leftM, 1e-9);
+  close(same.optics.inView.rightM, auto.optics.inView.rightM, 1e-9);
+});
+
+test("a ceiling fisheye ignores a pan", () => {
+  const result = evaluatePlacement({ profile: openDoor, heightM: 4, distanceM: 4.6, camera: fisheyeCamera, panDeg: 20 });
+  assert.equal(result.pan.value, 0);
+  assert.equal(result.pan.manual, false);
+});

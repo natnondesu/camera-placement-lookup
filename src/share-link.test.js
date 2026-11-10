@@ -15,6 +15,7 @@ const full = {
   tiltDeg: null,
   entranceM: 5,
   offsetM: -1.25,
+  panDeg: null,
   verdict: "best",
   site: "Central World",
   location: "ทางเข้า A, camera 1",
@@ -27,6 +28,13 @@ test("a placement survives the round trip through a link", () => {
 test("a hand-set tilt and a custom sensor are carried when present", () => {
   const custom = { ...full, camera: "custom", sensor: "1/2.7", tiltDeg: 31.5, solve: "manual", distanceM: 5.25 };
   assert.deepEqual(decodePlacement(encodePlacement(custom)), custom);
+});
+
+test("a pan set by hand is carried; a camera aimed at the middle leaves it out", () => {
+  const panned = { ...full, panDeg: -12.5 };
+  assert.deepEqual(decodePlacement(encodePlacement(panned)), panned);
+  assert.doesNotMatch(encodePlacement(full), /(^|&)p=/);
+  assert.equal(decodePlacement("s=open_door&h=4&d=4.6").panDeg, null);
 });
 
 test("the link stays short: numbers drop trailing zeros and empty fields are left out", () => {

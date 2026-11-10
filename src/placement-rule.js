@@ -110,6 +110,8 @@ const isFisheye = (camera) => camera.lens === "fisheye";
 const EFFECTIVE_COVERAGE = 0.8;
 // Floor seen more than this far off a fisheye's axis is squeezed against the image circle's edge.
 const FISHEYE_MAX_OFF_AXIS_DEG = 80;
+// A hand-set pan may turn the camera off the middle of the entrance by up to this share of half its horizontal view.
+const PAN_REACH_SHARE = 0.9;
 
 // Each end of the datasheet implies an effective sensor width, 2 f tan(fov / 2). Moving that width in step with the
 // focal length reproduces both ends exactly; in between it is an estimate the datasheet does not give. Every stream
@@ -220,11 +222,14 @@ function linePoints(offsetM, span) {
  * counting line toward the camera. A rectilinear camera turns to the entrance centre and tilts down; a fisheye looks down.
  * @param {{ heightM: number, distanceM: number, offsetM?: number, tiltDeg: number, fisheye?: boolean }} placement
  */
-export function cameraPose({ heightM, distanceM, offsetM = 0, tiltDeg, fisheye = false }) {
+export function cameraPose({ heightM, distanceM, offsetM = 0, tiltDeg, fisheye = false, panDeg }) {
   const position = { x: offsetM, y: heightM, z: distanceM };
   if (fisheye) return { position, forward: { x: 0, y: -1, z: 0 }, right: { x: 1, y: 0, z: 0 }, up: { x: 0, y: 0, z: -1 }, fisheye };
   const reach = Math.hypot(offsetM, distanceM) || 1e-9;
-  const level = { x: -offsetM / reach, z: -distanceM / reach };
+  // Pan: the turn from facing straight across at the entrance, positive to the camera's right; by default, the aim.
+  const level = Number.isFinite(panDeg)
+    ? { x: Math.sin(toRad(panDeg)), z: -Math.cos(toRad(panDeg)) }
+    : { x: -offsetM / reach, z: -distanceM / reach };
   const t = toRad(tiltDeg);
   const forward = { x: level.x * Math.cos(t), y: -Math.sin(t), z: level.z * Math.cos(t) };
   const right = { x: -level.z, y: 0, z: level.x };
@@ -551,12 +556,11 @@ function lineThroughLens(pose, lens, share) {
 // Each image bound (in front of the lens, within the sides, within the top and bottom) is a linear condition on x along
 // the line, so the stretch is where five half-lines overlap. A steep, close camera can lose the line off the bottom
 // of the picture before its side, so the sides alone are not enough.
-function lineInView(camera, heightM, distanceM, offsetM, tiltDeg, share) {
+function lineInView(camera, pose, heightM, distanceM, offsetM, share) {
   if (isFisheye(camera)) {
     const half = fisheyeChord(heightM, distanceM, (camera.fovDeg / 2) * share) / 2;
     return { leftM: offsetM - half, rightM: offsetM + half };
   }
-  const pose = cameraPose({ heightM, distanceM, offsetM, tiltDeg });
   const lens = lensFor(camera);
   if (lens.kind !== "pinhole") return lineThroughLens(pose, lens, share);
   const { position: p, forward: f, right: r, up } = pose;
@@ -587,7 +591,7 @@ function lineInView(camera, heightM, distanceM, offsetM, tiltDeg, share) {
  * @param {{ profile: SceneProfile, heightM: number, distanceM: number, camera: CameraOptics,
  *           tiltDeg?: number, entranceWidthM?: number, offsetM?: number }} placement
  */
-export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg, entranceWidthM, offsetM = 0 }) {
+export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg, entranceWidthM, offsetM = 0, panDeg }) {
   const fisheye = isFisheye(camera);
   const aimReachM = Math.hypot(offsetM, distanceM);
   // A ceiling fisheye always looks straight down, so its tilt is fixed.
@@ -595,7 +599,12 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
   const tilt = fisheye ? 90 : tiltDeg ?? recommended;
   const vFovDeg = verticalFov(camera);
   const hFovDeg = horizontalFov(camera);
-  const pose = cameraPose({ heightM, distanceM, offsetM, tiltDeg: tilt, fisheye });
+  // Pan: aimed at the middle of the entrance unless set by hand, and never so far that the middle leaves the picture.
+  const recommendedPan = fisheye ? 0 : -Math.atan2(offsetM, distanceM) * DEG;
+  const panReach = fisheye ? 0 : (horizontalFov(camera) / 2) * PAN_REACH_SHARE;
+  const panRange = { min: recommendedPan - panReach, max: recommendedPan + panReach };
+  const pan = fisheye || !Number.isFinite(panDeg) ? recommendedPan : Math.min(panRange.max, Math.max(panRange.min, panDeg));
+  const pose = cameraPose({ heightM, distanceM, offsetM, tiltDeg: tilt, fisheye, panDeg: fisheye ? undefined : pan });
   const lens = fisheye ? null : lensFor(camera);
 
   const span = walkableSpan(entranceWidthM);
@@ -613,10 +622,9 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
 
   const faceAngleDeg = faceAngle(heightM, aimReachM, profile.facePointM);
   const headAngleDeg = downwardAngle(heightM, profile.humanHeightM, aimReachM);
-  const inView = lineInView(camera, heightM, distanceM, offsetM, tilt, 1);
-  const inEffective = lineInView(camera, heightM, distanceM, offsetM, tilt, EFFECTIVE_COVERAGE);
+  const inView = lineInView(camera, pose, heightM, distanceM, offsetM, 1);
+  const inEffective = lineInView(camera, pose, heightM, distanceM, offsetM, EFFECTIVE_COVERAGE);
   const pixelsPerMetre = pixelDensity(camera, Math.hypot(heightM, aimReachM), 90 - points.aim.feetAngleDeg);
-  const panDeg = fisheye ? 0 : Math.atan2(Math.abs(offsetM), distanceM) * DEG;
   const { min, max } = profile.heightRangeM;
 
   return {
@@ -628,7 +636,10 @@ export function evaluatePlacement({ profile, heightM, distanceM, camera, tiltDeg
     },
     faceLine: judgeFaceLine({ profile, camera, heightM, distanceM, offsetM, pose, lens }),
     tilt: { value: tilt, recommended },
-    pan: { deg: panDeg, toward: panDeg < 0.05 ? null : offsetM > 0 ? "left" : "right" },
+    pan: {
+      deg: Math.abs(pan), toward: Math.abs(pan) < 0.05 ? null : pan < 0 ? "left" : "right",
+      value: pan, recommended: recommendedPan, manual: !fisheye && Number.isFinite(panDeg), range: panRange,
+    },
     optics: {
       lens: fisheye ? "fisheye" : "rectilinear", verticalFovDeg: vFovDeg, horizontalFovDeg: hFovDeg,
       coverageWidthM: inView.rightM - inView.leftM, effectiveWidthM: inEffective.rightM - inEffective.leftM,

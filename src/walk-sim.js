@@ -866,8 +866,12 @@ export function createWalkSim(THREE, ui) {
       helpers.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(outline), lines));
       const spokes = corners.map(([x, y]) => carried(x, y)).filter(Boolean).flatMap((c) => [origin, c]);
       helpers.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(spokes), lines));
+      // The aim line follows the lens axis down to half a person's height, wherever the camera is panned.
+      const axis = camera.getWorldDirection(new THREE.Vector3());
+      const drop = p.heightM - p.humanHeightM / 2;
+      const aimEnd = axis.y < -0.02 ? origin.clone().addScaledVector(axis, Math.min(drop / -axis.y, 20)) : origin.clone().addScaledVector(axis, 8);
       const aim = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([origin, new THREE.Vector3(0, p.humanHeightM / 2, p.distanceM)]),
+        new THREE.BufferGeometry().setFromPoints([origin, aimEnd]),
         new THREE.LineDashedMaterial({ color: p.colors.camera, dashSize: 0.15, gapSize: 0.1 }),
       );
       aim.computeLineDistances();
@@ -1281,7 +1285,8 @@ export function createWalkSim(THREE, ui) {
       configureLens(placement);
       camera.position.set(-placement.offsetM, placement.heightM, 0);
       // Turned to the middle of the entrance, then tilted down.
-      camera.rotation.set((-placement.tiltDeg * Math.PI) / 180, Math.atan2(-placement.offsetM, -placement.distanceM), 0);
+      // The scene's x runs opposite to the engine's, so a pan to the camera's right turns it toward scene -x.
+      camera.rotation.set((-placement.tiltDeg * Math.PI) / 180, Math.PI - (placement.panDeg * Math.PI) / 180, 0);
       camera.updateProjectionMatrix();
       if (placement.lens === "fisheye") fisheyeMaterial.uniforms.halfFov.value = (placement.fovDeg * Math.PI) / 360;
       rebuildProps(placement);

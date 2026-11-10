@@ -21,6 +21,8 @@ const SHEET_TEXT = {
     shLine: "Mark the counting line out from the point below the camera", shLineHint: "Straight out, across the full entrance.",
     shTilt: "Tilt the camera down", shTiltHint: "It aims at {aim} m on a person standing on the line.",
     shMountHintOffset: "To the lens centre, {distance} m {side} of the entrance centre line; turn it {pan}° to the middle.",
+    shMountHintPanned: "To the lens centre, {where}; turn it {pan}° to the {turn} from facing straight across the entrance.",
+    shWhereCentre: "on the entrance centre line", shWhereSide: "{distance} m {side} of the entrance centre line",
     shSideLeft: "left", shSideRight: "right",
     shTiltFisheye: "Point the camera straight down", shTiltFisheyeHint: "Ceiling fisheye: the lens faces the floor.",
     shZoomWide: "Set the zoom to the widest end", shZoomTele: "Set the zoom to the longest end", shZoom: "Set the zoom",
@@ -59,6 +61,8 @@ const SHEET_TEXT = {
     shLine: "ทำเครื่องหมายเส้นนับ ห่างจากจุดใต้กล้อง", shLineHint: "ตรงออกไป และยาวตลอดความกว้างทางเข้า",
     shTilt: "ก้มกล้องลง", shTiltHint: "เล็งที่ความสูง {aim} m ของคนที่ยืนบนเส้นนับ",
     shMountHintOffset: "วัดถึงกึ่งกลางเลนส์ ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า หันกล้อง {pan}° เข้าหากลางทางเข้า",
+    shMountHintPanned: "วัดถึงกึ่งกลางเลนส์ {where} หันกล้องไปทาง{turn} {pan}° จากแนวตั้งฉากกับทางเข้า",
+    shWhereCentre: "บนแนวกึ่งกลางทางเข้า", shWhereSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า",
     shSideLeft: "ซ้าย", shSideRight: "ขวา",
     shTiltFisheye: "หันกล้องลงตรงๆ", shTiltFisheyeHint: "ฟิชอายติดเพดาน เลนส์หันลงพื้น",
     shZoomWide: "ตั้งซูมที่ระยะกว้างสุด", shZoomTele: "ตั้งซูมที่ระยะไกลสุด", shZoom: "ตั้งซูม",
@@ -184,6 +188,7 @@ function sharedPlacementFrom(p) {
     tiltDeg: state.tiltUserAdjusted && preset.lens !== "fisheye" ? Number(els.tiltInput.value) : null,
     entranceM: state.entranceM,
     offsetM: state.offsetM,
+    panDeg: state.panUserAdjusted && preset.lens !== "fisheye" ? state.panDeg : null,
     verdict: p.result.verdict,
     site: state.site,
     location: state.location
@@ -239,6 +244,8 @@ function restoreSharedPlacement() {
   state.entranceM = shared.entranceM;
   els.entranceInput.value = shared.entranceM === null ? "" : String(shared.entranceM);
   state.offsetM = setFieldValue(els.offsetInput, els.offsetRange, shared.offsetM === null ? 0 : shared.offsetM, 2);
+  state.panUserAdjusted = Number.isFinite(shared.panDeg);
+  state.panDeg = state.panUserAdjusted ? shared.panDeg : 0;
   if (shared.site !== null) state.site = shared.site;
   if (shared.location !== null) state.location = shared.location;
   setSolveMode(["distance", "height", "manual"].includes(shared.solve) ? shared.solve : "distance");
@@ -339,8 +346,13 @@ function sheetSteps(p) {
   else if (Math.abs(focal - preset.focalMinMm) < 0.05) zoomText = t("shZoomWide");
   else if (Math.abs(focal - preset.focalMaxMm) < 0.05) zoomText = t("shZoomTele");
   const steps = [
-    [t("shMount"), state.offsetM === 0 ? t("shMountHint")
-      : t("shMountHintOffset", { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "shSideRight" : "shSideLeft"), pan: deg(r.pan.deg) }), fmt(p.heightM, 1), "m"],
+    [t("shMount"), r.pan.manual
+      ? t("shMountHintPanned", {
+        where: state.offsetM === 0 ? t("shWhereCentre") : t("shWhereSide", { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "shSideRight" : "shSideLeft") }),
+        pan: deg(r.pan.deg), turn: t(r.pan.value > 0 ? "shSideRight" : "shSideLeft"),
+      })
+      : state.offsetM === 0 ? t("shMountHint")
+        : t("shMountHintOffset", { distance: fmt(Math.abs(state.offsetM), 2), side: t(state.offsetM > 0 ? "shSideRight" : "shSideLeft"), pan: deg(r.pan.deg) }), fmt(p.heightM, 1), "m"],
     [t("shLine"), t("shLineHint"), fmt(p.distanceM, 2), "m"],
     fisheye
       ? [t("shTiltFisheye"), t("shTiltFisheyeHint"), "90", "°"]
