@@ -111,27 +111,28 @@ const EFFECTIVE_COVERAGE = 0.8;
 // Floor seen more than this far off a fisheye's axis is squeezed against the image circle's edge.
 const FISHEYE_MAX_OFF_AXIS_DEG = 80;
 
-// Each end of the datasheet implies an effective sensor size, 2 f tan(fov / 2). Moving that size in step with the
-// focal length reproduces both ends exactly; in between it is an estimate the datasheet does not give.
+// Each end of the datasheet implies an effective sensor width, 2 f tan(fov / 2). Moving that width in step with the
+// focal length reproduces both ends exactly; in between it is an estimate the datasheet does not give. Every stream
+// shares the width; its height is cut from the lens's picture (see lensFor).
 function datasheetView(camera) {
-  const { wide, tele, aspect } = camera.datasheetFov;
+  const { wide, tele } = camera.datasheetFov;
   const focal = camera.focalLengthMm ?? wide.focalLengthMm;
   const span = tele.focalLengthMm - wide.focalLengthMm;
   const t = span > 0 ? Math.min(1, Math.max(0, (focal - wide.focalLengthMm) / span)) : 0;
   const size = (end, deg) => 2 * end.focalLengthMm * Math.tan(toRad(deg / 2));
-  const between = (a, b) => a + (b - a) * t;
-  const width = between(size(wide, wide.hFovDeg), size(tele, tele.hFovDeg));
-  const height = between(size(wide, wide.vFovDeg), size(tele, tele.vFovDeg));
-  // The vertical view is quoted for one stream shape; another shape keeps the width and crops or extends the height.
-  const streamHeight = (height * (aspect.w / aspect.h)) / (camera.resolution.w / camera.resolution.h);
-  return { h: 2 * Math.atan(width / (2 * focal)) * DEG, v: 2 * Math.atan(streamHeight / (2 * focal)) * DEG };
+  const width = size(wide, wide.hFovDeg) + (size(tele, tele.hFovDeg) - size(wide, wide.hFovDeg)) * t;
+  return { h: 2 * Math.atan(width / (2 * focal)) * DEG };
 }
 
 /** @param {CameraOptics} camera @returns {number} */
 export function verticalFov(camera) {
   if (isFisheye(camera)) return camera.fovDeg;
-  // Wide lenses are distorted, so the datasheet's measured view beats the pinhole estimate.
-  if (camera.datasheetFov) return datasheetView(camera).v;
+  // A datasheet camera's vertical view is what its lens shows on this stream's shape, top edge to bottom edge.
+  if (camera.datasheetFov) {
+    const lens = lensFor(camera);
+    const top = lens.toRay(0, lens.halfH);
+    return 2 * (top === null ? lens.maxTheta : Math.acos(top.z)) * DEG;
+  }
   const sensorHeightMm = camera.sensorWidthMm * (camera.resolution.h / camera.resolution.w);
   return 2 * Math.atan(sensorHeightMm / (2 * camera.focalLengthMm)) * DEG;
 }
@@ -295,37 +296,58 @@ function radialLens(kind, halfH, radius, inverse, maxTheta) {
 /**
  * How a direction from a rectilinear camera lands in its image. Image coordinates run -1 to 1 across the width and
  * -halfH to halfH up the height (halfH = height / width). A camera known by its sensor and focal length is a pinhole.
- * A datasheet's horizontal and vertical views rarely both fit a pinhole on the stream's shape: a wide lens squeezes
- * more into the edges of its picture (barrel distortion). Its image radius follows f(θ + aθ³), θ from the lens axis,
- * with f and a set so both quoted views land exactly on the picture's edges. The 3D view renders through the same lens.
+ * A datasheet camera's wide end squeezes more into the edges of its picture (barrel distortion) than a pinhole can:
+ * its shape, an image radius in proportion to θ + aθ³ (θ from the lens axis), is fitted once on the picture the
+ * datasheet quotes the wide end for, so both quoted views land on its edges. Toward the long end the lens straightens
+ * into a pinhole, in step with the width of view. The scale comes from the horizontal view, and every stream is cut
+ * from that picture, so its vertical view follows from the lens. Checked against a real camera (ADR 0006).
  * @param {CameraOptics} camera a rectilinear camera
  */
 export function lensFor(camera) {
   const halfH = camera.resolution.h / camera.resolution.w;
   const th = toRad(horizontalFov(camera) / 2);
-  const tv = toRad(verticalFov(camera) / 2);
   const flat = toRad(89);
-  const denominator = tv ** 3 - halfH * th ** 3;
-  if (!camera.datasheetFov || Math.abs(denominator) < 1e-12) {
+  const pinhole = () => {
     const f = 1 / Math.tan(th);
-    return radialLens("pinhole", halfH, (t) => f * Math.tan(t), (r) => Math.atan(r / f), flat);
-  }
-  // r(θv) = halfH where r(θh) = 1:  θv + aθv³ = halfH (θh + aθh³).
-  const a = (halfH * th - tv) / denominator;
-  const f = 1 / (th + a * th ** 3);
+    return { ...radialLens("pinhole", halfH, (t) => f * Math.tan(t), (r) => Math.atan(r / f), flat), f, maxTheta: flat };
+  };
+  if (!camera.datasheetFov) return pinhole();
+  const { wide, tele, aspect } = camera.datasheetFov;
+  // The wide end's shape on its own picture: r(θv) = nativeH where r(θh) = 1, so θv + aθv³ = nativeH (θh + aθh³).
+  const nativeH = aspect.h / aspect.w;
+  const thW = toRad(wide.hFovDeg / 2);
+  const tvW = toRad(wide.vFovDeg / 2);
+  const denominator = tvW ** 3 - nativeH * thW ** 3;
+  const a = Math.abs(denominator) < 1e-12 ? 0 : (nativeH * thW - tvW) / denominator;
+  // How much of that shape is left at this zoom: all of it at the wide end, none at the long end. A fixed lens keeps it.
+  const tanWide = Math.tan(thW);
+  const tanTele = Math.tan(toRad(tele.hFovDeg / 2));
+  const w = Math.abs(tanWide - tanTele) < 1e-9 ? 1 : Math.min(1, Math.max(0, (Math.tan(th) - tanTele) / (tanWide - tanTele)));
+  if (w === 0) return pinhole();
+  const g = (t) => (1 - w) * Math.tan(t) + w * (t + a * t ** 3);
   // A strong barrel curve turns back on itself; the lens ends just before it does.
-  const maxTheta = a < 0 ? Math.min(flat, 0.98 * Math.sqrt(-1 / (3 * a))) : flat;
+  const slope = (t) => (1 - w) / Math.cos(t) ** 2 + w * (1 + 3 * a * t * t);
+  let maxTheta = flat;
+  for (let t = 0; t <= flat; t += toRad(0.25)) {
+    if (slope(t) <= 1e-6) {
+      maxTheta = 0.98 * t;
+      break;
+    }
+  }
+  const f = 1 / g(th);
+  const edge = g(maxTheta);
   const inverse = (r) => {
     const target = r / f;
-    let t = Math.min(target, maxTheta);
-    for (let i = 0; i < 30; i += 1) {
-      const step = (t + a * t ** 3 - target) / (1 + 3 * a * t * t);
-      t -= step;
-      if (Math.abs(step) < 1e-12) break;
+    if (target > edge) return null;
+    let lo = 0;
+    let hi = maxTheta;
+    for (let i = 0; i < 64; i += 1) {
+      const mid = (lo + hi) / 2;
+      if (g(mid) < target) lo = mid; else hi = mid;
     }
-    return Number.isFinite(t) && t >= 0 && Math.abs(t + a * t ** 3 - target) < 1e-9 ? t : null;
+    return (lo + hi) / 2;
   };
-  return { ...radialLens("barrel", halfH, (t) => f * (t + a * t ** 3), inverse, maxTheta), a, f };
+  return { ...radialLens("barrel", halfH, (t) => f * g(t), inverse, maxTheta), a, w, f, maxTheta };
 }
 
 /**

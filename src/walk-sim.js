@@ -71,11 +71,13 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
-// A curved (barrel) lens: each output pixel finds its angle from the lens axis through r = f(θ + aθ³), then reads the
-// wide pinhole render that covers the whole picture. Same lens as the plan and the coverage figures.
+// A curved (barrel) lens: each output pixel finds its angle from the lens axis through r = f g(θ), with
+// g(θ) = (1 - w) tan θ + w (θ + aθ³), then reads the wide pinhole render that covers the whole picture. Same lens as
+// the plan and the coverage figures (lensFor).
 const BARREL_FRAGMENT = `
 uniform sampler2D tScene;
 uniform float a;
+uniform float w;
 uniform float f;
 uniform float halfH;
 uniform vec2 extent;
@@ -85,13 +87,18 @@ void main() {
   vec2 img = vec2(vUv.x * 2.0 - 1.0, (vUv.y * 2.0 - 1.0) * halfH);
   float r = length(img);
   float target = r / f;
-  float theta = target;
-  for (int i = 0; i < 12; i++) {
-    theta -= (theta + a * theta * theta * theta - target) / (1.0 + 3.0 * a * theta * theta);
+  float lo = 0.0;
+  float hi = maxTheta;
+  for (int i = 0; i < 32; i++) {
+    float mid = 0.5 * (lo + hi);
+    float g = (1.0 - w) * tan(mid) + w * (mid + a * mid * mid * mid);
+    if (g < target) lo = mid; else hi = mid;
   }
+  float theta = 0.5 * (lo + hi);
+  float edge = (1.0 - w) * tan(maxTheta) + w * (maxTheta + a * maxTheta * maxTheta * maxTheta);
   vec2 pin = r < 1e-6 ? img / f : img * (tan(theta) / r);
   vec2 uv = pin / extent * 0.5 + 0.5;
-  if (theta > maxTheta || uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+  if (target > edge || uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
     gl_FragColor = vec4(0.02, 0.025, 0.03, 1.0);
     return;
   }
@@ -145,7 +152,7 @@ export function createWalkSim(THREE, ui) {
   const barrelTarget = new THREE.WebGLRenderTarget(16, 16);
   const barrelMaterial = new THREE.ShaderMaterial({
     uniforms: {
-      tScene: { value: barrelTarget.texture }, a: { value: 0 }, f: { value: 1 }, halfH: { value: 0.75 },
+      tScene: { value: barrelTarget.texture }, a: { value: 0 }, w: { value: 1 }, f: { value: 1 }, halfH: { value: 0.75 },
       extent: { value: new THREE.Vector2(1, 1) }, maxTheta: { value: 1.5 },
     },
     vertexShader: FISHEYE_VERTEX,
@@ -563,10 +570,11 @@ export function createWalkSim(THREE, ui) {
     camera.aspect = reachX / reachY;
     const u = barrelMaterial.uniforms;
     u.a.value = lens.a;
+    u.w.value = lens.w;
     u.f.value = lens.f;
     u.halfH.value = h;
     u.extent.value.set(reachX, reachY);
-    u.maxTheta.value = Math.min(1.55, lens.toRay(1, h) === null ? 1.55 : Math.acos(lens.toRay(1, h).z) + 0.2);
+    u.maxTheta.value = Math.min(1.55, lens.maxTheta);
   }
 
   // Pixel density at a point, from the console's lens model.

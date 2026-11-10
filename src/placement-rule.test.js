@@ -365,9 +365,11 @@ test("a zoom lens matches its datasheet view at the wide end", () => {
   close(verticalFov(zoomAt(2.7)), 72, 1e-9);
 });
 
-test("a zoom lens matches its datasheet view at the tele end", () => {
+test("at the tele end the lens is a pinhole: the vertical view follows from the horizontal, within the datasheet's rounding", () => {
   close(horizontalFov(zoomAt(13.5)), 26, 1e-9);
-  close(verticalFov(zoomAt(13.5)), 20, 1e-9);
+  assert.equal(lensFor(zoomAt(13.5)).kind, "pinhole");
+  close(verticalFov(zoomAt(13.5)), 2 * Math.atan(0.75 * Math.tan((13 * Math.PI) / 180)) * (180 / Math.PI), 1e-9);
+  assert.ok(Math.abs(verticalFov(zoomAt(13.5)) - 20) < 0.5);
 });
 
 test("between the ends the effective sensor width moves in step with the focal length", () => {
@@ -375,10 +377,13 @@ test("between the ends the effective sensor width moves in step with the focal l
   close(horizontalFov(zoomAt(8.1)), viewFrom(midWidth, 8.1), 1e-9);
 });
 
-test("a 16:9 stream keeps the horizontal view and crops the vertical", () => {
+test("a 16:9 stream keeps the horizontal view and is cut from the lens's picture", () => {
   const camera = zoomAt(2.7, { w: 2688, h: 1520 });
   close(horizontalFov(camera), 100, 1e-9);
-  close(verticalFov(camera), viewFrom(effectiveSize(2.7, 72) * (4 / 3) / (2688 / 1520), 2.7), 1e-9);
+  const lens = lensFor(camera);
+  const half = (verticalFov(camera) / 2) * (Math.PI / 180);
+  close(lens.toImage({ x: 0, y: Math.sin(half), z: Math.cos(half) }).y, 1520 / 2688, 1e-9);
+  assert.ok(verticalFov(camera) < 72);
 });
 
 test("pixel density on a calibrated zoom uses the datasheet view", () => {
@@ -618,4 +623,41 @@ test("the datasheet lens covers the width the datasheet promises, wider than a p
   const { r } = footprintOf({ heightM: 3, distanceM: 3.45, offsetM: 0, entranceWidthM: 5 }, 1, dahuaCamera);
   // 8.7 m is what a pinhole with the 72 deg vertical view (88 deg across) would cover.
   assert.ok(r.optics.coverageWidthM > 9.5);
+});
+
+// The lens against real data (ADR 0006; report "Lens model vs real camera", 10 Nov 2026).
+const realCamera = { focalPxAt910: 1301.6, vertical169Deg: 22.39 };
+const dahuaAt = (focal, resolution = { w: 2592, h: 1944 }) => ({ sensorWidthMm: 4.8, focalLengthMm: focal, resolution, datasheetFov: dahua.datasheetFov });
+
+test("the wide end's diagonal comes out at the quoted 133 deg, though only the horizontal and vertical were fitted", () => {
+  const lens = lensFor(dahuaAt(2.7));
+  const corner = lens.toRay(1, 0.75);
+  assert.ok(Math.abs(2 * Math.acos(corner.z) * (180 / Math.PI) - 133) < 2);
+});
+
+test("at 9 mm on the 16:9 stream the lens matches the camera fitted from the real frame", () => {
+  const camera = dahuaAt(9, { w: 2688, h: 1520 });
+  const lens = lensFor(camera);
+  // Its scale at the centre of the 910 px wide frame, and its vertical view, neither fitted to the real camera.
+  assert.ok(Math.abs((455 * lens.f) / realCamera.focalPxAt910 - 1) < 0.01);
+  assert.ok(Math.abs(verticalFov(camera) - realCamera.vertical169Deg) < 0.2);
+});
+
+test("the lens's centre pixels reproduce Dahua's DORI distances at both ends", () => {
+  // Identify is 250 px/m at the centre of the picture: Dahua quotes 6.4 m at 2.7 mm and 22 m at 13.5 mm (2592 wide).
+  for (const [focal, distance] of [[2.7, 6.4], [13.5, 22]]) {
+    const lens = lensFor(dahuaAt(focal));
+    const centrePpm = (1296 * lens.f) / distance;
+    assert.ok(Math.abs(centrePpm / 250 - 1) < 0.03, focal + " mm: " + centrePpm);
+  }
+});
+
+test("a direction through the blended lens and back comes out the same at any zoom", () => {
+  for (const focal of [2.7, 5, 9, 12]) {
+    const lens = lensFor(dahuaAt(focal, { w: 2688, h: 1520 }));
+    for (const [x, y] of [[0.3, 0.2], [-1, 0.5], [0.9, -0.56]]) {
+      const back = lens.toImage(lens.toRay(x, y));
+      assert.ok(Math.abs(back.x - x) < 1e-7 && Math.abs(back.y - y) < 1e-7, focal + " mm");
+    }
+  }
 });
