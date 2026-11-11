@@ -10,19 +10,21 @@ A camera can watch more than one line. The **counting line** is where people are
 
 The thresholds live in [rules/scene-profiles.json](rules/scene-profiles.json), one entry per **scene profile**. Change them there, through a reviewed PR.
 
-| Rule | Open door (default) | Corridor |
-| --- | --- | --- |
-| When to use | People can also walk across the front of the counted doorway, e.g. a store entrance | People only move one way through the view, e.g. a mall entrance or escalator |
-| Height range | 2.0-10.0 m | 2.0-10.0 m |
-| Feet Best | 38-43 deg | 35-43 deg |
-| Feet target | 41 deg | 38 deg |
-| Feet Acceptable | 38-48 deg | 33-48 deg |
-| Face Best | 10 deg up to (not including) 25 deg | same |
-| Face Acceptable | up to 30 deg; under 10 deg (too flat) is also Acceptable | same |
-| Face point / human height | 1.5 m / 1.7 m | same |
-| Pixel floor, counting / face | 80 / 200 px/m | same |
+| Rule | Open door (default) | Corridor | Escalator |
+| --- | --- | --- | --- |
+| When to use | People can also walk across the front of the counted doorway, e.g. a store entrance | People only move one way through the view, e.g. a mall entrance | People step off one escalator onto the landing and leave by the other |
+| Height range | 2.0-10.0 m | 2.0-10.0 m | 2.0-10.0 m |
+| Feet Best | 38-43 deg | 35-43 deg | 38-43 deg |
+| Feet target | 41 deg | 38 deg | 41 deg |
+| Feet Acceptable | 38-48 deg | 33-48 deg | 38-48 deg |
+| Face Best | 10 deg up to (not including) 25 deg | same | same |
+| Face Acceptable | up to 30 deg; under 10 deg (too flat) is also Acceptable | same | same |
+| Face point / human height | 1.5 m / 1.7 m | same | same |
+| Pixel floor, counting / face | 80 / 200 px/m | same | same |
 
 Open door has no Acceptable zone farther than its Best band: a counting line too far away is Out of range, because passers-by in front of the door would be miscounted.
+
+Escalator uses the Open door thresholds ([ADR 0007](docs/adr/0007-escalators-are-counted-on-the-flat-landing.md)). People are counted on the flat **landing**, where they step off and start walking, not on the moving steps. Escalators come in pairs, so the width checked against the view is the whole pair, both escalators and the divider between them (2.6 m unless entered). The camera can be at the top landing or the bottom landing; the thresholds are the same for both. When the face line falls beyond the landing, on the incline, people there stand higher or lower than the landing floor, so the face reading is shown as approximate.
 
 ## How each number is worked out
 
@@ -51,6 +53,7 @@ The **pixel floor** never changes the verdict: a counting line below it carries 
 | Camera catalogue | `rules/cameras.json` |
 | Web console | `generate.mjs` builds `public/index.html` with the engine and rules inlined (`npm run build`) |
 | Lookup tables | `public/camera-placement-lookup-<profile>.csv`, written by the same build; the Rule table tab can also copy them |
+| Escalator pair shape | `src/escalator.js` (tested): where the comb plate, steps and incline sit beyond the counting line, shared by the drawings and the 3D view |
 | Share links and site sheet | `src/share-link.js` (tested), `src/site-sheet.js` and `src/site-sheet.css`, inlined by the build |
 
 A **share link** carries the placement in the address itself, so it keeps working for as long as the app stays at its address. Keep camera ids in `rules/cameras.json` once published (retire a camera rather than delete it) so old links still find their camera. The office keeps the **site sheet** PDF in the job folder; its QR code reopens the live placement.
