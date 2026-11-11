@@ -3242,7 +3242,7 @@ ${pwaCss}
       <p class="answer-sub" id="answerSub"></p>
       <div class="answer-chips">
         <span class="answer-chip face" id="answerFaceChip" data-state="visible"><i></i><span data-i18n="faceLine">Face line</span> <b id="answerFace"></b> <span id="answerFaceState"></span></span>
-        <span class="answer-chip entry" id="answerEntry" data-state="covered"><i></i><span data-i18n="entranceShort">Entrance</span> <b id="answerEntryWidth"></b> <span id="answerEntryState"></span></span>
+        <span class="answer-chip entry" id="answerEntry" data-state="covered"><i></i><span id="answerEntryLabel" data-i18n="entranceShort">Entrance</span> <b id="answerEntryWidth"></b> <span id="answerEntryState"></span></span>
         <span class="answer-chip" id="answerPpmChip" data-state="ok"><i></i><b id="answerPpm"></b> px/m</span>
       </div>
     </section>
@@ -3729,12 +3729,12 @@ ${shareSource}
         densityWarn: "Only {ppm} px/m at the counting line, below the {min} px/m floor: people may be missed. Mount lower, or use a higher-resolution camera or a longer lens.",
         tooSmall: "Too small",
         faceTooSmall: "In frame, but only {ppm} px/m at the face (floor {min} px/m): too few pixels for demographics. Never fails the placement.",
-        subtitle: "Geometry console", countingLineAt: "Counting line at", entranceShort: "Entrance", entryCovered: "in view",
+        subtitle: "Geometry console", countingLineAt: "Counting line at", entranceShort: "Entrance", entranceShort_pair: "Escalator pair", entryCovered: "in view",
         entryTight: "edges at frame rim", entryTooWide: "too wide", allControls: "All controls", lower: "Lower", raise: "Raise", viewTabs: "View", visualizer: "Visualizer", ruleTable: "Rule table", language: "Language",
         placementControls: "Placement controls", scene: "Scene", rulesVersion: "rules {version}",
         cameraPreset: "Camera preset", optics: "optics", geometry: "Geometry", dragOrType: "drag or type",
-        resetAll: "Reset", resetAllTitle: "Back to the default: only the camera height is set. The scene, landing, camera model and entrance width stay.",
-        resetDone: "Back to the default. Height, scene, landing, camera and entrance width kept.", undo: "Undo",
+        resetAll: "Reset", resetAllTitle: "Back to the default: only the camera height is set. The scene, landing, camera model and entrance width stay.", resetAllTitle_pair: "Back to the default: only the camera height is set. The scene, landing, camera model and pair width stay.",
+        resetDone: "Back to the default. Height, scene, landing, camera and entrance width kept.", resetDone_pair: "Back to the default. Height, scene, landing, camera and pair width kept.", undo: "Undo",
         solveFor: "Solve for", manual: "Manual", distance: "Distance", height: "Height",
         mountingHeight: "Mounting height", solved: "solved", countingDistance: "Counting line distance",
         recommendedDistance: "recommended distance", useRecommended: "Use recommended distance",
@@ -3747,32 +3747,32 @@ ${shareSource}
         faceViewPx: "{px} px face", faceViewBest: "best case", faceViewNone: "No face in view",
         faceViewLoading: "Loading face…", faceViewFailed: "No face model",
         sideModeSide: "Side", sideModeOrbit: "Orbit", sideReadingsAria: "Current side-view readings",
-        alongFloor: "{distance} m to the middle",
+        alongFloor: "{distance} m to the middle", alongFloor_pair: "{distance} m to the middle",
         orbitNote: "Drag to orbit, scroll or pinch to zoom. The view cone ends where it meets the floor.",
-        orbitAria: "The scene from outside: the entrance, the counting line and the camera's view. Drag to orbit.",
+        orbitAria: "The scene from outside: the entrance, the counting line and the camera's view. Drag to orbit.", orbitAria_pair: "The scene from outside: the escalator pair, the counting line and the camera's view. Drag to orbit.",
         planCentreLine: "entrance centre line", planToLine: "{distance} m to counting line", planRight: "{distance} m right of centre", planLeft: "{distance} m left of centre",
         planCamera: "camera, {height} m up", planDragSideways: "drag the camera sideways (the distance is solved); turn it by the dot", planDragAnywhere: "drag the camera; turn it by the dot",
         planWidths: "view {width} m wide at the line, effective {effective} m", planEffectiveOnly: "effective {effective} m at the line", leftTick: "left", rightTick: "right",
-        offsetAria: "Camera offset from the entrance centre line in meters, positive to the right",
-        offsetCentred: "On the entrance centre line, aimed at the middle.",
-        offsetSide: "{distance} m {side} of the centre line, as the camera faces it; a {pan} deg turn aims it at the middle.",
+        offsetAria: "Camera offset from the entrance centre line in meters, positive to the right", offsetAria_pair: "Camera offset from the centre line of the pair in meters, positive to the right",
+        offsetCentred: "On the entrance centre line, aimed at the middle.", offsetCentred_pair: "On the centre line of the pair, aimed at the middle.",
+        offsetSide: "{distance} m {side} of the centre line, as the camera faces it; a {pan} deg turn aims it at the middle.", offsetSide_pair: "{distance} m {side} of the centre line, as the camera faces it; a {pan} deg turn aims it at the middle.",
         offsetSideManual: "{distance} m {side} of the centre line; pan set by hand (the middle needs {pan} deg).",
-        aimOffEffective: "Turned this far, a person in the middle of the entrance reaches the outer 10% of the picture, where detection is weaker. Turn the camera back toward the middle (Pan angle, Aim at middle).",
-        entranceTurnedOut: "Entrance {width} m would fit the {covered} m view, but turned this way its {side} end is {miss} m out of it. Turn the camera toward that end, or move it closer to the entrance centre line.",
+        aimOffEffective: "Turned this far, a person in the middle of the entrance reaches the outer 10% of the picture, where detection is weaker. Turn the camera back toward the middle (Pan angle, Aim at middle).", aimOffEffective_pair: "Turned this far, a person in the middle of the pair reaches the outer 10% of the picture, where detection is weaker. Turn the camera back toward the middle (Pan angle, Aim at middle).",
+        entranceTurnedOut: "Entrance {width} m would fit the {covered} m view, but turned this way its {side} end is {miss} m out of it. Turn the camera toward that end, or move it closer to the entrance centre line.", entranceTurnedOut_pair: "Escalator pair {width} m would fit the {covered} m view, but turned this way its {side} end is {miss} m out of it. Turn the camera toward that end, or move it closer to the centre line of the pair.",
         edgeBodySteep: "is steeper than the feet bands, so people walking there may be missed. Move the counting line farther out or mount the camera lower.",
-        offsetSideFisheye: "{distance} m {side} of the entrance centre line. A ceiling fisheye looks straight down, so it does not turn.",
+        offsetSideFisheye: "{distance} m {side} of the entrance centre line. A ceiling fisheye looks straight down, so it does not turn.", offsetSideFisheye_pair: "{distance} m {side} of the centre line of the pair. A ceiling fisheye looks straight down, so it does not turn.",
         sideLeft: "left", sideRight: "right",
         edgeLead: "{side} end at {angle}", edgeBody: "is outside the feet bands, so people walking there may be missed. Move the camera toward the centre line or mount it higher.",
         edgeCutLead: "{side} end cut off:", edgeCutBody: "a person there is not wholly in frame, so people walking there may be missed. Move the camera toward the centre line or zoom out.",
         sideLeftCap: "Left", sideRightCap: "Right",
-        noDistance: "From this far off-centre no distance gives an Acceptable feet angle in the middle of the entrance. Move the camera toward the centre line or mount it higher.",
-        faceOffCentre: "No face-Best spot along the middle of the entrance from this far off-centre. Move the camera toward the centre line.",
+        noDistance: "From this far off-centre no distance gives an Acceptable feet angle in the middle of the entrance. Move the camera toward the centre line or mount it higher.", noDistance_pair: "From this far off-centre no distance gives an Acceptable feet angle in the middle of the pair. Move the camera toward the centre line or mount it higher.",
+        faceOffCentre: "No face-Best spot along the middle of the entrance from this far off-centre. Move the camera toward the centre line.", faceOffCentre_pair: "No face-Best spot along the middle of the pair from this far off-centre. Move the camera toward the centre line.",
         entranceWidth: "Entrance width", none: "none",
         entranceHint: "Optional: the doorway people walk through, checked against the view at the counting line.",
         advancedOptics: "Advanced optics", tiltAngle: "Tilt angle", recommended: "Recommended", level: "level", down: "down",
-        panAngle: "Pan angle", panAimMiddle: "Aim at middle", panLeft: "left", panRight: "right",
-        panStraight: "Facing straight across.", panTurned: "Turned {deg} deg {side}.",
-        panAuto: "At the middle of the entrance.", panOffMiddle: "{deg} deg off the middle.",
+        panAngle: "Pan angle", panAimMiddle: "Aim at middle", panAimMiddle_pair: "Aim at middle", panLeft: "left", panRight: "right",
+        panStraight: "Facing straight across.", panStraight_pair: "Facing straight across.", panTurned: "Turned {deg} deg {side}.",
+        panAuto: "At the middle of the entrance.", panAuto_pair: "At the middle of the pair.", panOffMiddle: "{deg} deg off the middle.",
         panFisheye: "A ceiling fisheye looks straight down; it is not panned.",
         tiltHint: "Ceiling fisheye: always 90 deg, straight down.", sensorFormat: "Sensor format", presetBadge: "preset",
         focalLength: "Focal length", resolution: "Resolution",
@@ -3817,9 +3817,9 @@ ${shareSource}
         faceSame: "Face is already best at the counting line, so both lines are the same.",
         faceBeyond: "{gap} m beyond the counting line. Demographics only; never fails the placement.",
         faceInFront: "{gap} m in front of the counting line. Demographics only; never fails the placement.",
-        entranceTooWide: "Entrance {width} m is wider than the {covered} m the camera covers at the counting line; {miss} m is out of view. Mount higher, use a shorter focal length, or add a camera.",
-        entranceTight: "Entrance {width} m fits the {covered} m view, but its edges fall in the outer 20% of the frame where detection is weaker.",
-        entranceCovered: "Entrance {width} m is fully in view: the camera covers {covered} m at the counting line.",
+        entranceTooWide: "Entrance {width} m is wider than the {covered} m the camera covers at the counting line; {miss} m is out of view. Mount higher, use a shorter focal length, or add a camera.", entranceTooWide_pair: "Escalator pair {width} m is wider than the {covered} m the camera covers at the counting line; {miss} m is out of view. Mount higher, use a shorter focal length, or add a camera.",
+        entranceTight: "Entrance {width} m fits the {covered} m view, but its edges fall in the outer 20% of the frame where detection is weaker.", entranceTight_pair: "Escalator pair {width} m fits the {covered} m view, but its edges fall in the outer 20% of the frame where detection is weaker.",
+        entranceCovered: "Entrance {width} m is fully in view: the camera covers {covered} m at the counting line.", entranceCovered_pair: "Escalator pair {width} m is fully in view: the camera covers {covered} m at the counting line.",
         sideFeet: "Feet {angle} deg, {status}", sideFace: "Face line {distance}, {state}",
         sideTilt: "Tilt {tilt} deg {mode} · view {fov} deg", tiltManual: "manual", tiltRecommended: "recommended", tiltFisheye: "ceiling fisheye",
         canvasCamera: "Camera", canvasHead: "head", canvasFace: "face", canvasFeetAngle: "feet {angle} deg", canvasFaceAngle: "face {angle} deg",
@@ -3836,7 +3836,7 @@ ${shareSource}
         readingsVerdict: "Verdict: {status} (feet angle {angle} deg)",
         readingsCounting: "Counting line: {distance} m from below the camera",
         readingsFace: "Face line: {distance} ({state})", readingsTilt: "Tilt: {tilt} deg down",
-        readingsEntrance: "Entrance: {text}", readingsRules: "Rules {version}",
+        readingsEntrance: "Entrance: {text}", readingsEntrance_pair: "Escalator pair: {text}", readingsRules: "Rules {version}",
         sideAria: "Side elevation. Camera height {height} meters, counting line at {distance} meters, feet angle {angle} degrees, {status}.",
         topAria: "Top-down coverage. Width {width} meters at the counting line.", cameraAria: "Camera view at {tilt} degrees tilt.",
         announce: "Placement is {status}. Feet {feet}. Face line {face}. Counting line {distance} meters.",
@@ -3862,12 +3862,12 @@ ${shareSource}
         densityWarn: "ที่เส้นนับมีเพียง {ppm} px/m ต่ำกว่าเกณฑ์ {min} px/m อาจนับคนได้ไม่ครบ ติดตั้งให้ต่ำลง หรือใช้กล้องความละเอียดสูงขึ้นหรือเลนส์ยาวขึ้น",
         tooSmall: "เล็กเกินไป",
         faceTooSmall: "อยู่ในภาพ แต่ที่ใบหน้ามีเพียง {ppm} px/m (เกณฑ์ {min} px/m) พิกเซลน้อยเกินไปสำหรับข้อมูลเพศ/อายุ ไม่ทำให้ตำแหน่งไม่ผ่าน",
-        subtitle: "เครื่องมือคำนวณตำแหน่งกล้อง", countingLineAt: "เส้นนับที่", entranceShort: "ทางเข้า", entryCovered: "อยู่ในภาพ",
+        subtitle: "เครื่องมือคำนวณตำแหน่งกล้อง", countingLineAt: "เส้นนับที่", entranceShort: "ทางเข้า", entranceShort_pair: "บันไดเลื่อนทั้งคู่", entryCovered: "อยู่ในภาพ",
         entryTight: "ขอบอยู่ริมภาพ", entryTooWide: "กว้างเกินภาพ", allControls: "ตั้งค่าทั้งหมด", lower: "ลด", raise: "เพิ่ม", viewTabs: "มุมมอง", visualizer: "แผนภาพ", ruleTable: "ตารางกฎ", language: "ภาษา",
         placementControls: "ตั้งค่าตำแหน่ง", scene: "ลักษณะพื้นที่", rulesVersion: "กฎ {version}",
         cameraPreset: "รุ่นกล้อง", optics: "เลนส์", geometry: "ความสูงและระยะ", dragOrType: "ลากหรือพิมพ์",
-        resetAll: "รีเซ็ต", resetAllTitle: "กลับสู่ค่าเริ่มต้น: ตั้งเฉพาะความสูงกล้อง คงลักษณะพื้นที่ ชานพัก รุ่นกล้อง และความกว้างทางเข้าไว้",
-        resetDone: "กลับสู่ค่าเริ่มต้นแล้ว คงความสูง ลักษณะพื้นที่ ชานพัก รุ่นกล้อง และความกว้างทางเข้าไว้", undo: "เลิกทำ",
+        resetAll: "รีเซ็ต", resetAllTitle: "กลับสู่ค่าเริ่มต้น: ตั้งเฉพาะความสูงกล้อง คงลักษณะพื้นที่ ชานพัก รุ่นกล้อง และความกว้างทางเข้าไว้", resetAllTitle_pair: "กลับสู่ค่าเริ่มต้น: ตั้งเฉพาะความสูงกล้อง คงลักษณะพื้นที่ ชานพัก รุ่นกล้อง และความกว้างบันไดเลื่อนทั้งคู่ไว้",
+        resetDone: "กลับสู่ค่าเริ่มต้นแล้ว คงความสูง ลักษณะพื้นที่ ชานพัก รุ่นกล้อง และความกว้างทางเข้าไว้", resetDone_pair: "กลับสู่ค่าเริ่มต้นแล้ว คงความสูง ลักษณะพื้นที่ ชานพัก รุ่นกล้อง และความกว้างบันไดเลื่อนทั้งคู่ไว้", undo: "เลิกทำ",
         solveFor: "คำนวณ", manual: "กำหนดเอง", distance: "ระยะ", height: "ความสูง",
         mountingHeight: "ความสูงติดตั้ง", solved: "คำนวณให้", countingDistance: "ระยะเส้นนับ",
         recommendedDistance: "ระยะที่แนะนำ", useRecommended: "ใช้ระยะที่แนะนำ",
@@ -3880,32 +3880,32 @@ ${shareSource}
         faceViewPx: "ใบหน้า {px} px", faceViewBest: "กรณีดีที่สุด", faceViewNone: "ไม่เห็นใบหน้า",
         faceViewLoading: "กำลังโหลด…", faceViewFailed: "ไม่มีโมเดลใบหน้า",
         sideModeSide: "ด้านข้าง", sideModeOrbit: "หมุนดู", sideReadingsAria: "ค่าที่อ่านได้จากมุมมองด้านข้าง",
-        alongFloor: "ถึงกลางทางเข้า {distance} m",
+        alongFloor: "ถึงกลางทางเข้า {distance} m", alongFloor_pair: "ถึงกลางบันไดเลื่อนทั้งคู่ {distance} m",
         orbitNote: "ลากเพื่อหมุนดู เลื่อนหรือถ่างนิ้วเพื่อซูม กรวยภาพจบตรงที่แตะพื้น",
-        orbitAria: "ฉากจากด้านนอก: ทางเข้า เส้นนับ และมุมมองของกล้อง ลากเพื่อหมุนดู",
+        orbitAria: "ฉากจากด้านนอก: ทางเข้า เส้นนับ และมุมมองของกล้อง ลากเพื่อหมุนดู", orbitAria_pair: "ฉากจากด้านนอก: บันไดเลื่อนทั้งคู่ เส้นนับ และมุมมองของกล้อง ลากเพื่อหมุนดู",
         planCentreLine: "แนวกึ่งกลางทางเข้า", planToLine: "ห่างเส้นนับ {distance} m", planRight: "ขวาของกึ่งกลาง {distance} m", planLeft: "ซ้ายของกึ่งกลาง {distance} m",
         planCamera: "กล้อง สูง {height} m", planDragSideways: "ลากกล้องไปด้านข้างได้ (ระยะคำนวณให้) หมุนกล้องด้วยจุดหน้ากล้อง", planDragAnywhere: "ลากกล้องได้ หมุนกล้องด้วยจุดหน้ากล้อง",
         planWidths: "ภาพกว้าง {width} m ที่เส้นนับ ใช้งานได้ {effective} m", planEffectiveOnly: "ใช้งานได้ {effective} m ที่เส้นนับ", leftTick: "ซ้าย", rightTick: "ขวา",
-        offsetAria: "ระยะกล้องจากแนวกึ่งกลางทางเข้า เป็นเมตร ค่าบวกคือทางขวา",
-        offsetCentred: "อยู่บนแนวกึ่งกลางทางเข้า เล็งที่กลางทางเข้า",
-        offsetSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลาง (มองจากกล้อง) หัน {pan} deg เพื่อเล็งกลางทางเข้า",
+        offsetAria: "ระยะกล้องจากแนวกึ่งกลางทางเข้า เป็นเมตร ค่าบวกคือทางขวา", offsetAria_pair: "ระยะกล้องจากแนวกึ่งกลางบันไดเลื่อนทั้งคู่ เป็นเมตร ค่าบวกคือทางขวา",
+        offsetCentred: "อยู่บนแนวกึ่งกลางทางเข้า เล็งที่กลางทางเข้า", offsetCentred_pair: "อยู่บนแนวกึ่งกลางบันไดเลื่อนทั้งคู่ เล็งตรงกลาง",
+        offsetSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลาง (มองจากกล้อง) หัน {pan} deg เพื่อเล็งกลางทางเข้า", offsetSide_pair: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลาง (มองจากกล้อง) หัน {pan} deg เพื่อเล็งกลางบันไดเลื่อนทั้งคู่",
         offsetSideManual: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลาง ตั้งมุมหันเอง (ถ้าจะเล็งกลางต้องหัน {pan} deg)",
-        aimOffEffective: "หันกล้องไปมากขนาดนี้ คนที่ยืนกลางทางเข้าจะอยู่ในช่วง 10% ริมภาพซึ่งตรวจจับได้ไม่ดี หันกล้องกลับเข้าหากลางทางเข้า (มุมหัน เล็งกลางทางเข้า)",
-        entranceTurnedOut: "ทางเข้า {width} m แคบกว่าภาพ ({covered} m) แต่หันกล้องแบบนี้ ปลายด้าน{side}หลุดภาพไป {miss} m หันกล้องไปทางปลายนั้น หรือย้ายกล้องเข้าใกล้แนวกึ่งกลางทางเข้า",
+        aimOffEffective: "หันกล้องไปมากขนาดนี้ คนที่ยืนกลางทางเข้าจะอยู่ในช่วง 10% ริมภาพซึ่งตรวจจับได้ไม่ดี หันกล้องกลับเข้าหากลางทางเข้า (มุมหัน เล็งกลางทางเข้า)", aimOffEffective_pair: "หันกล้องไปมากขนาดนี้ คนที่ยืนตรงกลางจะอยู่ในช่วง 10% ริมภาพซึ่งตรวจจับได้ไม่ดี หันกล้องกลับเข้าหาตรงกลาง (มุมหัน เล็งกลาง)",
+        entranceTurnedOut: "ทางเข้า {width} m แคบกว่าภาพ ({covered} m) แต่หันกล้องแบบนี้ ปลายด้าน{side}หลุดภาพไป {miss} m หันกล้องไปทางปลายนั้น หรือย้ายกล้องเข้าใกล้แนวกึ่งกลางทางเข้า", entranceTurnedOut_pair: "บันไดเลื่อนทั้งคู่ {width} m แคบกว่าภาพ ({covered} m) แต่หันกล้องแบบนี้ ปลายด้าน{side}หลุดภาพไป {miss} m หันกล้องไปทางปลายนั้น หรือย้ายกล้องเข้าใกล้แนวกึ่งกลางบันไดเลื่อนทั้งคู่",
         edgeBodySteep: "ชันกว่าเกณฑ์มุมเท้า คนที่เดินตรงนั้นอาจนับไม่ได้ ย้ายเส้นนับออกไปไกลขึ้นหรือติดกล้องให้ต่ำลง",
-        offsetSideFisheye: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า ฟิชอายติดเพดานมองลงตรงๆ จึงไม่ต้องหัน",
+        offsetSideFisheye: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า ฟิชอายติดเพดานมองลงตรงๆ จึงไม่ต้องหัน", offsetSideFisheye_pair: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางบันไดเลื่อนทั้งคู่ ฟิชอายติดเพดานมองลงตรงๆ จึงไม่ต้องหัน",
         sideLeft: "ซ้าย", sideRight: "ขวา",
         edgeLead: "ปลายด้าน{side} {angle}", edgeBody: "อยู่นอกเกณฑ์มุมเท้า คนที่เดินตรงนั้นอาจนับไม่ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น",
         edgeCutLead: "ปลายด้าน{side}อยู่นอกภาพ:", edgeCutBody: "คนที่ยืนตรงนั้นอยู่ในภาพไม่ครบตัว อาจนับไม่ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือซูมออก",
         sideLeftCap: "ซ้าย", sideRightCap: "ขวา",
-        noDistance: "กล้องห่างจากกึ่งกลางมากจนไม่มีระยะไหนให้มุมเท้าที่กลางทางเข้าพอใช้ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น",
-        faceOffCentre: "กล้องห่างจากกึ่งกลางมากเกินไป จึงไม่มีจุดที่มุมหน้าดีที่สุดตามแนวกลางทางเข้า ขยับกล้องเข้าหาแนวกึ่งกลาง",
+        noDistance: "กล้องห่างจากกึ่งกลางมากจนไม่มีระยะไหนให้มุมเท้าที่กลางทางเข้าพอใช้ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น", noDistance_pair: "กล้องห่างจากกึ่งกลางมากจนไม่มีระยะไหนให้มุมเท้าที่กลางบันไดเลื่อนทั้งคู่พอใช้ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น",
+        faceOffCentre: "กล้องห่างจากกึ่งกลางมากเกินไป จึงไม่มีจุดที่มุมหน้าดีที่สุดตามแนวกลางทางเข้า ขยับกล้องเข้าหาแนวกึ่งกลาง", faceOffCentre_pair: "กล้องห่างจากกึ่งกลางมากเกินไป จึงไม่มีจุดที่มุมหน้าดีที่สุดตามแนวกลางบันไดเลื่อนทั้งคู่ ขยับกล้องเข้าหาแนวกึ่งกลาง",
         entranceWidth: "ความกว้างทางเข้า", none: "ไม่มี",
         entranceHint: "ไม่บังคับ: ช่องที่คนเดินผ่าน ใช้ตรวจกับภาพที่เส้นนับ",
         advancedOptics: "ตั้งค่าเลนส์ขั้นสูง", tiltAngle: "มุมก้ม", recommended: "ค่าแนะนำ", level: "ระดับ", down: "ก้มลง",
-        panAngle: "มุมหัน", panAimMiddle: "เล็งกลางทางเข้า", panLeft: "ซ้าย", panRight: "ขวา",
-        panStraight: "หันตรงตั้งฉากกับทางเข้า", panTurned: "หันไปทาง{side} {deg} deg",
-        panAuto: "เล็งกลางทางเข้า", panOffMiddle: "ห่างจากกลาง {deg} deg",
+        panAngle: "มุมหัน", panAimMiddle: "เล็งกลางทางเข้า", panAimMiddle_pair: "เล็งกลางบันไดเลื่อนทั้งคู่", panLeft: "ซ้าย", panRight: "ขวา",
+        panStraight: "หันตรงตั้งฉากกับทางเข้า", panStraight_pair: "หันตรงไปข้างหน้า", panTurned: "หันไปทาง{side} {deg} deg",
+        panAuto: "เล็งกลางทางเข้า", panAuto_pair: "เล็งตรงกลาง", panOffMiddle: "ห่างจากกลาง {deg} deg",
         panFisheye: "ฟิชอายติดเพดานมองตรงลง ไม่ต้องหัน",
         tiltHint: "ฟิชอายติดเพดาน: ก้ม 90 deg ตรงลงเสมอ", sensorFormat: "ขนาดเซนเซอร์", presetBadge: "ตามรุ่น",
         focalLength: "ความยาวโฟกัส", resolution: "ความละเอียด",
@@ -3950,9 +3950,9 @@ ${shareSource}
         faceSame: "มุมใบหน้าที่เส้นนับดีที่สุดอยู่แล้ว ทั้งสองเส้นจึงเป็นเส้นเดียวกัน",
         faceBeyond: "อยู่ถัดจากเส้นนับออกไป {gap} m ใช้เก็บข้อมูลเพศ/อายุเท่านั้น ไม่ทำให้ตำแหน่งไม่ผ่าน",
         faceInFront: "อยู่ก่อนถึงเส้นนับ {gap} m ใช้เก็บข้อมูลเพศ/อายุเท่านั้น ไม่ทำให้ตำแหน่งไม่ผ่าน",
-        entranceTooWide: "ทางเข้า {width} m กว้างกว่าที่กล้องมองเห็นที่เส้นนับ ({covered} m) ขาดไป {miss} m ติดตั้งให้สูงขึ้น ใช้ความยาวโฟกัสสั้นลง หรือเพิ่มกล้อง",
-        entranceTight: "ทางเข้า {width} m อยู่ในภาพ ({covered} m) แต่ขอบทางเข้าอยู่ในช่วง 20% ริมภาพซึ่งตรวจจับได้ไม่ดี",
-        entranceCovered: "ทางเข้า {width} m อยู่ในภาพครบ กล้องมองเห็นกว้าง {covered} m ที่เส้นนับ",
+        entranceTooWide: "ทางเข้า {width} m กว้างกว่าที่กล้องมองเห็นที่เส้นนับ ({covered} m) ขาดไป {miss} m ติดตั้งให้สูงขึ้น ใช้ความยาวโฟกัสสั้นลง หรือเพิ่มกล้อง", entranceTooWide_pair: "บันไดเลื่อนทั้งคู่ {width} m กว้างกว่าที่กล้องมองเห็นที่เส้นนับ ({covered} m) ขาดไป {miss} m ติดตั้งให้สูงขึ้น ใช้ความยาวโฟกัสสั้นลง หรือเพิ่มกล้อง",
+        entranceTight: "ทางเข้า {width} m อยู่ในภาพ ({covered} m) แต่ขอบทางเข้าอยู่ในช่วง 20% ริมภาพซึ่งตรวจจับได้ไม่ดี", entranceTight_pair: "บันไดเลื่อนทั้งคู่ {width} m อยู่ในภาพ ({covered} m) แต่ขอบบันไดเลื่อนทั้งคู่อยู่ในช่วง 20% ริมภาพซึ่งตรวจจับได้ไม่ดี",
+        entranceCovered: "ทางเข้า {width} m อยู่ในภาพครบ กล้องมองเห็นกว้าง {covered} m ที่เส้นนับ", entranceCovered_pair: "บันไดเลื่อนทั้งคู่ {width} m อยู่ในภาพครบ กล้องมองเห็นกว้าง {covered} m ที่เส้นนับ",
         sideFeet: "เท้า {angle} deg, {status}", sideFace: "เส้นจับใบหน้า {distance}, {state}",
         sideTilt: "มุมก้ม {tilt} deg {mode} · มุมภาพ {fov} deg", tiltManual: "กำหนดเอง", tiltRecommended: "ค่าแนะนำ", tiltFisheye: "ฟิชอายติดเพดาน",
         canvasCamera: "กล้อง", canvasHead: "ศีรษะ", canvasFace: "ใบหน้า", canvasFeetAngle: "เท้า {angle} deg", canvasFaceAngle: "ใบหน้า {angle} deg",
@@ -3969,7 +3969,7 @@ ${shareSource}
         readingsVerdict: "ผล: {status} (มุมเท้า {angle} deg)",
         readingsCounting: "เส้นนับ: {distance} m จากจุดใต้กล้อง",
         readingsFace: "เส้นจับใบหน้า: {distance} ({state})", readingsTilt: "มุมก้ม: {tilt} deg",
-        readingsEntrance: "ทางเข้า: {text}", readingsRules: "กฎ {version}",
+        readingsEntrance: "ทางเข้า: {text}", readingsEntrance_pair: "บันไดเลื่อนทั้งคู่: {text}", readingsRules: "กฎ {version}",
         sideAria: "ภาพด้านข้าง กล้องสูง {height} เมตร เส้นนับห่าง {distance} เมตร มุมเท้า {angle} องศา {status}",
         topAria: "มุมมองจากด้านบน กว้าง {width} เมตรที่เส้นนับ", cameraAria: "ภาพจากกล้องที่มุมก้ม {tilt} องศา",
         announce: "ผล {status} เท้า {feet} เส้นจับใบหน้า {face} เส้นนับ {distance} เมตร",
@@ -4010,7 +4010,8 @@ ${shareSource}
 
     function t(key, vars) {
       const table = I18N[lang] || I18N.en;
-      let text = key in table ? table[key] : key in I18N.en ? I18N.en[key] : key;
+      const wanted = state.profileId === "escalator" && (key + "_pair") in I18N.en ? key + "_pair" : key;
+      let text = wanted in table ? table[wanted] : wanted in I18N.en ? I18N.en[wanted] : wanted;
       if (vars) Object.keys(vars).forEach((name) => { text = text.split("{" + name + "}").join(String(vars[name])); });
       return text;
     }
@@ -4113,7 +4114,7 @@ ${shareSource}
       horizontalPpmMetric: byId("horizontalPpmMetric"), verticalPpmMetric: byId("verticalPpmMetric"),
       tableMeta: byId("tableMeta"), copyCsv: byId("copyCsv"), lookupBody: byId("lookupBody"),
       answer: byId("answer"), answerPill: byId("answerPill"), answerFeet: byId("answerFeet"), answerDistance: byId("answerDistance"),
-      answerSub: byId("answerSub"), answerFace: byId("answerFace"), answerEntry: byId("answerEntry"), answerEntryWidth: byId("answerEntryWidth"),
+      answerSub: byId("answerSub"), answerFace: byId("answerFace"), answerEntry: byId("answerEntry"), answerEntryWidth: byId("answerEntryWidth"), answerEntryLabel: byId("answerEntryLabel"),
       answerEntryState: byId("answerEntryState"), answerPpm: byId("answerPpm"), rail: byId("rail"), sheetBar: byId("sheetBar"),
       sheetHandle: byId("sheetHandle"), sheetSummary: byId("sheetSummary"), sheetScene: byId("sheetScene"), sheetCamera: byId("sheetCamera"),
       quickHeight: byId("quickHeight"), quickHeightStepper: byId("quickHeightStepper"), quickEntrance: byId("quickEntrance"), tableToggle: byId("tableToggle"),
@@ -4150,7 +4151,7 @@ ${shareSource}
         scene: p.profile.id,
         landing: state.landing,
         escalator: p.profile.id === "escalator" ? escalatorFor(state.entranceM) : null,
-        escalatorKit: { ESCALATOR: ESCALATOR, surfaceHeight: surfaceHeight, stepCentres: stepCentres, stepUnder: stepUnder, floorWells: floorWells, rideSeconds: rideSeconds, pitDepthM: pitDepthM, slopeBand: slopeBand, slopeSkirt: slopeSkirt, floorPieces: floorPieces, gridSegments: gridSegments, beltDirection: beltDirection, boardingU: boardingU, freeBoarding: freeBoarding, riderAt: riderAt },
+        escalatorKit: { ESCALATOR: ESCALATOR, surfaceHeight: surfaceHeight, stepCentres: stepCentres, stepUnder: stepUnder, floorWells: floorWells, rideSeconds: rideSeconds, pitDepthM: pitDepthM, slopeBand: slopeBand, slopeSkirt: slopeSkirt, floorPieces: floorPieces, gridSegments: gridSegments, beltDirection: beltDirection, boardingU: boardingU, freeBoarding: freeBoarding, riderAt: riderAt, pastBoxCutoff: pastBoxCutoff },
         heightM: p.heightM,
         distanceM: p.distanceM,
         tiltDeg: r.tilt.value,
@@ -4187,6 +4188,7 @@ ${shareSource}
       profileId: RULES.defaultProfile,
       solveMode: "distance",
       entranceM: 5,
+      doorEntranceM: undefined,
       // Where the camera sits for the Escalator scene: "top" (escalators drop away below) or "bottom" (they rise away).
       landing: "top",
       offsetM: 0,
@@ -4268,7 +4270,9 @@ ${shareSource}
     }
 
     function judgedEntrance() {
-      return state.entranceM === null ? undefined : state.entranceM;
+      // A blank width is judged as the standard pair the views draw, not as a 5 m door.
+      if (state.entranceM === null) return state.profileId === "escalator" ? ESCALATOR.defaultWidthM : undefined;
+      return state.entranceM;
     }
 
     // The solved distance or height puts the middle of the entrance on the target angle, wherever the camera sits sideways.
@@ -4322,7 +4326,8 @@ ${shareSource}
       const fl = p.result.faceLine;
       if (p.profile.id !== "escalator" || !copy.visible || fl.distanceM === null) return copy;
       if (faceLineSurface(escalatorFor(state.entranceM), fl.distanceM - p.distanceM) !== "incline") return copy;
-      return { ...copy, note: copy.note + " " + t(state.landing === "bottom" ? "faceInclineBottom" : "faceInclineTop") };
+      const incline = t(state.landing === "bottom" ? "faceInclineBottom" : "faceInclineTop");
+      return { ...copy, note: copy.note + " " + incline, incline: incline };
     }
 
     function faceLineBase(p) {
@@ -4396,8 +4401,13 @@ ${shareSource}
     function setScene(id) {
       // A door's width means nothing for an escalator pair, so choosing the scene starts from the standard pair.
       if (id === "escalator" && state.profileId !== "escalator") {
+        state.doorEntranceM = state.entranceM;
         state.entranceM = ESCALATOR.defaultWidthM;
         els.entranceInput.value = String(ESCALATOR.defaultWidthM);
+      } else if (id !== "escalator" && state.profileId === "escalator" && state.doorEntranceM !== undefined) {
+        state.entranceM = state.doorEntranceM;
+        els.entranceInput.value = state.entranceM === null ? "" : String(state.entranceM);
+        state.doorEntranceM = undefined;
       }
       state.profileId = id;
       if (state.solveMode === "manual") setFieldValue(els.distanceInput, els.distanceRange, solvedDistance(), 2);
@@ -5730,6 +5740,8 @@ ${shareSource}
       });
       els.entranceInput.dataset.i18nAttr = "placeholder:none;aria-label:" + (escalator ? "escalatorWidth" : "entranceWidth");
       els.entranceInput.setAttribute("aria-label", t(escalator ? "escalatorWidth" : "entranceWidth"));
+      els.offsetInput.setAttribute("aria-label", t("offsetAria"));
+      els.orbitCanvas.setAttribute("aria-label", t("orbitAria"));
 
       const face = faceLineCopy(p);
       const verdictLabel = STATUS_LABEL[r.verdict];
@@ -5861,6 +5873,7 @@ ${shareSource}
       els.answerEntry.hidden = r.entrance === null;
       if (r.entrance !== null) {
         els.answerEntry.dataset.state = r.entrance.status;
+        els.answerEntryLabel.textContent = t("entranceShort");
         els.answerEntryWidth.textContent = fmt(r.entrance.widthM, 1, " m");
         els.answerEntryState.textContent = t(ENTRY_STATE[r.entrance.status]);
       }

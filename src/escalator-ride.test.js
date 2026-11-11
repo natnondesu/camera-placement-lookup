@@ -88,7 +88,23 @@ test("an arrival joins at the far end, or queues behind the last rider a gap apa
   near(freeBoarding(top, "arrive", 0, [c + 1.2], gap), c + 1.2 + gap);
 });
 
-test("riders a gap apart never share a step", () => {
+test("a steady stream of boarders never shares a step, queued arrivals included, however the belt phase falls", () => {
   const gap = ESCALATOR.rideGapM;
-  assert.ok(gap >= 2 * ESCALATOR.stepDepthM - 1e-9);
+  for (const role of ["leave", "arrive"]) {
+    for (const layout of [top, bottom]) {
+      for (const phase of [0, 0.1, 0.23, 0.39]) {
+        const riders = [];
+        let travel = phase;
+        for (let tick = 0; tick < 1200; tick += 1) {
+          travel += ESCALATOR.beltSpeedMps * 0.1;
+          const poses = riders.map((r) => riderAt(layout, role, r.boardU, travel - r.boardTravel)).filter((pose) => pose.status === "riding");
+          const board = freeBoarding(layout, role, travel, poses.map((pose) => pose.u), gap);
+          if (board !== null && tick % 3 === 0) riders.push({ boardU: board, boardTravel: travel });
+          const steps = poses.filter((pose) => !pose.hidden).map((pose) => stepUnder(layout, pose.u, beltDirection(role) * travel).centreU.toFixed(6));
+          assert.equal(new Set(steps).size, steps.length, role + ": two riders on one step at tick " + tick);
+        }
+        assert.ok(riders.length > 10, "the stream kept boarding");
+      }
+    }
+  }
 });

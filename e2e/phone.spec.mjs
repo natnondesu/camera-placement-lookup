@@ -42,3 +42,13 @@ test("the expanded camera view keeps its overlay laid over the picture", async (
   // Absolutely positioned over the 3D canvas: WebKit paints a grid-stacked sibling under the WebGL layer.
   expect(layout).toEqual({ position: "absolute", sameBox: true, painted: true });
 });
+
+for (const landing of ["top", "bottom"]) {
+  test("the Escalator page fits the phone's width on the " + landing + " landing, in English and Thai", async ({ page }) => {
+    await openConsole(page, "s=escalator&h=4&e=2.6&m=distance&l=" + landing);
+    const fits = () => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+    expect(await fits()).toBe(true);
+    await page.evaluate(() => setLanguage("th"));
+    expect(await fits()).toBe(true);
+  });
+}

@@ -19,6 +19,7 @@ const WALL = 0.06;
 const GROUND = { minX: -45, maxX: 45, minZ: -15, maxZ: 75 };
 const COLOURS = {
   panel: "#48505c",
+  glass: "#8fa3b8",
   rail: "#222730",
   tread: "#626b79",
   hood: "#2b313b",
@@ -60,6 +61,8 @@ export function buildEscalatorScene(THREE, p, material, stripWidth) {
       const made = material(COLOURS[key]);
       // The same finish as the plain floor, so the pieces around a well do not show a seam against it.
       if (key === "floor") made.roughness = 0.95;
+      // Glass lets riders and the step line show through; it does not write depth, so it never hides an avatar.
+      if (key === "glass") Object.assign(made, { transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide });
       cache.set(key, made);
     }
     return cache.get(key);
@@ -90,20 +93,29 @@ export function buildEscalatorScene(THREE, p, material, stripWidth) {
   const innerHalf = layout.dividerM / 2 - bal;
   const sides = layout.lanes.flatMap((lane) => [[lane.minX - bal, lane.minX], [lane.maxX, lane.maxX + bal]]);
   sides.forEach(([xa, xb]) => {
-    group.add(prism(kit.slopeSkirt(layout, E.handrailM, base), xa, xb, "panel"));
+    group.add(prism(kit.slopeBand(layout, E.handrailM, 0), xa, xb, "glass"));
+    if (!bottom) group.add(prism(kit.slopeSkirt(layout, 0, base), xa, xb, "panel"));
     group.add(prism(kit.slopeBand(layout, E.handrailM + 0.04, E.handrailM - 0.05), xa - 0.02, xb + 0.02, "rail"));
   });
-  if (innerHalf > 0.001) group.add(prism(kit.slopeSkirt(layout, E.handrailM, base), -innerHalf, innerHalf, "panel"));
+  if (innerHalf > 0.001) group.add(prism(bottom ? kit.slopeBand(layout, E.handrailM, 0) : kit.slopeSkirt(layout, E.handrailM, base), -innerHalf, innerHalf, "panel"));
+
+  if (bottom) {
+    // A truss band under the incline, open beneath it, instead of a wall filled down to the floor.
+    const slope = (layout.riseM - 0.06) / (layout.endU - layout.inclineU);
+    const outer = layout.widthM / 2 + bal;
+    const truss = [
+      { u: layout.inclineU, y: 0 }, { u: layout.endU, y: layout.riseM - 0.06 },
+      { u: layout.endU, y: layout.riseM - 0.06 - E.trussM }, { u: layout.inclineU + E.trussM / slope, y: 0 },
+    ];
+    group.add(prism(truss, -outer, outer, "deck"));
+  }
 
   const steps = [];
   const pitch = E.stepDepthM;
   const dummy = new THREE.Object3D();
   const stepGeometry = new THREE.BoxGeometry(1, STEP_THICKNESS, 1);
   layout.lanes.forEach((lane) => {
-    const underside = bottom
-      ? [{ u: layout.inclineU, y: 0 }, { u: layout.endU, y: layout.riseM - 0.06 }, { u: layout.endU, y: 0 }]
-      : kit.slopeBand(layout, -0.06, -E.trussM);
-    group.add(prism(underside, lane.minX, lane.maxX, "deck"));
+    if (!bottom) group.add(prism(kit.slopeBand(layout, -0.06, -E.trussM), lane.minX, lane.maxX, "deck"));
     group.add(box(lane.minX, lane.maxX, 0, COMB_HEIGHT, layout.combU - COMB_DEPTH, layout.combU, "comb"));
     const capacity = kit.stepCentres(layout, 0).length + 2;
     const mesh = new THREE.InstancedMesh(stepGeometry, shared("tread"), capacity);

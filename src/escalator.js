@@ -38,9 +38,6 @@ export const ESCALATOR = Object.freeze({
   defaultWidthM: 2.6,
 });
 
-/** The landing the camera is mounted at. */
-export const LANDINGS = Object.freeze(["top", "bottom"]);
-
 const SLOPE = Math.tan((ESCALATOR.inclineDeg * Math.PI) / 180);
 const wrap = (value, size) => ((value % size) + size) % size;
 
@@ -309,3 +306,17 @@ export function freeBoarding(layout, role, travelM, ridersU, gapM) {
   if (role === "leave") return ridersU.some((u) => u < start + gapM - EPSILON) ? null : start;
   return ridersU.reduce((at, u) => Math.max(at, u + gapM), start);
 }
+
+/** Riders farther than this beyond the comb plate get no detection box and are not the face window's subject. */
+export const BOXED_RIDE_M = 2;
+
+/** A rider this close to the face line (metres along u) is still the face window's subject and gets a box. */
+export const FACE_WINDOW_M = 0.8;
+
+/**
+ * @param {EscalatorLayout} layout
+ * @param {number} u metres beyond the counting line
+ * @param {number | null} faceU the face line, metres beyond the counting line, or null when there is none
+ */
+export const pastBoxCutoff = (layout, u, faceU = null) =>
+  u > layout.combU + BOXED_RIDE_M && !(faceU !== null && Math.abs(u - faceU) <= FACE_WINDOW_M);

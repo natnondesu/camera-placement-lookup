@@ -8,6 +8,9 @@ for (const [label, hash, lang] of [
   ["the default placement", "s=open_door&h=4&e=5&m=distance", "en"],
   ["a placement with warnings", "s=open_door&h=4&e=5&o=2&p=5&t=40&m=distance", "en"],
   ["a placement with warnings, in Thai", "s=open_door&h=4&e=5&o=2&p=5&t=40&m=distance", "th"],
+  ["the Escalator scene, Top landing", "s=escalator&h=4&e=2.6&m=distance", "en"],
+  ["the Escalator scene, Bottom landing", "s=escalator&l=bottom&h=4&e=2.6&m=distance", "en"],
+  ["the Escalator scene, Bottom landing, in Thai", "s=escalator&l=bottom&h=4&e=2.6&m=distance", "th"],
 ]) {
   test(`the site sheet prints on one A4 page: ${label}`, async ({ page, browserName }) => {
     test.skip(browserName !== "chromium", "PDF printing is Chromium only");

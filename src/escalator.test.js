@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   ESCALATOR,
-  LANDINGS,
+  BOXED_RIDE_M,
+  pastBoxCutoff,
   escalatorLayout,
   surfaceHeight,
   stepCentres,
@@ -82,10 +83,11 @@ test("a pair too narrow for one-metre steps narrows the steps, never the divider
   near(layout.lanes[0].minX, -0.95);
 });
 
+const LANDINGS = ["top", "bottom"];
+
 test("an unknown landing is the top landing", () => {
   assert.equal(escalatorLayout({ widthM: 2.6, landing: "sideways" }).landing, "top");
   assert.equal(escalatorLayout({ widthM: 2.6 }).landing, "top");
-  assert.deepEqual(LANDINGS, ["top", "bottom"]);
 });
 
 test("the landing is flat to the comb plate and across the flat steps, then the incline starts", () => {
@@ -295,4 +297,23 @@ test("a grid line along the edge of a well is kept", () => {
   const well = { minX: 2, maxX: 5, minU: 3, maxU: 7 };
   const segments = gridSegments({ minX: 0, maxX: 8, minU: 0, maxU: 10 }, 1, [well]);
   assert.ok(segments.some((s) => s.x0 === 2 && s.x1 === 2 && s.u0 === 0 && s.u1 === 10), "the edge x=2 line runs whole");
+});
+
+test("a rider is past the box cut-off only more than BOXED_RIDE_M beyond the comb plate", () => {
+  const layout = escalatorLayout({ widthM: 2.6, landing: "bottom" });
+  assert.equal(BOXED_RIDE_M, 2);
+  assert.equal(pastBoxCutoff(layout, layout.combU - 1), false);
+  assert.equal(pastBoxCutoff(layout, layout.combU), false);
+  assert.equal(pastBoxCutoff(layout, layout.combU + BOXED_RIDE_M), false);
+  assert.equal(pastBoxCutoff(layout, layout.combU + BOXED_RIDE_M + 0.01), true);
+});
+
+test("a rider crossing the face line stays boxed even when it is past the box cut-off", () => {
+  const layout = escalatorLayout({ widthM: 2.6, landing: "bottom" });
+  const faceU = layout.combU + BOXED_RIDE_M + 1.5;
+  assert.equal(pastBoxCutoff(layout, faceU, faceU), false);
+  assert.equal(pastBoxCutoff(layout, faceU + 0.5, faceU), false);
+  assert.equal(pastBoxCutoff(layout, faceU - 0.5, faceU), false);
+  assert.equal(pastBoxCutoff(layout, faceU + 1.5, faceU), true);
+  assert.equal(pastBoxCutoff(layout, layout.combU + BOXED_RIDE_M + 0.01, faceU - 3), true);
 });

@@ -32,7 +32,14 @@ const HELP_TEXT = {
 
     g5Title: "Share and print", g5Sum: "Keep a placement as a link or a printable site sheet.",
     g5s1: "Share makes a link that holds the whole placement; opening it later restores everything. In the Share window, add the site and location, then open the printable site sheet.",
-    g5s2: "Copy readings puts the key numbers on the clipboard, ready to paste into a chat or a report."
+    g5s2: "Copy readings puts the key numbers on the clipboard, ready to paste into a chat or a report.",
+    g1s1_pair: "The verdict: Best, Acceptable or Out of range. It is the feet angle at the middle of the escalator pair, where people are counted.",
+    g1s4_pair: "Warnings appear here, the most important first: an end of the pair outside the bands, too few pixels, a height outside the range. +N more steps through the rest.",
+    g2s1_pair: "Choose what to solve. Distance: give the mounting height and get where the counting line goes. Height: give the distance you have and get the height to mount at. Reset (top right of this panel) goes back to the default, keeping the height, scene, landing and pair width; Undo brings it all back.",
+    g3Title_pair: "Set the pair width and the camera position", g3Sum_pair: "The width of the escalator pair, and a camera that is not on the centre line.",
+    g3s1_pair: "Pair width: both escalators and the divider, from outer step edge to outer step edge. A standard pair is 2.6 m. Both ends are checked, 0.35 m in from each frame.",
+    g3s2_pair: "If the camera cannot sit on the centre line of the pair, set how far left or right it is. It turns to aim at the middle.",
+    g4s1_pair: "Side view: the camera's own slice down to the middle of the pair, with the Best and Acceptable bands on the floor."
   },
   th: {
     hpHelp: "วิธีใช้", hpTitle: "วิธีใช้งานโปรแกรม", hpIntro: "คู่มือสั้น ๆ 5 เรื่อง กด แสดงให้ดู เพื่อพาไล่ดูปุ่มจริงบนหน้าจอ กด Esc เพื่อหยุดได้ทุกเมื่อ",
@@ -64,7 +71,14 @@ const HELP_TEXT = {
 
     g5Title: "แชร์และพิมพ์", g5Sum: "เก็บตำแหน่งไว้เป็นลิงก์ หรือใบสรุปหน้างานที่พิมพ์ได้",
     g5s1: "แชร์ สร้างลิงก์ที่เก็บตำแหน่งทั้งหมด เปิดลิงก์ภายหลังจะได้ค่าเดิมครบ ในหน้าต่างแชร์ ใส่ชื่อสถานที่และจุดติดตั้ง แล้วเปิดใบสรุปหน้างานเพื่อพิมพ์",
-    g5s2: "คัดลอกค่า คัดลอกตัวเลขสำคัญไว้ วางในแชทหรือรายงานได้ทันที"
+    g5s2: "คัดลอกค่า คัดลอกตัวเลขสำคัญไว้ วางในแชทหรือรายงานได้ทันที",
+    g1s1_pair: "ผลการประเมิน: ดีที่สุด พอใช้ หรือเกินเกณฑ์ ตัดสินจากมุมเท้าที่กลางบันไดเลื่อนทั้งคู่ ซึ่งเป็นจุดที่นับคน",
+    g1s4_pair: "คำเตือนจะแสดงตรงนี้ เรื่องสำคัญที่สุดก่อน เช่น ปลายบันไดเลื่อนทั้งคู่อยู่นอกเกณฑ์ พิกเซลน้อยเกินไป หรือความสูงอยู่นอกช่วง กด อีก N ข้อ เพื่อดูข้อถัดไป",
+    g2s1_pair: "เลือกสิ่งที่จะคำนวณ ระยะ: ใส่ความสูงติดตั้ง แล้วได้ตำแหน่งเส้นนับ ความสูง: ใส่ระยะที่มี แล้วได้ความสูงที่ควรติดตั้ง ปุ่มรีเซ็ต (มุมขวาบนของแผงนี้) กลับสู่ค่าเริ่มต้นโดยคงความสูง ลักษณะพื้นที่ ชานพัก และความกว้างบันไดเลื่อนทั้งคู่ไว้ และเลิกทำได้",
+    g3Title_pair: "ตั้งความกว้างบันไดเลื่อนและตำแหน่งกล้อง", g3Sum_pair: "ความกว้างบันไดเลื่อนทั้งคู่ และกล้องที่ไม่ได้อยู่บนแนวกึ่งกลาง",
+    g3s1_pair: "ความกว้างบันไดเลื่อนทั้งคู่: รวมบันไดเลื่อนทั้งสองตัวและช่องกลาง วัดจากขอบขั้นด้านนอกถึงด้านนอก คู่มาตรฐานกว้าง 2.6 m ปลายทั้งสองด้านจะถูกตรวจ โดยเว้นเข้ามาจากขอบภาพด้านละ 0.35 m",
+    g3s2_pair: "ถ้าติดกล้องบนแนวกึ่งกลางบันไดเลื่อนไม่ได้ ให้ใส่ระยะที่ห่างไปทางซ้ายหรือขวา กล้องจะหันไปเล็งตรงกลาง",
+    g4s1_pair: "มุมมองด้านข้าง: ภาพตัดของกล้องลงไปถึงกลางบันไดเลื่อนทั้งคู่ พร้อมช่วงดีที่สุดและพอใช้บนพื้น"
   }
 };
 Object.keys(HELP_TEXT).forEach((code) => Object.assign(I18N[code], HELP_TEXT[code]));

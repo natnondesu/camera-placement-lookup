@@ -4417,7 +4417,7 @@
       <p class="answer-sub" id="answerSub"></p>
       <div class="answer-chips">
         <span class="answer-chip face" id="answerFaceChip" data-state="visible"><i></i><span data-i18n="faceLine">Face line</span> <b id="answerFace"></b> <span id="answerFaceState"></span></span>
-        <span class="answer-chip entry" id="answerEntry" data-state="covered"><i></i><span data-i18n="entranceShort">Entrance</span> <b id="answerEntryWidth"></b> <span id="answerEntryState"></span></span>
+        <span class="answer-chip entry" id="answerEntry" data-state="covered"><i></i><span id="answerEntryLabel" data-i18n="entranceShort">Entrance</span> <b id="answerEntryWidth"></b> <span id="answerEntryState"></span></span>
         <span class="answer-chip" id="answerPpmChip" data-state="ok"><i></i><b id="answerPpm"></b> px/m</span>
       </div>
     </section>
@@ -5623,9 +5623,6 @@ const ESCALATOR = Object.freeze({
   defaultWidthM: 2.6,
 });
 
-/** The landing the camera is mounted at. */
-const LANDINGS = Object.freeze(["top", "bottom"]);
-
 const SLOPE = Math.tan((ESCALATOR.inclineDeg * Math.PI) / 180);
 const wrap = (value, size) => ((value % size) + size) % size;
 
@@ -5895,6 +5892,20 @@ function freeBoarding(layout, role, travelM, ridersU, gapM) {
   return ridersU.reduce((at, u) => Math.max(at, u + gapM), start);
 }
 
+/** Riders farther than this beyond the comb plate get no detection box and are not the face window's subject. */
+const BOXED_RIDE_M = 2;
+
+/** A rider this close to the face line (metres along u) is still the face window's subject and gets a box. */
+const FACE_WINDOW_M = 0.8;
+
+/**
+ * @param {EscalatorLayout} layout
+ * @param {number} u metres beyond the counting line
+ * @param {number | null} faceU the face line, metres beyond the counting line, or null when there is none
+ */
+const pastBoxCutoff = (layout, u, faceU = null) =>
+  u > layout.combU + BOXED_RIDE_M && !(faceU !== null && Math.abs(u - faceU) <= FACE_WINDOW_M);
+
 /**
  * A placement written into a link, so the link itself is the record: no server keeps anything.
  * @typedef {{
@@ -6033,12 +6044,12 @@ function decodePlacement(hash) {
         densityWarn: "Only {ppm} px/m at the counting line, below the {min} px/m floor: people may be missed. Mount lower, or use a higher-resolution camera or a longer lens.",
         tooSmall: "Too small",
         faceTooSmall: "In frame, but only {ppm} px/m at the face (floor {min} px/m): too few pixels for demographics. Never fails the placement.",
-        subtitle: "Geometry console", countingLineAt: "Counting line at", entranceShort: "Entrance", entryCovered: "in view",
+        subtitle: "Geometry console", countingLineAt: "Counting line at", entranceShort: "Entrance", entranceShort_pair: "Escalator pair", entryCovered: "in view",
         entryTight: "edges at frame rim", entryTooWide: "too wide", allControls: "All controls", lower: "Lower", raise: "Raise", viewTabs: "View", visualizer: "Visualizer", ruleTable: "Rule table", language: "Language",
         placementControls: "Placement controls", scene: "Scene", rulesVersion: "rules {version}",
         cameraPreset: "Camera preset", optics: "optics", geometry: "Geometry", dragOrType: "drag or type",
-        resetAll: "Reset", resetAllTitle: "Back to the default: only the camera height is set. The scene, landing, camera model and entrance width stay.",
-        resetDone: "Back to the default. Height, scene, landing, camera and entrance width kept.", undo: "Undo",
+        resetAll: "Reset", resetAllTitle: "Back to the default: only the camera height is set. The scene, landing, camera model and entrance width stay.", resetAllTitle_pair: "Back to the default: only the camera height is set. The scene, landing, camera model and pair width stay.",
+        resetDone: "Back to the default. Height, scene, landing, camera and entrance width kept.", resetDone_pair: "Back to the default. Height, scene, landing, camera and pair width kept.", undo: "Undo",
         solveFor: "Solve for", manual: "Manual", distance: "Distance", height: "Height",
         mountingHeight: "Mounting height", solved: "solved", countingDistance: "Counting line distance",
         recommendedDistance: "recommended distance", useRecommended: "Use recommended distance",
@@ -6051,32 +6062,32 @@ function decodePlacement(hash) {
         faceViewPx: "{px} px face", faceViewBest: "best case", faceViewNone: "No face in view",
         faceViewLoading: "Loading face…", faceViewFailed: "No face model",
         sideModeSide: "Side", sideModeOrbit: "Orbit", sideReadingsAria: "Current side-view readings",
-        alongFloor: "{distance} m to the middle",
+        alongFloor: "{distance} m to the middle", alongFloor_pair: "{distance} m to the middle",
         orbitNote: "Drag to orbit, scroll or pinch to zoom. The view cone ends where it meets the floor.",
-        orbitAria: "The scene from outside: the entrance, the counting line and the camera's view. Drag to orbit.",
+        orbitAria: "The scene from outside: the entrance, the counting line and the camera's view. Drag to orbit.", orbitAria_pair: "The scene from outside: the escalator pair, the counting line and the camera's view. Drag to orbit.",
         planCentreLine: "entrance centre line", planToLine: "{distance} m to counting line", planRight: "{distance} m right of centre", planLeft: "{distance} m left of centre",
         planCamera: "camera, {height} m up", planDragSideways: "drag the camera sideways (the distance is solved); turn it by the dot", planDragAnywhere: "drag the camera; turn it by the dot",
         planWidths: "view {width} m wide at the line, effective {effective} m", planEffectiveOnly: "effective {effective} m at the line", leftTick: "left", rightTick: "right",
-        offsetAria: "Camera offset from the entrance centre line in meters, positive to the right",
-        offsetCentred: "On the entrance centre line, aimed at the middle.",
-        offsetSide: "{distance} m {side} of the centre line, as the camera faces it; a {pan} deg turn aims it at the middle.",
+        offsetAria: "Camera offset from the entrance centre line in meters, positive to the right", offsetAria_pair: "Camera offset from the centre line of the pair in meters, positive to the right",
+        offsetCentred: "On the entrance centre line, aimed at the middle.", offsetCentred_pair: "On the centre line of the pair, aimed at the middle.",
+        offsetSide: "{distance} m {side} of the centre line, as the camera faces it; a {pan} deg turn aims it at the middle.", offsetSide_pair: "{distance} m {side} of the centre line, as the camera faces it; a {pan} deg turn aims it at the middle.",
         offsetSideManual: "{distance} m {side} of the centre line; pan set by hand (the middle needs {pan} deg).",
-        aimOffEffective: "Turned this far, a person in the middle of the entrance reaches the outer 10% of the picture, where detection is weaker. Turn the camera back toward the middle (Pan angle, Aim at middle).",
-        entranceTurnedOut: "Entrance {width} m would fit the {covered} m view, but turned this way its {side} end is {miss} m out of it. Turn the camera toward that end, or move it closer to the entrance centre line.",
+        aimOffEffective: "Turned this far, a person in the middle of the entrance reaches the outer 10% of the picture, where detection is weaker. Turn the camera back toward the middle (Pan angle, Aim at middle).", aimOffEffective_pair: "Turned this far, a person in the middle of the pair reaches the outer 10% of the picture, where detection is weaker. Turn the camera back toward the middle (Pan angle, Aim at middle).",
+        entranceTurnedOut: "Entrance {width} m would fit the {covered} m view, but turned this way its {side} end is {miss} m out of it. Turn the camera toward that end, or move it closer to the entrance centre line.", entranceTurnedOut_pair: "Escalator pair {width} m would fit the {covered} m view, but turned this way its {side} end is {miss} m out of it. Turn the camera toward that end, or move it closer to the centre line of the pair.",
         edgeBodySteep: "is steeper than the feet bands, so people walking there may be missed. Move the counting line farther out or mount the camera lower.",
-        offsetSideFisheye: "{distance} m {side} of the entrance centre line. A ceiling fisheye looks straight down, so it does not turn.",
+        offsetSideFisheye: "{distance} m {side} of the entrance centre line. A ceiling fisheye looks straight down, so it does not turn.", offsetSideFisheye_pair: "{distance} m {side} of the centre line of the pair. A ceiling fisheye looks straight down, so it does not turn.",
         sideLeft: "left", sideRight: "right",
         edgeLead: "{side} end at {angle}", edgeBody: "is outside the feet bands, so people walking there may be missed. Move the camera toward the centre line or mount it higher.",
         edgeCutLead: "{side} end cut off:", edgeCutBody: "a person there is not wholly in frame, so people walking there may be missed. Move the camera toward the centre line or zoom out.",
         sideLeftCap: "Left", sideRightCap: "Right",
-        noDistance: "From this far off-centre no distance gives an Acceptable feet angle in the middle of the entrance. Move the camera toward the centre line or mount it higher.",
-        faceOffCentre: "No face-Best spot along the middle of the entrance from this far off-centre. Move the camera toward the centre line.",
+        noDistance: "From this far off-centre no distance gives an Acceptable feet angle in the middle of the entrance. Move the camera toward the centre line or mount it higher.", noDistance_pair: "From this far off-centre no distance gives an Acceptable feet angle in the middle of the pair. Move the camera toward the centre line or mount it higher.",
+        faceOffCentre: "No face-Best spot along the middle of the entrance from this far off-centre. Move the camera toward the centre line.", faceOffCentre_pair: "No face-Best spot along the middle of the pair from this far off-centre. Move the camera toward the centre line.",
         entranceWidth: "Entrance width", none: "none",
         entranceHint: "Optional: the doorway people walk through, checked against the view at the counting line.",
         advancedOptics: "Advanced optics", tiltAngle: "Tilt angle", recommended: "Recommended", level: "level", down: "down",
-        panAngle: "Pan angle", panAimMiddle: "Aim at middle", panLeft: "left", panRight: "right",
-        panStraight: "Facing straight across.", panTurned: "Turned {deg} deg {side}.",
-        panAuto: "At the middle of the entrance.", panOffMiddle: "{deg} deg off the middle.",
+        panAngle: "Pan angle", panAimMiddle: "Aim at middle", panAimMiddle_pair: "Aim at middle", panLeft: "left", panRight: "right",
+        panStraight: "Facing straight across.", panStraight_pair: "Facing straight across.", panTurned: "Turned {deg} deg {side}.",
+        panAuto: "At the middle of the entrance.", panAuto_pair: "At the middle of the pair.", panOffMiddle: "{deg} deg off the middle.",
         panFisheye: "A ceiling fisheye looks straight down; it is not panned.",
         tiltHint: "Ceiling fisheye: always 90 deg, straight down.", sensorFormat: "Sensor format", presetBadge: "preset",
         focalLength: "Focal length", resolution: "Resolution",
@@ -6121,9 +6132,9 @@ function decodePlacement(hash) {
         faceSame: "Face is already best at the counting line, so both lines are the same.",
         faceBeyond: "{gap} m beyond the counting line. Demographics only; never fails the placement.",
         faceInFront: "{gap} m in front of the counting line. Demographics only; never fails the placement.",
-        entranceTooWide: "Entrance {width} m is wider than the {covered} m the camera covers at the counting line; {miss} m is out of view. Mount higher, use a shorter focal length, or add a camera.",
-        entranceTight: "Entrance {width} m fits the {covered} m view, but its edges fall in the outer 20% of the frame where detection is weaker.",
-        entranceCovered: "Entrance {width} m is fully in view: the camera covers {covered} m at the counting line.",
+        entranceTooWide: "Entrance {width} m is wider than the {covered} m the camera covers at the counting line; {miss} m is out of view. Mount higher, use a shorter focal length, or add a camera.", entranceTooWide_pair: "Escalator pair {width} m is wider than the {covered} m the camera covers at the counting line; {miss} m is out of view. Mount higher, use a shorter focal length, or add a camera.",
+        entranceTight: "Entrance {width} m fits the {covered} m view, but its edges fall in the outer 20% of the frame where detection is weaker.", entranceTight_pair: "Escalator pair {width} m fits the {covered} m view, but its edges fall in the outer 20% of the frame where detection is weaker.",
+        entranceCovered: "Entrance {width} m is fully in view: the camera covers {covered} m at the counting line.", entranceCovered_pair: "Escalator pair {width} m is fully in view: the camera covers {covered} m at the counting line.",
         sideFeet: "Feet {angle} deg, {status}", sideFace: "Face line {distance}, {state}",
         sideTilt: "Tilt {tilt} deg {mode} · view {fov} deg", tiltManual: "manual", tiltRecommended: "recommended", tiltFisheye: "ceiling fisheye",
         canvasCamera: "Camera", canvasHead: "head", canvasFace: "face", canvasFeetAngle: "feet {angle} deg", canvasFaceAngle: "face {angle} deg",
@@ -6140,7 +6151,7 @@ function decodePlacement(hash) {
         readingsVerdict: "Verdict: {status} (feet angle {angle} deg)",
         readingsCounting: "Counting line: {distance} m from below the camera",
         readingsFace: "Face line: {distance} ({state})", readingsTilt: "Tilt: {tilt} deg down",
-        readingsEntrance: "Entrance: {text}", readingsRules: "Rules {version}",
+        readingsEntrance: "Entrance: {text}", readingsEntrance_pair: "Escalator pair: {text}", readingsRules: "Rules {version}",
         sideAria: "Side elevation. Camera height {height} meters, counting line at {distance} meters, feet angle {angle} degrees, {status}.",
         topAria: "Top-down coverage. Width {width} meters at the counting line.", cameraAria: "Camera view at {tilt} degrees tilt.",
         announce: "Placement is {status}. Feet {feet}. Face line {face}. Counting line {distance} meters.",
@@ -6166,12 +6177,12 @@ function decodePlacement(hash) {
         densityWarn: "ที่เส้นนับมีเพียง {ppm} px/m ต่ำกว่าเกณฑ์ {min} px/m อาจนับคนได้ไม่ครบ ติดตั้งให้ต่ำลง หรือใช้กล้องความละเอียดสูงขึ้นหรือเลนส์ยาวขึ้น",
         tooSmall: "เล็กเกินไป",
         faceTooSmall: "อยู่ในภาพ แต่ที่ใบหน้ามีเพียง {ppm} px/m (เกณฑ์ {min} px/m) พิกเซลน้อยเกินไปสำหรับข้อมูลเพศ/อายุ ไม่ทำให้ตำแหน่งไม่ผ่าน",
-        subtitle: "เครื่องมือคำนวณตำแหน่งกล้อง", countingLineAt: "เส้นนับที่", entranceShort: "ทางเข้า", entryCovered: "อยู่ในภาพ",
+        subtitle: "เครื่องมือคำนวณตำแหน่งกล้อง", countingLineAt: "เส้นนับที่", entranceShort: "ทางเข้า", entranceShort_pair: "บันไดเลื่อนทั้งคู่", entryCovered: "อยู่ในภาพ",
         entryTight: "ขอบอยู่ริมภาพ", entryTooWide: "กว้างเกินภาพ", allControls: "ตั้งค่าทั้งหมด", lower: "ลด", raise: "เพิ่ม", viewTabs: "มุมมอง", visualizer: "แผนภาพ", ruleTable: "ตารางกฎ", language: "ภาษา",
         placementControls: "ตั้งค่าตำแหน่ง", scene: "ลักษณะพื้นที่", rulesVersion: "กฎ {version}",
         cameraPreset: "รุ่นกล้อง", optics: "เลนส์", geometry: "ความสูงและระยะ", dragOrType: "ลากหรือพิมพ์",
-        resetAll: "รีเซ็ต", resetAllTitle: "กลับสู่ค่าเริ่มต้น: ตั้งเฉพาะความสูงกล้อง คงลักษณะพื้นที่ ชานพัก รุ่นกล้อง และความกว้างทางเข้าไว้",
-        resetDone: "กลับสู่ค่าเริ่มต้นแล้ว คงความสูง ลักษณะพื้นที่ ชานพัก รุ่นกล้อง และความกว้างทางเข้าไว้", undo: "เลิกทำ",
+        resetAll: "รีเซ็ต", resetAllTitle: "กลับสู่ค่าเริ่มต้น: ตั้งเฉพาะความสูงกล้อง คงลักษณะพื้นที่ ชานพัก รุ่นกล้อง และความกว้างทางเข้าไว้", resetAllTitle_pair: "กลับสู่ค่าเริ่มต้น: ตั้งเฉพาะความสูงกล้อง คงลักษณะพื้นที่ ชานพัก รุ่นกล้อง และความกว้างบันไดเลื่อนทั้งคู่ไว้",
+        resetDone: "กลับสู่ค่าเริ่มต้นแล้ว คงความสูง ลักษณะพื้นที่ ชานพัก รุ่นกล้อง และความกว้างทางเข้าไว้", resetDone_pair: "กลับสู่ค่าเริ่มต้นแล้ว คงความสูง ลักษณะพื้นที่ ชานพัก รุ่นกล้อง และความกว้างบันไดเลื่อนทั้งคู่ไว้", undo: "เลิกทำ",
         solveFor: "คำนวณ", manual: "กำหนดเอง", distance: "ระยะ", height: "ความสูง",
         mountingHeight: "ความสูงติดตั้ง", solved: "คำนวณให้", countingDistance: "ระยะเส้นนับ",
         recommendedDistance: "ระยะที่แนะนำ", useRecommended: "ใช้ระยะที่แนะนำ",
@@ -6184,32 +6195,32 @@ function decodePlacement(hash) {
         faceViewPx: "ใบหน้า {px} px", faceViewBest: "กรณีดีที่สุด", faceViewNone: "ไม่เห็นใบหน้า",
         faceViewLoading: "กำลังโหลด…", faceViewFailed: "ไม่มีโมเดลใบหน้า",
         sideModeSide: "ด้านข้าง", sideModeOrbit: "หมุนดู", sideReadingsAria: "ค่าที่อ่านได้จากมุมมองด้านข้าง",
-        alongFloor: "ถึงกลางทางเข้า {distance} m",
+        alongFloor: "ถึงกลางทางเข้า {distance} m", alongFloor_pair: "ถึงกลางบันไดเลื่อนทั้งคู่ {distance} m",
         orbitNote: "ลากเพื่อหมุนดู เลื่อนหรือถ่างนิ้วเพื่อซูม กรวยภาพจบตรงที่แตะพื้น",
-        orbitAria: "ฉากจากด้านนอก: ทางเข้า เส้นนับ และมุมมองของกล้อง ลากเพื่อหมุนดู",
+        orbitAria: "ฉากจากด้านนอก: ทางเข้า เส้นนับ และมุมมองของกล้อง ลากเพื่อหมุนดู", orbitAria_pair: "ฉากจากด้านนอก: บันไดเลื่อนทั้งคู่ เส้นนับ และมุมมองของกล้อง ลากเพื่อหมุนดู",
         planCentreLine: "แนวกึ่งกลางทางเข้า", planToLine: "ห่างเส้นนับ {distance} m", planRight: "ขวาของกึ่งกลาง {distance} m", planLeft: "ซ้ายของกึ่งกลาง {distance} m",
         planCamera: "กล้อง สูง {height} m", planDragSideways: "ลากกล้องไปด้านข้างได้ (ระยะคำนวณให้) หมุนกล้องด้วยจุดหน้ากล้อง", planDragAnywhere: "ลากกล้องได้ หมุนกล้องด้วยจุดหน้ากล้อง",
         planWidths: "ภาพกว้าง {width} m ที่เส้นนับ ใช้งานได้ {effective} m", planEffectiveOnly: "ใช้งานได้ {effective} m ที่เส้นนับ", leftTick: "ซ้าย", rightTick: "ขวา",
-        offsetAria: "ระยะกล้องจากแนวกึ่งกลางทางเข้า เป็นเมตร ค่าบวกคือทางขวา",
-        offsetCentred: "อยู่บนแนวกึ่งกลางทางเข้า เล็งที่กลางทางเข้า",
-        offsetSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลาง (มองจากกล้อง) หัน {pan} deg เพื่อเล็งกลางทางเข้า",
+        offsetAria: "ระยะกล้องจากแนวกึ่งกลางทางเข้า เป็นเมตร ค่าบวกคือทางขวา", offsetAria_pair: "ระยะกล้องจากแนวกึ่งกลางบันไดเลื่อนทั้งคู่ เป็นเมตร ค่าบวกคือทางขวา",
+        offsetCentred: "อยู่บนแนวกึ่งกลางทางเข้า เล็งที่กลางทางเข้า", offsetCentred_pair: "อยู่บนแนวกึ่งกลางบันไดเลื่อนทั้งคู่ เล็งตรงกลาง",
+        offsetSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลาง (มองจากกล้อง) หัน {pan} deg เพื่อเล็งกลางทางเข้า", offsetSide_pair: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลาง (มองจากกล้อง) หัน {pan} deg เพื่อเล็งกลางบันไดเลื่อนทั้งคู่",
         offsetSideManual: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลาง ตั้งมุมหันเอง (ถ้าจะเล็งกลางต้องหัน {pan} deg)",
-        aimOffEffective: "หันกล้องไปมากขนาดนี้ คนที่ยืนกลางทางเข้าจะอยู่ในช่วง 10% ริมภาพซึ่งตรวจจับได้ไม่ดี หันกล้องกลับเข้าหากลางทางเข้า (มุมหัน เล็งกลางทางเข้า)",
-        entranceTurnedOut: "ทางเข้า {width} m แคบกว่าภาพ ({covered} m) แต่หันกล้องแบบนี้ ปลายด้าน{side}หลุดภาพไป {miss} m หันกล้องไปทางปลายนั้น หรือย้ายกล้องเข้าใกล้แนวกึ่งกลางทางเข้า",
+        aimOffEffective: "หันกล้องไปมากขนาดนี้ คนที่ยืนกลางทางเข้าจะอยู่ในช่วง 10% ริมภาพซึ่งตรวจจับได้ไม่ดี หันกล้องกลับเข้าหากลางทางเข้า (มุมหัน เล็งกลางทางเข้า)", aimOffEffective_pair: "หันกล้องไปมากขนาดนี้ คนที่ยืนตรงกลางจะอยู่ในช่วง 10% ริมภาพซึ่งตรวจจับได้ไม่ดี หันกล้องกลับเข้าหาตรงกลาง (มุมหัน เล็งกลาง)",
+        entranceTurnedOut: "ทางเข้า {width} m แคบกว่าภาพ ({covered} m) แต่หันกล้องแบบนี้ ปลายด้าน{side}หลุดภาพไป {miss} m หันกล้องไปทางปลายนั้น หรือย้ายกล้องเข้าใกล้แนวกึ่งกลางทางเข้า", entranceTurnedOut_pair: "บันไดเลื่อนทั้งคู่ {width} m แคบกว่าภาพ ({covered} m) แต่หันกล้องแบบนี้ ปลายด้าน{side}หลุดภาพไป {miss} m หันกล้องไปทางปลายนั้น หรือย้ายกล้องเข้าใกล้แนวกึ่งกลางบันไดเลื่อนทั้งคู่",
         edgeBodySteep: "ชันกว่าเกณฑ์มุมเท้า คนที่เดินตรงนั้นอาจนับไม่ได้ ย้ายเส้นนับออกไปไกลขึ้นหรือติดกล้องให้ต่ำลง",
-        offsetSideFisheye: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า ฟิชอายติดเพดานมองลงตรงๆ จึงไม่ต้องหัน",
+        offsetSideFisheye: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า ฟิชอายติดเพดานมองลงตรงๆ จึงไม่ต้องหัน", offsetSideFisheye_pair: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางบันไดเลื่อนทั้งคู่ ฟิชอายติดเพดานมองลงตรงๆ จึงไม่ต้องหัน",
         sideLeft: "ซ้าย", sideRight: "ขวา",
         edgeLead: "ปลายด้าน{side} {angle}", edgeBody: "อยู่นอกเกณฑ์มุมเท้า คนที่เดินตรงนั้นอาจนับไม่ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น",
         edgeCutLead: "ปลายด้าน{side}อยู่นอกภาพ:", edgeCutBody: "คนที่ยืนตรงนั้นอยู่ในภาพไม่ครบตัว อาจนับไม่ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือซูมออก",
         sideLeftCap: "ซ้าย", sideRightCap: "ขวา",
-        noDistance: "กล้องห่างจากกึ่งกลางมากจนไม่มีระยะไหนให้มุมเท้าที่กลางทางเข้าพอใช้ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น",
-        faceOffCentre: "กล้องห่างจากกึ่งกลางมากเกินไป จึงไม่มีจุดที่มุมหน้าดีที่สุดตามแนวกลางทางเข้า ขยับกล้องเข้าหาแนวกึ่งกลาง",
+        noDistance: "กล้องห่างจากกึ่งกลางมากจนไม่มีระยะไหนให้มุมเท้าที่กลางทางเข้าพอใช้ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น", noDistance_pair: "กล้องห่างจากกึ่งกลางมากจนไม่มีระยะไหนให้มุมเท้าที่กลางบันไดเลื่อนทั้งคู่พอใช้ได้ ขยับกล้องเข้าหาแนวกึ่งกลางหรือติดให้สูงขึ้น",
+        faceOffCentre: "กล้องห่างจากกึ่งกลางมากเกินไป จึงไม่มีจุดที่มุมหน้าดีที่สุดตามแนวกลางทางเข้า ขยับกล้องเข้าหาแนวกึ่งกลาง", faceOffCentre_pair: "กล้องห่างจากกึ่งกลางมากเกินไป จึงไม่มีจุดที่มุมหน้าดีที่สุดตามแนวกลางบันไดเลื่อนทั้งคู่ ขยับกล้องเข้าหาแนวกึ่งกลาง",
         entranceWidth: "ความกว้างทางเข้า", none: "ไม่มี",
         entranceHint: "ไม่บังคับ: ช่องที่คนเดินผ่าน ใช้ตรวจกับภาพที่เส้นนับ",
         advancedOptics: "ตั้งค่าเลนส์ขั้นสูง", tiltAngle: "มุมก้ม", recommended: "ค่าแนะนำ", level: "ระดับ", down: "ก้มลง",
-        panAngle: "มุมหัน", panAimMiddle: "เล็งกลางทางเข้า", panLeft: "ซ้าย", panRight: "ขวา",
-        panStraight: "หันตรงตั้งฉากกับทางเข้า", panTurned: "หันไปทาง{side} {deg} deg",
-        panAuto: "เล็งกลางทางเข้า", panOffMiddle: "ห่างจากกลาง {deg} deg",
+        panAngle: "มุมหัน", panAimMiddle: "เล็งกลางทางเข้า", panAimMiddle_pair: "เล็งกลางบันไดเลื่อนทั้งคู่", panLeft: "ซ้าย", panRight: "ขวา",
+        panStraight: "หันตรงตั้งฉากกับทางเข้า", panStraight_pair: "หันตรงไปข้างหน้า", panTurned: "หันไปทาง{side} {deg} deg",
+        panAuto: "เล็งกลางทางเข้า", panAuto_pair: "เล็งตรงกลาง", panOffMiddle: "ห่างจากกลาง {deg} deg",
         panFisheye: "ฟิชอายติดเพดานมองตรงลง ไม่ต้องหัน",
         tiltHint: "ฟิชอายติดเพดาน: ก้ม 90 deg ตรงลงเสมอ", sensorFormat: "ขนาดเซนเซอร์", presetBadge: "ตามรุ่น",
         focalLength: "ความยาวโฟกัส", resolution: "ความละเอียด",
@@ -6254,9 +6265,9 @@ function decodePlacement(hash) {
         faceSame: "มุมใบหน้าที่เส้นนับดีที่สุดอยู่แล้ว ทั้งสองเส้นจึงเป็นเส้นเดียวกัน",
         faceBeyond: "อยู่ถัดจากเส้นนับออกไป {gap} m ใช้เก็บข้อมูลเพศ/อายุเท่านั้น ไม่ทำให้ตำแหน่งไม่ผ่าน",
         faceInFront: "อยู่ก่อนถึงเส้นนับ {gap} m ใช้เก็บข้อมูลเพศ/อายุเท่านั้น ไม่ทำให้ตำแหน่งไม่ผ่าน",
-        entranceTooWide: "ทางเข้า {width} m กว้างกว่าที่กล้องมองเห็นที่เส้นนับ ({covered} m) ขาดไป {miss} m ติดตั้งให้สูงขึ้น ใช้ความยาวโฟกัสสั้นลง หรือเพิ่มกล้อง",
-        entranceTight: "ทางเข้า {width} m อยู่ในภาพ ({covered} m) แต่ขอบทางเข้าอยู่ในช่วง 20% ริมภาพซึ่งตรวจจับได้ไม่ดี",
-        entranceCovered: "ทางเข้า {width} m อยู่ในภาพครบ กล้องมองเห็นกว้าง {covered} m ที่เส้นนับ",
+        entranceTooWide: "ทางเข้า {width} m กว้างกว่าที่กล้องมองเห็นที่เส้นนับ ({covered} m) ขาดไป {miss} m ติดตั้งให้สูงขึ้น ใช้ความยาวโฟกัสสั้นลง หรือเพิ่มกล้อง", entranceTooWide_pair: "บันไดเลื่อนทั้งคู่ {width} m กว้างกว่าที่กล้องมองเห็นที่เส้นนับ ({covered} m) ขาดไป {miss} m ติดตั้งให้สูงขึ้น ใช้ความยาวโฟกัสสั้นลง หรือเพิ่มกล้อง",
+        entranceTight: "ทางเข้า {width} m อยู่ในภาพ ({covered} m) แต่ขอบทางเข้าอยู่ในช่วง 20% ริมภาพซึ่งตรวจจับได้ไม่ดี", entranceTight_pair: "บันไดเลื่อนทั้งคู่ {width} m อยู่ในภาพ ({covered} m) แต่ขอบบันไดเลื่อนทั้งคู่อยู่ในช่วง 20% ริมภาพซึ่งตรวจจับได้ไม่ดี",
+        entranceCovered: "ทางเข้า {width} m อยู่ในภาพครบ กล้องมองเห็นกว้าง {covered} m ที่เส้นนับ", entranceCovered_pair: "บันไดเลื่อนทั้งคู่ {width} m อยู่ในภาพครบ กล้องมองเห็นกว้าง {covered} m ที่เส้นนับ",
         sideFeet: "เท้า {angle} deg, {status}", sideFace: "เส้นจับใบหน้า {distance}, {state}",
         sideTilt: "มุมก้ม {tilt} deg {mode} · มุมภาพ {fov} deg", tiltManual: "กำหนดเอง", tiltRecommended: "ค่าแนะนำ", tiltFisheye: "ฟิชอายติดเพดาน",
         canvasCamera: "กล้อง", canvasHead: "ศีรษะ", canvasFace: "ใบหน้า", canvasFeetAngle: "เท้า {angle} deg", canvasFaceAngle: "ใบหน้า {angle} deg",
@@ -6273,7 +6284,7 @@ function decodePlacement(hash) {
         readingsVerdict: "ผล: {status} (มุมเท้า {angle} deg)",
         readingsCounting: "เส้นนับ: {distance} m จากจุดใต้กล้อง",
         readingsFace: "เส้นจับใบหน้า: {distance} ({state})", readingsTilt: "มุมก้ม: {tilt} deg",
-        readingsEntrance: "ทางเข้า: {text}", readingsRules: "กฎ {version}",
+        readingsEntrance: "ทางเข้า: {text}", readingsEntrance_pair: "บันไดเลื่อนทั้งคู่: {text}", readingsRules: "กฎ {version}",
         sideAria: "ภาพด้านข้าง กล้องสูง {height} เมตร เส้นนับห่าง {distance} เมตร มุมเท้า {angle} องศา {status}",
         topAria: "มุมมองจากด้านบน กว้าง {width} เมตรที่เส้นนับ", cameraAria: "ภาพจากกล้องที่มุมก้ม {tilt} องศา",
         announce: "ผล {status} เท้า {feet} เส้นจับใบหน้า {face} เส้นนับ {distance} เมตร",
@@ -6314,7 +6325,8 @@ function decodePlacement(hash) {
 
     function t(key, vars) {
       const table = I18N[lang] || I18N.en;
-      let text = key in table ? table[key] : key in I18N.en ? I18N.en[key] : key;
+      const wanted = state.profileId === "escalator" && (key + "_pair") in I18N.en ? key + "_pair" : key;
+      let text = wanted in table ? table[wanted] : wanted in I18N.en ? I18N.en[wanted] : wanted;
       if (vars) Object.keys(vars).forEach((name) => { text = text.split("{" + name + "}").join(String(vars[name])); });
       return text;
     }
@@ -6417,7 +6429,7 @@ function decodePlacement(hash) {
       horizontalPpmMetric: byId("horizontalPpmMetric"), verticalPpmMetric: byId("verticalPpmMetric"),
       tableMeta: byId("tableMeta"), copyCsv: byId("copyCsv"), lookupBody: byId("lookupBody"),
       answer: byId("answer"), answerPill: byId("answerPill"), answerFeet: byId("answerFeet"), answerDistance: byId("answerDistance"),
-      answerSub: byId("answerSub"), answerFace: byId("answerFace"), answerEntry: byId("answerEntry"), answerEntryWidth: byId("answerEntryWidth"),
+      answerSub: byId("answerSub"), answerFace: byId("answerFace"), answerEntry: byId("answerEntry"), answerEntryWidth: byId("answerEntryWidth"), answerEntryLabel: byId("answerEntryLabel"),
       answerEntryState: byId("answerEntryState"), answerPpm: byId("answerPpm"), rail: byId("rail"), sheetBar: byId("sheetBar"),
       sheetHandle: byId("sheetHandle"), sheetSummary: byId("sheetSummary"), sheetScene: byId("sheetScene"), sheetCamera: byId("sheetCamera"),
       quickHeight: byId("quickHeight"), quickHeightStepper: byId("quickHeightStepper"), quickEntrance: byId("quickEntrance"), tableToggle: byId("tableToggle"),
@@ -6454,7 +6466,7 @@ function decodePlacement(hash) {
         scene: p.profile.id,
         landing: state.landing,
         escalator: p.profile.id === "escalator" ? escalatorFor(state.entranceM) : null,
-        escalatorKit: { ESCALATOR: ESCALATOR, surfaceHeight: surfaceHeight, stepCentres: stepCentres, stepUnder: stepUnder, floorWells: floorWells, rideSeconds: rideSeconds, pitDepthM: pitDepthM, slopeBand: slopeBand, slopeSkirt: slopeSkirt, floorPieces: floorPieces, gridSegments: gridSegments, beltDirection: beltDirection, boardingU: boardingU, freeBoarding: freeBoarding, riderAt: riderAt },
+        escalatorKit: { ESCALATOR: ESCALATOR, surfaceHeight: surfaceHeight, stepCentres: stepCentres, stepUnder: stepUnder, floorWells: floorWells, rideSeconds: rideSeconds, pitDepthM: pitDepthM, slopeBand: slopeBand, slopeSkirt: slopeSkirt, floorPieces: floorPieces, gridSegments: gridSegments, beltDirection: beltDirection, boardingU: boardingU, freeBoarding: freeBoarding, riderAt: riderAt, pastBoxCutoff: pastBoxCutoff },
         heightM: p.heightM,
         distanceM: p.distanceM,
         tiltDeg: r.tilt.value,
@@ -6491,6 +6503,7 @@ function decodePlacement(hash) {
       profileId: RULES.defaultProfile,
       solveMode: "distance",
       entranceM: 5,
+      doorEntranceM: undefined,
       // Where the camera sits for the Escalator scene: "top" (escalators drop away below) or "bottom" (they rise away).
       landing: "top",
       offsetM: 0,
@@ -6572,7 +6585,9 @@ function decodePlacement(hash) {
     }
 
     function judgedEntrance() {
-      return state.entranceM === null ? undefined : state.entranceM;
+      // A blank width is judged as the standard pair the views draw, not as a 5 m door.
+      if (state.entranceM === null) return state.profileId === "escalator" ? ESCALATOR.defaultWidthM : undefined;
+      return state.entranceM;
     }
 
     // The solved distance or height puts the middle of the entrance on the target angle, wherever the camera sits sideways.
@@ -6626,7 +6641,8 @@ function decodePlacement(hash) {
       const fl = p.result.faceLine;
       if (p.profile.id !== "escalator" || !copy.visible || fl.distanceM === null) return copy;
       if (faceLineSurface(escalatorFor(state.entranceM), fl.distanceM - p.distanceM) !== "incline") return copy;
-      return { ...copy, note: copy.note + " " + t(state.landing === "bottom" ? "faceInclineBottom" : "faceInclineTop") };
+      const incline = t(state.landing === "bottom" ? "faceInclineBottom" : "faceInclineTop");
+      return { ...copy, note: copy.note + " " + incline, incline: incline };
     }
 
     function faceLineBase(p) {
@@ -6700,8 +6716,13 @@ function decodePlacement(hash) {
     function setScene(id) {
       // A door's width means nothing for an escalator pair, so choosing the scene starts from the standard pair.
       if (id === "escalator" && state.profileId !== "escalator") {
+        state.doorEntranceM = state.entranceM;
         state.entranceM = ESCALATOR.defaultWidthM;
         els.entranceInput.value = String(ESCALATOR.defaultWidthM);
+      } else if (id !== "escalator" && state.profileId === "escalator" && state.doorEntranceM !== undefined) {
+        state.entranceM = state.doorEntranceM;
+        els.entranceInput.value = state.entranceM === null ? "" : String(state.entranceM);
+        state.doorEntranceM = undefined;
       }
       state.profileId = id;
       if (state.solveMode === "manual") setFieldValue(els.distanceInput, els.distanceRange, solvedDistance(), 2);
@@ -8034,6 +8055,8 @@ function decodePlacement(hash) {
       });
       els.entranceInput.dataset.i18nAttr = "placeholder:none;aria-label:" + (escalator ? "escalatorWidth" : "entranceWidth");
       els.entranceInput.setAttribute("aria-label", t(escalator ? "escalatorWidth" : "entranceWidth"));
+      els.offsetInput.setAttribute("aria-label", t("offsetAria"));
+      els.orbitCanvas.setAttribute("aria-label", t("orbitAria"));
 
       const face = faceLineCopy(p);
       const verdictLabel = STATUS_LABEL[r.verdict];
@@ -8165,6 +8188,7 @@ function decodePlacement(hash) {
       els.answerEntry.hidden = r.entrance === null;
       if (r.entrance !== null) {
         els.answerEntry.dataset.state = r.entrance.status;
+        els.answerEntryLabel.textContent = t("entranceShort");
         els.answerEntryWidth.textContent = fmt(r.entrance.widthM, 1, " m");
         els.answerEntryState.textContent = t(ENTRY_STATE[r.entrance.status]);
       }
@@ -8580,15 +8604,15 @@ const SHEET_TEXT = {
     shFov: "{h}° × {v}° at {f} mm", shDatasheet: "(datasheet)",
     shVerdict_best: "<b>Placement is best.</b> Feet angle {angle}° {where}, inside the best band {min}–{max}°.",
     shVerdict_acceptable: "<b>Placement is acceptable.</b> Feet angle {angle}° {where}, outside the best band {min}–{max}° but within {amin}–{amax}°.",
-    shWhere_line: "at the counting line", shWhere_aim: "at the middle of the entrance",
+    shWhere_line: "at the counting line", shWhere_aim: "at the middle of the entrance", shWhere_aim_pair: "at the middle of the pair",
     shVerdict_out_of_range: "<b>Placement is out of range.</b> {reason}",
     shMount: "Mount the camera above the floor", shMountHint: "Measure to the centre of the lens.",
-    shLine: "Mark the counting line out from the point below the camera", shLineHint: "Straight out, across the full entrance.",
+    shLine: "Mark the counting line out from the point below the camera", shLineHint: "Straight out, across the full entrance.", shLineHint_pair: "Straight out, across the full width of the pair.",
     shTilt: "Tilt the camera down", shTiltHint: "It aims at {aim} m on a person standing on the line.",
-    shTiltHintMiddle: "Set for the middle of the entrance: {aim} m up a person standing there.", shToMiddle: "to middle",
-    shMountHintOffset: "To the lens centre, {distance} m {side} of the entrance centre line; turn it {pan}° to the middle.",
-    shMountHintPanned: "To the lens centre, {where}; turn it {pan}° to the {turn} from facing straight across the entrance.",
-    shWhereCentre: "on the entrance centre line", shWhereSide: "{distance} m {side} of the entrance centre line",
+    shTiltHintMiddle: "Set for the middle of the entrance: {aim} m up a person standing there.", shTiltHintMiddle_pair: "Set for the middle of the pair: {aim} m up a person standing there.", shToMiddle: "to middle",
+    shMountHintOffset: "To the lens centre, {distance} m {side} of the entrance centre line; turn it {pan}° to the middle.", shMountHintOffset_pair: "To the lens centre, {distance} m {side} of the centre line of the pair; turn it {pan}° to the middle.",
+    shMountHintPanned: "To the lens centre, {where}; turn it {pan}° to the {turn} from facing straight across the entrance.", shMountHintPanned_pair: "To the lens centre, {where}; turn it {pan}° to the {turn} from facing straight across the pair.",
+    shWhereCentre: "on the entrance centre line", shWhereCentre_pair: "on the centre line of the pair", shWhereSide: "{distance} m {side} of the entrance centre line", shWhereSide_pair: "{distance} m {side} of the centre line of the pair",
     shSideLeft: "left", shSideRight: "right",
     shTiltFisheye: "Point the camera straight down", shTiltFisheyeHint: "Ceiling fisheye: the lens faces the floor.",
     shZoomWide: "Set the zoom to the widest end", shZoomTele: "Set the zoom to the longest end", shZoom: "Set the zoom",
@@ -8603,7 +8627,7 @@ const SHEET_TEXT = {
     shRowEntrance: "inside the effective {eff} m of the {cover} m the camera covers",
     shFaceWarn: "Faces are {ppm} px/m at the face line, under the {min} px/m floor: demographics may be unreliable. Zoom in a little or mount lower if demographics matter here.",
     shAsInstalled: "As installed (measured)", shHeight: "Height", shCountingLine: "Counting line", shZoomBlank: "Zoom", shTiltBlank: "Tilt",
-    shOnSite: "On site", shCheck1: "Counting line marked across the full entrance", shCheck2: "Nothing blocks the view: signs, beams, doors",
+    shOnSite: "On site", shCheck1: "Counting line marked across the full entrance", shCheck1_pair: "Counting line marked across the full width of the pair", shCheck2: "Nothing blocks the view: signs, beams, doors",
     shCheck3: "No strong backlight from glass doors or windows", shCheck4: "Power and network tested; stream visible",
     shOpenTitle: "Open this placement", shOpenNote: "Scan or open the link to see the same placement in the console, with the live simulation.",
     shInstalledBy: "Installed by", shDate: "Date"
@@ -8621,15 +8645,15 @@ const SHEET_TEXT = {
     shFov: "มุมรับภาพ {h}° × {v}° ที่ {f} mm", shDatasheet: "(ตามสเปก)",
     shVerdict_best: "<b>ตำแหน่งนี้ดีที่สุด</b> มุมเท้า{where} {angle}° อยู่ในช่วงดีที่สุด {min}–{max}°",
     shVerdict_acceptable: "<b>ตำแหน่งนี้พอใช้</b> มุมเท้า{where} {angle}° อยู่นอกช่วงดีที่สุด {min}–{max}° แต่อยู่ในช่วง {amin}–{amax}°",
-    shWhere_line: "ที่เส้นนับ", shWhere_aim: "ที่กลางทางเข้า",
+    shWhere_line: "ที่เส้นนับ", shWhere_aim: "ที่กลางทางเข้า", shWhere_aim_pair: "ที่กลางบันไดเลื่อนทั้งคู่",
     shVerdict_out_of_range: "<b>ตำแหน่งนี้เกินเกณฑ์</b> {reason}",
     shMount: "ติดตั้งกล้องสูงจากพื้น", shMountHint: "วัดถึงกึ่งกลางเลนส์",
-    shLine: "ทำเครื่องหมายเส้นนับ ห่างจากจุดใต้กล้อง", shLineHint: "ตรงออกไป และยาวตลอดความกว้างทางเข้า",
+    shLine: "ทำเครื่องหมายเส้นนับ ห่างจากจุดใต้กล้อง", shLineHint: "ตรงออกไป และยาวตลอดความกว้างทางเข้า", shLineHint_pair: "ตรงออกไป และยาวตลอดความกว้างบันไดเลื่อนทั้งคู่",
     shTilt: "ก้มกล้องลง", shTiltHint: "เล็งที่ความสูง {aim} m ของคนที่ยืนบนเส้นนับ",
-    shTiltHintMiddle: "ตั้งสำหรับกลางทางเข้า: เล็งที่ความสูง {aim} m ของคนที่ยืนตรงนั้น", shToMiddle: "ถึงกลาง",
-    shMountHintOffset: "วัดถึงกึ่งกลางเลนส์ ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า หันกล้อง {pan}° เข้าหากลางทางเข้า",
-    shMountHintPanned: "วัดถึงกึ่งกลางเลนส์ {where} หันกล้องไปทาง{turn} {pan}° จากแนวตั้งฉากกับทางเข้า",
-    shWhereCentre: "บนแนวกึ่งกลางทางเข้า", shWhereSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า",
+    shTiltHintMiddle: "ตั้งสำหรับกลางทางเข้า: เล็งที่ความสูง {aim} m ของคนที่ยืนตรงนั้น", shTiltHintMiddle_pair: "ตั้งสำหรับกลางบันไดเลื่อนทั้งคู่: เล็งที่ความสูง {aim} m ของคนที่ยืนตรงนั้น", shToMiddle: "ถึงกลาง",
+    shMountHintOffset: "วัดถึงกึ่งกลางเลนส์ ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า หันกล้อง {pan}° เข้าหากลางทางเข้า", shMountHintOffset_pair: "วัดถึงกึ่งกลางเลนส์ ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางบันไดเลื่อนทั้งคู่ หันกล้อง {pan}° เข้าหากลางบันไดเลื่อนทั้งคู่",
+    shMountHintPanned: "วัดถึงกึ่งกลางเลนส์ {where} หันกล้องไปทาง{turn} {pan}° จากแนวตั้งฉากกับทางเข้า", shMountHintPanned_pair: "วัดถึงกึ่งกลางเลนส์ {where} หันกล้องไปทาง{turn} {pan}° จากแนวตั้งฉากกับบันไดเลื่อนทั้งคู่",
+    shWhereCentre: "บนแนวกึ่งกลางทางเข้า", shWhereCentre_pair: "บนแนวกึ่งกลางบันไดเลื่อนทั้งคู่", shWhereSide: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางทางเข้า", shWhereSide_pair: "ห่างไปทาง{side} {distance} m จากแนวกึ่งกลางบันไดเลื่อนทั้งคู่",
     shSideLeft: "ซ้าย", shSideRight: "ขวา",
     shTiltFisheye: "หันกล้องลงตรงๆ", shTiltFisheyeHint: "ฟิชอายติดเพดาน เลนส์หันลงพื้น",
     shZoomWide: "ตั้งซูมที่ระยะกว้างสุด", shZoomTele: "ตั้งซูมที่ระยะไกลสุด", shZoom: "ตั้งซูม",
@@ -8644,7 +8668,7 @@ const SHEET_TEXT = {
     shRowEntrance: "อยู่ในช่วงใช้งานได้ {eff} m จาก {cover} m ที่กล้องมองเห็น",
     shFaceWarn: "ที่เส้นจับใบหน้ามีเพียง {ppm} px/m ต่ำกว่าเกณฑ์ {min} px/m ข้อมูลเพศ/อายุอาจไม่แม่นยำ ซูมเข้าเล็กน้อยหรือติดตั้งให้ต่ำลงหากต้องการข้อมูลนี้",
     shAsInstalled: "ค่าที่ติดตั้งจริง (วัดได้)", shHeight: "ความสูง", shCountingLine: "เส้นนับ", shZoomBlank: "ซูม", shTiltBlank: "มุมก้ม",
-    shOnSite: "ตรวจหน้างาน", shCheck1: "ทำเครื่องหมายเส้นนับตลอดความกว้างทางเข้าแล้ว", shCheck2: "ไม่มีสิ่งบังภาพ เช่น ป้าย คาน ประตู",
+    shOnSite: "ตรวจหน้างาน", shCheck1: "ทำเครื่องหมายเส้นนับตลอดความกว้างทางเข้าแล้ว", shCheck1_pair: "ทำเครื่องหมายเส้นนับตลอดความกว้างบันไดเลื่อนทั้งคู่แล้ว", shCheck2: "ไม่มีสิ่งบังภาพ เช่น ป้าย คาน ประตู",
     shCheck3: "ไม่มีแสงย้อนแรงจากประตูกระจกหรือหน้าต่าง", shCheck4: "ทดสอบไฟและเครือข่ายแล้ว เห็นภาพจากกล้อง",
     shOpenTitle: "เปิดตำแหน่งนี้", shOpenNote: "สแกนหรือเปิดลิงก์เพื่อดูตำแหน่งเดียวกันในโปรแกรม พร้อมการจำลอง",
     shInstalledBy: "ผู้ติดตั้ง", shDate: "วันที่"
@@ -9042,7 +9066,7 @@ function sheetReadings(p) {
           : t("shRowCountNone", { angle: deg(r.feet.angleDeg), ppm: fmt(r.optics.pixelsPerMetre, 0) }), ""],
     [t("faceLine"), fl.distanceM === null ? t("none") : fmt(fl.distanceM, 2, " m"), faceTag, face.label,
       fl.angleDeg === null ? face.note
-        : t("shRowFace", { angle: deg(fl.angleDeg), ppm: fmt(fl.pixelsPerMetre, 0) }) + " " + (fl.visible && fl.tooSmall ? t("shFaceFloor", { min: profile.minPixelsPerMetre.face }) : face.note), "face-name"]
+        : t("shRowFace", { angle: deg(fl.angleDeg), ppm: fmt(fl.pixelsPerMetre, 0) }) + " " + (fl.visible && fl.tooSmall ? t("shFaceFloor", { min: profile.minPixelsPerMetre.face }) + (face.incline ? " " + face.incline : "") : face.note), "face-name"]
   ];
   if (r.entrance !== null) {
     const entryClass = { covered: "best", tight: "ok", too_wide: "bad" }[r.entrance.status];
@@ -9222,7 +9246,14 @@ const HELP_TEXT = {
 
     g5Title: "Share and print", g5Sum: "Keep a placement as a link or a printable site sheet.",
     g5s1: "Share makes a link that holds the whole placement; opening it later restores everything. In the Share window, add the site and location, then open the printable site sheet.",
-    g5s2: "Copy readings puts the key numbers on the clipboard, ready to paste into a chat or a report."
+    g5s2: "Copy readings puts the key numbers on the clipboard, ready to paste into a chat or a report.",
+    g1s1_pair: "The verdict: Best, Acceptable or Out of range. It is the feet angle at the middle of the escalator pair, where people are counted.",
+    g1s4_pair: "Warnings appear here, the most important first: an end of the pair outside the bands, too few pixels, a height outside the range. +N more steps through the rest.",
+    g2s1_pair: "Choose what to solve. Distance: give the mounting height and get where the counting line goes. Height: give the distance you have and get the height to mount at. Reset (top right of this panel) goes back to the default, keeping the height, scene, landing and pair width; Undo brings it all back.",
+    g3Title_pair: "Set the pair width and the camera position", g3Sum_pair: "The width of the escalator pair, and a camera that is not on the centre line.",
+    g3s1_pair: "Pair width: both escalators and the divider, from outer step edge to outer step edge. A standard pair is 2.6 m. Both ends are checked, 0.35 m in from each frame.",
+    g3s2_pair: "If the camera cannot sit on the centre line of the pair, set how far left or right it is. It turns to aim at the middle.",
+    g4s1_pair: "Side view: the camera's own slice down to the middle of the pair, with the Best and Acceptable bands on the floor."
   },
   th: {
     hpHelp: "วิธีใช้", hpTitle: "วิธีใช้งานโปรแกรม", hpIntro: "คู่มือสั้น ๆ 5 เรื่อง กด แสดงให้ดู เพื่อพาไล่ดูปุ่มจริงบนหน้าจอ กด Esc เพื่อหยุดได้ทุกเมื่อ",
@@ -9254,7 +9285,14 @@ const HELP_TEXT = {
 
     g5Title: "แชร์และพิมพ์", g5Sum: "เก็บตำแหน่งไว้เป็นลิงก์ หรือใบสรุปหน้างานที่พิมพ์ได้",
     g5s1: "แชร์ สร้างลิงก์ที่เก็บตำแหน่งทั้งหมด เปิดลิงก์ภายหลังจะได้ค่าเดิมครบ ในหน้าต่างแชร์ ใส่ชื่อสถานที่และจุดติดตั้ง แล้วเปิดใบสรุปหน้างานเพื่อพิมพ์",
-    g5s2: "คัดลอกค่า คัดลอกตัวเลขสำคัญไว้ วางในแชทหรือรายงานได้ทันที"
+    g5s2: "คัดลอกค่า คัดลอกตัวเลขสำคัญไว้ วางในแชทหรือรายงานได้ทันที",
+    g1s1_pair: "ผลการประเมิน: ดีที่สุด พอใช้ หรือเกินเกณฑ์ ตัดสินจากมุมเท้าที่กลางบันไดเลื่อนทั้งคู่ ซึ่งเป็นจุดที่นับคน",
+    g1s4_pair: "คำเตือนจะแสดงตรงนี้ เรื่องสำคัญที่สุดก่อน เช่น ปลายบันไดเลื่อนทั้งคู่อยู่นอกเกณฑ์ พิกเซลน้อยเกินไป หรือความสูงอยู่นอกช่วง กด อีก N ข้อ เพื่อดูข้อถัดไป",
+    g2s1_pair: "เลือกสิ่งที่จะคำนวณ ระยะ: ใส่ความสูงติดตั้ง แล้วได้ตำแหน่งเส้นนับ ความสูง: ใส่ระยะที่มี แล้วได้ความสูงที่ควรติดตั้ง ปุ่มรีเซ็ต (มุมขวาบนของแผงนี้) กลับสู่ค่าเริ่มต้นโดยคงความสูง ลักษณะพื้นที่ ชานพัก และความกว้างบันไดเลื่อนทั้งคู่ไว้ และเลิกทำได้",
+    g3Title_pair: "ตั้งความกว้างบันไดเลื่อนและตำแหน่งกล้อง", g3Sum_pair: "ความกว้างบันไดเลื่อนทั้งคู่ และกล้องที่ไม่ได้อยู่บนแนวกึ่งกลาง",
+    g3s1_pair: "ความกว้างบันไดเลื่อนทั้งคู่: รวมบันไดเลื่อนทั้งสองตัวและช่องกลาง วัดจากขอบขั้นด้านนอกถึงด้านนอก คู่มาตรฐานกว้าง 2.6 m ปลายทั้งสองด้านจะถูกตรวจ โดยเว้นเข้ามาจากขอบภาพด้านละ 0.35 m",
+    g3s2_pair: "ถ้าติดกล้องบนแนวกึ่งกลางบันไดเลื่อนไม่ได้ ให้ใส่ระยะที่ห่างไปทางซ้ายหรือขวา กล้องจะหันไปเล็งตรงกลาง",
+    g4s1_pair: "มุมมองด้านข้าง: ภาพตัดของกล้องลงไปถึงกลางบันไดเลื่อนทั้งคู่ พร้อมช่วงดีที่สุดและพอใช้บนพื้น"
   }
 };
 Object.keys(HELP_TEXT).forEach((code) => Object.assign(I18N[code], HELP_TEXT[code]));
@@ -9601,6 +9639,7 @@ const WALL = 0.06;
 const GROUND = { minX: -45, maxX: 45, minZ: -15, maxZ: 75 };
 const COLOURS = {
   panel: "#48505c",
+  glass: "#8fa3b8",
   rail: "#222730",
   tread: "#626b79",
   hood: "#2b313b",
@@ -9642,6 +9681,8 @@ function buildEscalatorScene(THREE, p, material, stripWidth) {
       const made = material(COLOURS[key]);
       // The same finish as the plain floor, so the pieces around a well do not show a seam against it.
       if (key === "floor") made.roughness = 0.95;
+      // Glass lets riders and the step line show through; it does not write depth, so it never hides an avatar.
+      if (key === "glass") Object.assign(made, { transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide });
       cache.set(key, made);
     }
     return cache.get(key);
@@ -9672,20 +9713,29 @@ function buildEscalatorScene(THREE, p, material, stripWidth) {
   const innerHalf = layout.dividerM / 2 - bal;
   const sides = layout.lanes.flatMap((lane) => [[lane.minX - bal, lane.minX], [lane.maxX, lane.maxX + bal]]);
   sides.forEach(([xa, xb]) => {
-    group.add(prism(kit.slopeSkirt(layout, E.handrailM, base), xa, xb, "panel"));
+    group.add(prism(kit.slopeBand(layout, E.handrailM, 0), xa, xb, "glass"));
+    if (!bottom) group.add(prism(kit.slopeSkirt(layout, 0, base), xa, xb, "panel"));
     group.add(prism(kit.slopeBand(layout, E.handrailM + 0.04, E.handrailM - 0.05), xa - 0.02, xb + 0.02, "rail"));
   });
-  if (innerHalf > 0.001) group.add(prism(kit.slopeSkirt(layout, E.handrailM, base), -innerHalf, innerHalf, "panel"));
+  if (innerHalf > 0.001) group.add(prism(bottom ? kit.slopeBand(layout, E.handrailM, 0) : kit.slopeSkirt(layout, E.handrailM, base), -innerHalf, innerHalf, "panel"));
+
+  if (bottom) {
+    // A truss band under the incline, open beneath it, instead of a wall filled down to the floor.
+    const slope = (layout.riseM - 0.06) / (layout.endU - layout.inclineU);
+    const outer = layout.widthM / 2 + bal;
+    const truss = [
+      { u: layout.inclineU, y: 0 }, { u: layout.endU, y: layout.riseM - 0.06 },
+      { u: layout.endU, y: layout.riseM - 0.06 - E.trussM }, { u: layout.inclineU + E.trussM / slope, y: 0 },
+    ];
+    group.add(prism(truss, -outer, outer, "deck"));
+  }
 
   const steps = [];
   const pitch = E.stepDepthM;
   const dummy = new THREE.Object3D();
   const stepGeometry = new THREE.BoxGeometry(1, STEP_THICKNESS, 1);
   layout.lanes.forEach((lane) => {
-    const underside = bottom
-      ? [{ u: layout.inclineU, y: 0 }, { u: layout.endU, y: layout.riseM - 0.06 }, { u: layout.endU, y: 0 }]
-      : kit.slopeBand(layout, -0.06, -E.trussM);
-    group.add(prism(underside, lane.minX, lane.maxX, "deck"));
+    if (!bottom) group.add(prism(kit.slopeBand(layout, -0.06, -E.trussM), lane.minX, lane.maxX, "deck"));
     group.add(box(lane.minX, lane.maxX, 0, COMB_HEIGHT, layout.combU - COMB_DEPTH, layout.combU, "comb"));
     const capacity = kit.stepCentres(layout, 0).length + 2;
     const mesh = new THREE.InstancedMesh(stepGeometry, shared("tread"), capacity);
@@ -10417,6 +10467,10 @@ function createWalkSim(THREE, ui) {
     for (let i = 0; i < style.pairs; i += 1) team(2);
     agents.filter((a) => !a.leader).forEach((agent) => spawn(agent, lay, p, true));
     agents.filter((a) => a.leader).forEach((member) => member.body.group.scale.setScalar((p.humanHeightM / MODEL_HEIGHT_M) * (0.94 + random() * 0.1)));
+    // Paused, step() does not run: put the new people on their start poses now rather than in a heap at the camera.
+    if (lay.esc && p === input) {
+      agents.filter((a) => !a.leader).forEach((agent) => placeGroup(agent, 0, lay));
+    }
     Object.assign(occlusion, { seen: 0, hidden: 0, sampledAt: 0 });
     syncWalking();
   }
@@ -10440,8 +10494,7 @@ function createWalkSim(THREE, ui) {
     ui.overlay.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  // How high the group's feet are above the landing floor. Everyone is on the landing until the riding leg exists.
-  const footHeight = () => 0;
+  const faceU = () => (input.faceLineDistanceM !== null ? input.faceLineDistanceM - input.distanceM : null);
 
   // ---- People on the escalator pair. Each person is either walking the landing (travelled along from -> to), riding
   // (standing on one step: boardU is where they got on, boardT the belt travel then), or done (carried out of sight).
@@ -10464,7 +10517,7 @@ function createWalkSim(THREE, ui) {
     }));
     const taken = ridersOn(role, members, kit);
     const free = (us) => us.every((u) => taken.every((t) => Math.abs(t - u) >= E.rideGapM - 1e-6));
-    const ride = (us) => members.forEach((m, k) => Object.assign(m, { phase: "ride", boardU: us[k], boardT: beltTravel }));
+    const ride = (us) => members.forEach((m, k) => Object.assign(m, { phase: "ride", boardU: us[k], boardT: beltTravel, easeU: 0 }));
     const rideS = kit.rideSeconds(L);
     const walkS = agent.length / agent.speed;
     const lattice = kit.stepCentres(L, dir * beltTravel);
@@ -10561,11 +10614,12 @@ function createWalkSim(THREE, ui) {
             const target = agent.travelled - E.rideGapM * rank * (1 - spreadAt(at.z));
             const front = members[rank - 1];
             const cap = front.phase === "walk" ? front.travelled - 0.45 : Infinity;
-            const next = Math.max(m.travelled, Math.min(target, limit, cap));
+            const next = Math.min(m.travelled + m.speed * 1.35 * dt, Math.max(m.travelled, Math.min(target, limit, cap)));
             speedNow = next > m.travelled + 1e-6 ? m.speed : 0;
             m.travelled = next;
           }
-          if (slot !== null && m.travelled >= agent.length - 1e-6) Object.assign(m, { phase: "ride", boardU: slot, boardT: beltTravel });
+          // The step centre is up to a step ahead of the comb plate: walk onto it rather than jump.
+          if (slot !== null && m.travelled >= agent.length - 1e-6) Object.assign(m, { phase: "ride", boardU: slot, boardT: beltTravel, easeU: Math.max(0, slot - L.combU) });
         }
         if (m.phase === "walk") {
           const at = pointAt(m.travelled);
@@ -10578,7 +10632,9 @@ function createWalkSim(THREE, ui) {
       if (m.phase === "ride") {
         const u = riderU(m, kit);
         const queued = arriving && u > L.endU + 1e-6;
-        settle(m, m.rideX, escalatorRig ? escalatorRig.treadY(role, u, beltTravel) : 0, d + u, arriving ? Math.PI : 0, 0, !queued);
+        const easing = m.easeU > 0;
+        if (easing) m.easeU = Math.max(0, m.easeU - m.speed * dt);
+        settle(m, m.rideX, escalatorRig ? escalatorRig.treadY(role, u, beltTravel) : 0, d + u - (m.easeU || 0), arriving ? Math.PI : 0, easing ? m.speed : 0, !queued);
         return;
       }
       // Done: carried out of sight, waiting for the rest of the group.
@@ -10856,7 +10912,7 @@ function createWalkSim(THREE, ui) {
       const g = agent.body.group;
       const behindWall = lay.doorZ !== null && g.position.z > lay.doorZ + 0.1 && Math.abs(g.position.x) > lay.doorHalf - 0.1;
       // The standing person is always boxed: they were put there to be measured, wherever the face line falls.
-      const deepRider = lay.esc && agent.phase === "ride" && g.position.z > lay.combZ + 2;
+      const deepRider = lay.esc && agent.phase === "ride" && input.escalatorKit.pastBoxCutoff(lay.esc, g.position.z - input.distanceM, faceU());
       if (behindWall || deepRider || !g.visible || (agent !== standing && g.position.y < -DEEPEST_BOXED_M)) continue;
       const tall = MODEL_HEIGHT_M * g.scale.x;
       const box = personBox(g, tall, w, h);
@@ -11141,10 +11197,12 @@ function createWalkSim(THREE, ui) {
   function faceSubject() {
     if (!walking) return standing;
     const line = input.faceLineDistanceM !== null ? input.faceLineDistanceM : input.distanceM;
-    const doorZ = layout(input).doorZ;
+    const lay = layout(input);
+    const doorZ = lay.doorZ;
     const walkers = agents.filter((a) => {
       const z = a.body.group.position.z;
-      return a.kind === "in" && a.body.group.visible && z > 0.6 && (doorZ === null || z < doorZ) && a.body.group.position.y >= -DEEPEST_BOXED_M;
+      const unboxedRider = lay.esc && input.escalatorKit.pastBoxCutoff(lay.esc, z - input.distanceM, faceU());
+      return a.kind === "in" && a.body.group.visible && z > 0.6 && (doorZ === null || z < doorZ) && a.body.group.position.y >= -DEEPEST_BOXED_M && !unboxedRider;
     });
     return walkers.reduce((best, a) => (!best || Math.abs(a.body.group.position.z - line) < Math.abs(best.body.group.position.z - line) ? a : best), null);
   }
@@ -11379,7 +11437,9 @@ function createWalkSim(THREE, ui) {
     return (span.min + span.max) / 2;
   };
   function moveStanding(x) {
-    standX = x;
+    // Clamp here: poseStanding reads a position outside the lane as "came from elsewhere" and centres the person.
+    const span = standSpan(input);
+    standX = Math.max(span.min, Math.min(span.max, x));
     poseStanding(input);
     render();
   }
@@ -11498,7 +11558,8 @@ function createWalkSim(THREE, ui) {
         walking, paused, counts: { ...counts }, beltTravelM: beltTravel,
         riding: riding.length, onLanding: shown.length - riding.length,
         ridersY: riding.map((a) => Math.round(a.body.group.position.y * 100) / 100),
-        people: shown.map((a) => ({ x: a.body.group.position.x, y: a.body.group.position.y, z: a.body.group.position.z, riding: a.phase === "ride" })),
+        people: shown.map((a) => ({ id: agents.indexOf(a), kind: a.kind, chatting: ((l) => l.chatAt !== null && l.travelled >= l.chatAt && l.chatLeft > 0)(a.leader || a), x: a.body.group.position.x, y: a.body.group.position.y, z: a.body.group.position.z, riding: a.phase === "ride" })),
+        faceSubjectZ: walking && input ? (() => { const who = faceSubject(); return who ? who.body.group.position.z : null; })() : null,
       };
     },
     viewState: () => ({ walking, paused, crowd, standingIndex, standLine, standX }),
