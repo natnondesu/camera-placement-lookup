@@ -55,6 +55,7 @@ cameras.cameras.filter((camera) => camera.lens !== "fisheye").forEach((camera) =
 const engineSource = (await fs.readFile(path.join(__dirname, "src/placement-rule.js"), "utf8")).replace(/^export /gm, "");
 const simSource = (await fs.readFile(path.join(__dirname, "src/walk-sim.js"), "utf8")).replace(/^export /gm, "");
 const peopleSource = (await fs.readFile(path.join(__dirname, "src/people.js"), "utf8")).replace(/^export /gm, "");
+const escalatorSceneSource = (await fs.readFile(path.join(__dirname, "src/escalator-scene.js"), "utf8")).replace(/^export /gm, "");
 const escalatorSource = (await fs.readFile(path.join(__dirname, "src/escalator.js"), "utf8")).replace(/^export /gm, "");
 const shareSource = (await fs.readFile(path.join(__dirname, "src/share-link.js"), "utf8")).replace(/^export /gm, "");
 const sheetSource = await fs.readFile(path.join(__dirname, "src/site-sheet.js"), "utf8");
@@ -4149,7 +4150,7 @@ ${shareSource}
         scene: p.profile.id,
         landing: state.landing,
         escalator: p.profile.id === "escalator" ? escalatorFor(state.entranceM) : null,
-        escalatorKit: { ESCALATOR: ESCALATOR, surfaceHeight: surfaceHeight, stepCentres: stepCentres, stepUnder: stepUnder, floorWells: floorWells },
+        escalatorKit: { ESCALATOR: ESCALATOR, surfaceHeight: surfaceHeight, stepCentres: stepCentres, stepUnder: stepUnder, floorWells: floorWells, rideSeconds: rideSeconds, pitDepthM: pitDepthM, slopeBand: slopeBand, slopeSkirt: slopeSkirt, floorPieces: floorPieces, gridSegments: gridSegments, beltDirection: beltDirection, boardingU: boardingU, freeBoarding: freeBoarding, riderAt: riderAt },
         heightM: p.heightM,
         distanceM: p.distanceM,
         tiltDeg: r.tilt.value,
@@ -6286,6 +6287,7 @@ ${pwaSource}
   </script>
   <script type="importmap">{ "imports": { "three": "${THREE_URL}" } }</script>
   <script type="module">
+${escalatorSceneSource}
 ${simSource}
 ${peopleSource}
     try {

@@ -68,9 +68,9 @@ export const MODEL_HEIGHT_M = 1.7;
 // How busy the scene is: how many people, how many walk in pairs or threes, and how often someone stops on the way
 // through or a group stands talking. Phones get a smaller crowd.
 const CROWDS = {
-  light: { door: 7, corridor: 6, pairs: 0, trios: 0, stopShare: 0, chatShare: 0 },
-  busy: { door: 14, corridor: 12, pairs: 2, trios: 1, stopShare: 0.25, chatShare: 0.15 },
-  crowded: { door: 22, corridor: 18, phone: 14, pairs: 3, trios: 2, stopShare: 0.35, chatShare: 0.22 },
+  light: { door: 7, corridor: 6, escalator: 6, pairs: 0, trios: 0, stopShare: 0, chatShare: 0 },
+  busy: { door: 14, corridor: 12, escalator: 12, pairs: 2, trios: 1, stopShare: 0.25, chatShare: 0.15 },
+  crowded: { door: 22, corridor: 18, escalator: 18, phone: 14, pairs: 3, trios: 2, stopShare: 0.35, chatShare: 0.22 },
 };
 // Matches the engine's 80% effective coverage: the outer 10% each side, or 20% of a fisheye's radius.
 const EFFECTIVE_SHARE = 0.8;
@@ -78,6 +78,8 @@ const SKIN = ["#f1c7a5", "#d9a47c", "#b97b52", "#8d5a3b", "#5f3b26"];
 const TOPS = ["#3d6fb6", "#7a8796", "#b5443c", "#2f7d5b", "#c9a227", "#e6e1d6", "#5a4a8c", "#26313d"];
 const BOTTOMS = ["#2b3440", "#3c4f6b", "#5b5148", "#1f2329", "#6b6f75"];
 const HAIR = ["#1b1612", "#3b2a1e", "#6b4a2b", "#8a8a8a"];
+// A person whose feet are deeper than this below the landing floor (riding down a well) gets no detection box.
+const DEEPEST_BOXED_M = 0.5;
 
 const FISHEYE_VERTEX = `
 varying vec2 vUv;
@@ -215,6 +217,10 @@ export function createWalkSim(THREE, ui) {
 
   let props = new THREE.Group();
   scene.add(props);
+  // The escalator pair's scenery, with the hooks that move its steps; null in the other scenes.
+  let escalatorRig = null;
+  // How far the escalator belts have run, in metres. Only step(dt) advances it, so Pause holds the steps.
+  let beltTravel = 0;
   // Layer 1 holds what only the orbit view shows: the camera itself, its view cone and its aim.
   const HELPER_LAYER = 1;
   let helpers = new THREE.Group();
@@ -318,22 +324,33 @@ export function createWalkSim(THREE, ui) {
   let standLine = "count";
   const faceLineApart = (p) => p.faceLineDistanceM !== null && Math.abs(p.faceLineDistanceM - p.distanceM) > 0.02;
   const standZ = (p) => (standLine === "face" && faceLineApart(p) ? p.faceLineDistanceM : p.distanceM);
-  const standReach = (p) => {
+  // Where the standing person may stand along their line (scene x), and how high their feet are. Past the comb plate
+  // the face line crosses the steps: they stand in the arriving lane, on the step under them.
+  function standSpan(p) {
     const lay = layout(p);
-    return Math.max(0, (lay.doorZ !== null ? lay.doorHalf : lay.corridorHalf) - 0.35);
-  };
+    const z = standZ(p);
+    if (lay.esc && z - p.distanceM > lay.esc.combU) {
+      const lane = lay.esc.lanes.find((l) => l.role === "arrive");
+      const inset = Math.min(0.25, Math.max(0, lane.maxX - lane.minX - 0.1) / 2);
+      return { min: -lane.maxX + inset, max: -lane.minX - inset, y: escalatorRig ? escalatorRig.treadY("arrive", z - p.distanceM, beltTravel) : 0, lane: true };
+    }
+    const half = lay.esc ? lay.esc.widthM / 2 : lay.doorZ !== null ? lay.doorHalf : lay.corridorHalf;
+    const reach = Math.max(0, half - 0.35);
+    return { min: -reach, max: reach, y: 0, lane: false };
+  }
 
   function poseStanding(p) {
     const g = standing.body.group;
-    const reach = standReach(p);
-    standX = Math.max(-reach, Math.min(reach, standX));
-    g.position.set(standX, 0, standZ(p));
+    const span = standSpan(p);
+    // Coming onto the lane from elsewhere, they stand in the middle of it rather than against its edge.
+    standX = span.lane && (standX < span.min || standX > span.max) ? (span.min + span.max) / 2 : Math.max(span.min, Math.min(span.max, standX));
+    g.position.set(standX, span.y, standZ(p));
     g.rotation.y = Math.PI;
     g.scale.setScalar(p.humanHeightM / MODEL_HEIGHT_M);
   }
 
   function syncWalking() {
-    agents.forEach((agent) => { agent.body.group.visible = walking; });
+    agents.forEach((agent) => { agent.body.group.visible = walking && !agent.hidden; });
     standing.body.group.visible = !walking;
     ui.walkButton.setAttribute("aria-pressed", String(walking));
     ui.walkOnly.forEach((el) => { el.hidden = !walking; });
@@ -438,11 +455,19 @@ export function createWalkSim(THREE, ui) {
   // Where people may walk, from the scene and the lines on the floor.
   function layout(p) {
     const doorZ = p.scene === "open_door" ? p.distanceM + 0.35 : null;
+    const esc = p.scene === "escalator" && p.escalator ? p.escalator : null;
     const endZ = Math.max(p.distanceM, p.faceLineDistanceM || 0) + 5;
     // The doorway or corridor is as wide as the entered entrance; typical sizes otherwise.
     const doorHalf = p.entranceWidthM ? p.entranceWidthM / 2 : 1.1;
     const corridorHalf = p.entranceWidthM ? p.entranceWidthM / 2 : 1.5;
-    return { doorZ, endZ, doorHalf, corridorHalf, passZ: doorZ === null ? null : doorZ + 1.4 };
+    const laneAt = (role) => esc.lanes.find((l) => l.role === role);
+    return {
+      doorZ, endZ, doorHalf, corridorHalf, passZ: doorZ === null ? null : doorZ + 1.4, esc,
+      // Scene x of each lane's middle, and the comb plate where people step on or off.
+      combZ: esc ? p.distanceM + esc.combU : null,
+      arriveX: esc ? -laneAt("arrive").centreX : 0,
+      leaveX: esc ? -laneAt("leave").centreX : 0,
+    };
   }
 
   function rebuildProps(p) {
@@ -450,16 +475,25 @@ export function createWalkSim(THREE, ui) {
     props.traverse((o) => {
       if (o.geometry) o.geometry.dispose();
       if (o.material) o.material.dispose();
+      if (o.isInstancedMesh) o.dispose();
     });
     props = new THREE.Group();
     const lay = layout(p);
     const stripWidth = Math.max(8, Math.min(p.coverageWidthM, 40) * 1.4) + 2 * Math.abs(p.offsetM);
     countingStrip = lineStrip(p.distanceM, stripWidth, p.colors.count, 0.85);
     props.add(countingStrip);
-    if (p.faceLineDistanceM !== null && Math.abs(p.faceLineDistanceM - p.distanceM) > 0.02) {
+    escalatorRig = lay.esc ? buildEscalatorScene(THREE, p, material, stripWidth) : null;
+    if (escalatorRig) escalatorRig.setTravel(beltTravel);
+    // A well in the floor means the floor and grid are rebuilt in pieces around it; otherwise the plain ones stay.
+    const cutGround = Boolean(escalatorRig && escalatorRig.replacesGround);
+    floor.visible = !cutGround;
+    grid.visible = !cutGround;
+    if (!escalatorRig && p.faceLineDistanceM !== null && Math.abs(p.faceLineDistanceM - p.distanceM) > 0.02) {
       props.add(lineStrip(p.faceLineDistanceM, stripWidth, p.colors.face, p.faceLineVisible ? 0.9 : 0.35));
     }
-    if (lay.doorZ !== null) {
+    if (escalatorRig) {
+      props.add(escalatorRig.group);
+    } else if (lay.doorZ !== null) {
       const side = 7;
       props.add(wallBox(side, 3, -(lay.doorHalf + side / 2), 1.5, lay.doorZ));
       props.add(wallBox(side, 3, lay.doorHalf + side / 2, 1.5, lay.doorZ));
@@ -479,20 +513,22 @@ export function createWalkSim(THREE, ui) {
     agent.stopLeft = 0;
     agent.chatAt = null;
     agent.chatLeft = 0;
-    agent.followers.forEach((f) => Object.assign(f, { lastZ: null, flash: 0, flashDirection: null, faceFlash: 0 }));
+    agent.followers.forEach((f) => Object.assign(f, { lastZ: null, flash: 0, flashDirection: null, faceFlash: 0, phase: null, hidden: false }));
     const roll = random();
     const kind = crossTraffic && roll < 0.35
       ? "cross"
       : lay.doorZ !== null && random() < 0.4 ? "pass" : random() < 0.6 ? "in" : "out";
     const lane = (random() * 2 - 1) * ((lay.doorZ !== null ? lay.doorHalf : lay.corridorHalf) - 0.35);
     const nearZ = 0.8;
+    // Somewhere across the width of the lane the walker steps on or off at.
+    const inLane = (x) => x + (random() - 0.5) * Math.max(0, Math.min(0.5, lay.esc ? lay.esc.stepWidthM - 0.4 : 0));
     let from;
     let to;
     if (kind === "cross") {
       // Walks left to right across the view, on the camera side of the door, without crossing the counting line.
-      const farthest = lay.doorZ !== null ? lay.doorZ - 0.5 : lay.endZ - 1;
+      const farthest = lay.esc ? p.distanceM - 0.15 : lay.doorZ !== null ? lay.doorZ - 0.5 : lay.endZ - 1;
       const z = 1.2 + random() * Math.max(0.5, farthest - 1.2);
-      const span = lay.doorZ !== null ? Math.max(7, lay.doorHalf + 2) : lay.corridorHalf - 0.25;
+      const span = lay.esc ? lay.esc.widthM / 2 + 2.5 : lay.doorZ !== null ? Math.max(7, lay.doorHalf + 2) : lay.corridorHalf - 0.25;
       const dir = random() < 0.5 ? -1 : 1;
       from = { x: -span * dir, z };
       to = { x: span * dir, z };
@@ -502,6 +538,12 @@ export function createWalkSim(THREE, ui) {
       const span = Math.max(9, lay.doorHalf + 4);
       from = { x: -span * dir, z };
       to = { x: span * dir, z };
+    } else if (lay.esc) {
+      // Straight from the comb plate of the arriving lane, or to the comb plate of the leaving one.
+      const arriveX = inLane(lay.arriveX);
+      const leaveX = inLane(lay.leaveX);
+      from = kind === "in" ? { x: arriveX, z: lay.combZ } : { x: leaveX * 0.7, z: nearZ };
+      to = kind === "in" ? { x: arriveX * 0.7, z: nearZ } : { x: leaveX, z: lay.combZ };
     } else if (kind === "in") {
       from = { x: lane, z: lay.endZ };
       to = { x: lane * 0.6, z: nearZ };
@@ -521,10 +563,14 @@ export function createWalkSim(THREE, ui) {
       flash: 0,
       flashDirection: null,
       faceFlash: 0,
+      phase: null,
+      hidden: false,
     });
     agent.body.group.scale.setScalar((p.humanHeightM / MODEL_HEIGHT_M) * (0.94 + random() * 0.1));
+    const onEscalator = Boolean(lay.esc) && (kind === "in" || kind === "out");
+    if (onEscalator) seatOnEscalator(agent, lay, p, fresh);
     // A group walking in or out may stop about a metre past the counting line to talk, then carry on the same way.
-    if ((kind === "in" || kind === "out") && agent.followers.length > 0 && random() < style.chatShare) {
+    if ((kind === "in" || kind === "out") && agent.followers.length > 0 && !(onEscalator && kind === "in") && random() < style.chatShare) {
       const target = p.distanceM + (kind === "in" ? -1 : 1);
       const t = (from.z - target) / (from.z - to.z);
       if (t > 0.05 && t < 0.95 && agent.travelled < t * length) {
@@ -551,7 +597,7 @@ export function createWalkSim(THREE, ui) {
     const lay = layout(p);
     const style = CROWDS[crowd];
     const phone = typeof window !== "undefined" && window.innerWidth < 760 && style.phone;
-    const total = phone ? style.phone : lay.doorZ !== null ? style.door : style.corridor;
+    const total = phone ? style.phone : lay.esc ? style.escalator : lay.doorZ !== null ? style.door : style.corridor;
     // The crowd always starts from the same avatar, so a reset replays the same people.
     avatarCount = 1;
     agents = Array.from({ length: total }, () => {
@@ -598,6 +644,163 @@ export function createWalkSim(THREE, ui) {
     ui.overlay.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
+  // How high the group's feet are above the landing floor. Everyone is on the landing until the riding leg exists.
+  const footHeight = () => 0;
+
+  // ---- People on the escalator pair. Each person is either walking the landing (travelled along from -> to), riding
+  // (standing on one step: boardU is where they got on, boardT the belt travel then), or done (carried out of sight).
+  const riderU = (a, kit) => a.boardU + kit.beltDirection(a.rideRole) * (beltTravel - a.boardT);
+  const ridersOn = (role, except, kit) => agents.filter((a) => a.phase === "ride" && a.rideRole === role && !except.includes(a)).map((a) => riderU(a, kit));
+
+  // Puts a group (leader and companions) on the route at spawn. Everyone is spread along the whole route at the start of
+  // a walk, so the scene is alive at once; later arrivals queue, out of sight, behind the last rider.
+  function seatOnEscalator(agent, lay, p, fresh) {
+    const kit = p.escalatorKit;
+    const E = kit.ESCALATOR;
+    const L = lay.esc;
+    const members = [agent, ...agent.followers];
+    const arriving = agent.kind === "in";
+    const role = arriving ? "arrive" : "leave";
+    const dir = kit.beltDirection(role);
+    members.forEach((m) => Object.assign(m, {
+      phase: "walk", hidden: false, rideRole: role, rideX: arriving ? agent.from.x : agent.to.x, boardU: 0, boardT: 0,
+      travelled: 0, speed: agent.speed, stopAt: null, stopLeft: 0,
+    }));
+    const taken = ridersOn(role, members, kit);
+    const free = (us) => us.every((u) => taken.every((t) => Math.abs(t - u) >= E.rideGapM - 1e-6));
+    const ride = (us) => members.forEach((m, k) => Object.assign(m, { phase: "ride", boardU: us[k], boardT: beltTravel }));
+    const rideS = kit.rideSeconds(L);
+    const walkS = agent.length / agent.speed;
+    const lattice = kit.stepCentres(L, dir * beltTravel);
+    const nearest = (u) => lattice.reduce((best, c) => (Math.abs(c - u) < Math.abs(best - u) ? c : best), lattice[0]);
+    let seated = false;
+    if (fresh) {
+      for (let attempt = 0; attempt < 8 && !seated; attempt += 1) {
+        const tau = random() * (rideS + walkS);
+        if (arriving) {
+          if (tau >= rideS) {
+            members.forEach((m) => { m.travelled = (tau - rideS) * agent.speed; });
+            seated = true;
+          } else {
+            const base = nearest(L.endU - tau * E.beltSpeedMps);
+            const us = members.map((_, k) => base + k * E.rideGapM);
+            if (free(us)) { ride(us); seated = true; }
+          }
+        } else if (tau < walkS) {
+          agent.travelled = tau * agent.speed;
+          seated = true;
+        } else {
+          const base = nearest(kit.boardingU(L, "leave", beltTravel) + (tau - walkS) * E.beltSpeedMps);
+          const us = members.map((_, k) => base - k * E.rideGapM);
+          if (us[us.length - 1] >= L.combU - 1e-6 && free(us)) {
+            ride(us);
+            members.forEach((m) => { m.travelled = agent.length; });
+            seated = true;
+          }
+        }
+      }
+    }
+    if (!seated && arriving) {
+      const start = kit.freeBoarding(L, "arrive", beltTravel, taken, E.rideGapM);
+      ride(members.map((_, k) => start + k * E.rideGapM));
+    }
+  }
+
+  // One group on the escalator pair for a frame: the belt carries riders, walkers cross the landing, and a leaver
+  // waits at the comb plate until the step in front of them is free.
+  function moveOnEscalator(agent, dt, lay, respawned = false) {
+    const kit = input.escalatorKit;
+    const E = kit.ESCALATOR;
+    const L = lay.esc;
+    const arriving = agent.kind === "in";
+    const role = arriving ? "arrive" : "leave";
+    const members = [agent, ...agent.followers];
+    const d = input.distanceM;
+    const heading = Math.atan2(agent.to.x - agent.from.x, agent.to.z - agent.from.z);
+    const reach = L.widthM / 2 - 0.25;
+    const pointAt = (travelled) => {
+      const t = agent.length > 0 ? Math.min(1, travelled / agent.length) : 0;
+      return { x: agent.from.x + (agent.to.x - agent.from.x) * t, z: agent.from.z + (agent.to.z - agent.from.z) * t };
+    };
+    // A lane is one step wide: people are in single file at the comb plate and spread abreast over the next 0.8 m.
+    const spreadAt = (z) => Math.min(1, Math.max(0, (lay.combZ - z) / 0.8));
+    const settle = (m, x, y, z, rotation, speedNow, visible) => {
+      m.hidden = !visible;
+      m.body.group.position.set(x, y, z);
+      m.body.group.rotation.y = rotation;
+      m.body.setMotion(speedNow > 0 ? "walk" : "idle");
+      m.body.animate(dt, speedNow);
+    };
+
+    members.forEach((m, rank) => {
+      let speedNow = 0;
+      if (m.phase === "ride") {
+        const pose = kit.riderAt(L, role, m.boardU, beltTravel - m.boardT);
+        if (pose.status === "off") {
+          if (arriving) Object.assign(m, { phase: "walk", travelled: 0 });
+          else m.phase = "done";
+        }
+      }
+      if (m.phase === "walk") {
+        const leader = m === agent;
+        if (arriving) {
+          const limit = leader ? agent.length : agent.phase === "walk" ? Math.min(agent.length, agent.travelled) : 0;
+          const stopped = leader && agent.stopAt !== null && agent.travelled >= agent.stopAt && agent.stopLeft > 0;
+          if (stopped) agent.stopLeft -= dt;
+          // Companions who stepped off later hurry to regroup with the leader.
+          const pace = m.speed * (!leader && m.travelled < limit - 0.02 ? 1.35 : 1);
+          if (!stopped && m.travelled < limit) m.travelled = Math.min(limit, m.travelled + pace * dt);
+          speedNow = !stopped && m.travelled < limit ? pace : 0;
+        } else {
+          // A leaver stands back from the comb plate while the step in front of them is taken.
+          const slot = kit.freeBoarding(L, "leave", beltTravel, ridersOn("leave", [m], kit), E.rideGapM);
+          const limit = Math.min(agent.length, slot === null ? agent.length - 0.6 : agent.length);
+          if (leader) {
+            const stopped = agent.stopAt !== null && agent.travelled >= agent.stopAt && agent.stopLeft > 0 && agent.travelled < agent.length;
+            if (stopped) agent.stopLeft -= dt;
+            else if (agent.travelled < limit) agent.travelled = Math.min(limit, agent.travelled + agent.speed * dt);
+            speedNow = !stopped && agent.travelled < limit ? agent.speed : 0;
+          } else {
+            const at = pointAt(Math.min(agent.travelled, agent.length));
+            const target = agent.travelled - E.rideGapM * rank * (1 - spreadAt(at.z));
+            const front = members[rank - 1];
+            const cap = front.phase === "walk" ? front.travelled - 0.45 : Infinity;
+            const next = Math.max(m.travelled, Math.min(target, limit, cap));
+            speedNow = next > m.travelled + 1e-6 ? m.speed : 0;
+            m.travelled = next;
+          }
+          if (slot !== null && m.travelled >= agent.length - 1e-6) Object.assign(m, { phase: "ride", boardU: slot, boardT: beltTravel });
+        }
+        if (m.phase === "walk") {
+          const at = pointAt(m.travelled);
+          const side = leader ? 0 : m.side * spreadAt(at.z) * 0.55;
+          const x = Math.max(-reach, Math.min(reach, at.x + Math.cos(heading) * side));
+          settle(m, x, 0, at.z - Math.sin(heading) * side, heading, speedNow, true);
+          return;
+        }
+      }
+      if (m.phase === "ride") {
+        const u = riderU(m, kit);
+        const queued = arriving && u > L.endU + 1e-6;
+        settle(m, m.rideX, escalatorRig ? escalatorRig.treadY(role, u, beltTravel) : 0, d + u, arriving ? Math.PI : 0, 0, !queued);
+        return;
+      }
+      // Done: carried out of sight, waiting for the rest of the group.
+      m.hidden = true;
+    });
+    // The next trip starts once everyone in the group has finished this one.
+    const finished = arriving ? members.every((m) => m.phase === "walk" && m.travelled >= agent.length - 1e-6) : members.every((m) => m.phase === "done");
+    if (!arriving) {
+      // The leaver's clock keeps running after they board, so companions behind them know where to be.
+      if (agent.phase !== "walk" && agent.travelled < agent.length + 5) agent.travelled += agent.speed * dt;
+    }
+    if (finished) {
+      spawn(agent, lay, input, false);
+      // Put the new group on its start pose now, so the counting sees no jump from the old route to the new one.
+      if (!respawned && (agent.kind === "in" || agent.kind === "out")) moveOnEscalator(agent, 0, lay, true);
+    }
+  }
+
   // Where a leader and its companions stand this frame: walking side by side, or in a small circle while talking.
   function placeGroup(agent, dt, lay) {
     const g = agent.body.group;
@@ -609,7 +812,7 @@ export function createWalkSim(THREE, ui) {
       agent.followers.forEach((member, i) => {
         const angle = (Math.PI * 2 * (i + 1)) / (ring + 1);
         const m = member.body.group;
-        m.position.set(g.position.x + Math.sin(angle) * 0.75, 0, g.position.z + Math.cos(angle) * 0.75);
+        m.position.set(g.position.x + Math.sin(angle) * 0.75, g.position.y, g.position.z + Math.cos(angle) * 0.75);
         m.rotation.y = Math.atan2(g.position.x - m.position.x, g.position.z - m.position.z);
       });
       const centre = agent.followers.reduce((sum, m) => ({ x: sum.x + m.body.group.position.x, z: sum.z + m.body.group.position.z }), { x: 0, z: 0 });
@@ -620,6 +823,10 @@ export function createWalkSim(THREE, ui) {
       });
       // Stepping out of the circle is not a crossing: counting picks up again from where each one walks on.
       if (agent.chatLeft <= 0) agent.followers.forEach((member) => { member.lastZ = null; });
+      return;
+    }
+    if (lay.esc && (agent.kind === "in" || agent.kind === "out")) {
+      moveOnEscalator(agent, dt, lay);
       return;
     }
     if (agent.stopAt !== null && agent.travelled >= agent.stopAt && agent.stopLeft > 0) {
@@ -639,7 +846,7 @@ export function createWalkSim(THREE, ui) {
     g.position.set(x, 0, z);
     g.rotation.y = heading;
     // Companions walk abreast, about 0.55 m apart; inside the entrance they keep within its width.
-    const reach = (lay.doorZ !== null ? lay.doorHalf : lay.corridorHalf) - 0.25;
+    const reach = (lay.esc ? lay.esc.widthM / 2 : lay.doorZ !== null ? lay.doorHalf : lay.corridorHalf) - 0.25;
     agent.followers.forEach((member) => {
       const m = member.body.group;
       let mx = x + Math.cos(heading) * 0.55 * member.side;
@@ -656,7 +863,12 @@ export function createWalkSim(THREE, ui) {
 
   function step(dt) {
     const lay = layout(input);
+    if (escalatorRig) {
+      beltTravel += input.escalatorKit.ESCALATOR.beltSpeedMps * dt;
+      escalatorRig.setTravel(beltTravel);
+    }
     agents.filter((a) => !a.leader).forEach((agent) => placeGroup(agent, dt, lay));
+    if (lay.esc) agents.forEach((a) => { a.body.group.visible = !a.hidden; });
     for (const agent of agents) {
       if (agent.leader) agent.kind = agent.leader.kind;
       const z = agent.body.group.position.z;
@@ -795,9 +1007,9 @@ export function createWalkSim(THREE, ui) {
   }
 
   function personBox(g, tall, w, h) {
-    const { x, z } = g.position;
+    const { x, y, z } = g.position;
     const points = [
-      [x, 0, z], [x, tall, z], [x - 0.3, tall / 2, z], [x + 0.3, tall / 2, z], [x, tall / 2, z - 0.3], [x, tall / 2, z + 0.3],
+      [x, y, z], [x, y + tall, z], [x - 0.3, y + tall / 2, z], [x + 0.3, y + tall / 2, z], [x, y + tall / 2, z - 0.3], [x, y + tall / 2, z + 0.3],
     ].map(([px, py, pz]) => toScreen(px, py, pz, w, h));
     if (points.some((p) => p.behind)) return null;
     const xs = points.map((p) => p.x);
@@ -847,11 +1059,13 @@ export function createWalkSim(THREE, ui) {
     for (const agent of shownAgents()) {
       const g = agent.body.group;
       const behindWall = lay.doorZ !== null && g.position.z > lay.doorZ + 0.1 && Math.abs(g.position.x) > lay.doorHalf - 0.1;
-      if (behindWall) continue;
+      // The standing person is always boxed: they were put there to be measured, wherever the face line falls.
+      const deepRider = lay.esc && agent.phase === "ride" && g.position.z > lay.combZ + 2;
+      if (behindWall || deepRider || !g.visible || (agent !== standing && g.position.y < -DEEPEST_BOXED_M)) continue;
       const tall = MODEL_HEIGHT_M * g.scale.x;
       const box = personBox(g, tall, w, h);
       if (!box) continue;
-      seen.push({ agent, box, tall, depth: Math.hypot(g.position.x - cameraX(), tall * 0.6 - input.heightM, g.position.z) });
+      seen.push({ agent, box, tall, depth: Math.hypot(g.position.x - cameraX(), g.position.y + tall * 0.6 - input.heightM, g.position.z) });
     }
     const hidden = walking ? occlusionOf(seen) : seen.map(() => false);
     const now = performance.now();
@@ -874,7 +1088,7 @@ export function createWalkSim(THREE, ui) {
       // Density at this person's face, the figure demographics depend on.
       if (box.h >= 28) {
         const faceY = tall * (input.facePointM / input.humanHeightM);
-        const text = Math.round(densityAt(g.position.x, faceY, g.position.z)) + " px/m";
+        const text = Math.round(densityAt(g.position.x, g.position.y + faceY, g.position.z)) + " px/m";
         densityLabels.push({ text, centreX, top: box.y, bottom: box.y + box.h, priority: box.h });
       }
       if (counted) {
@@ -1134,7 +1348,7 @@ export function createWalkSim(THREE, ui) {
     const doorZ = layout(input).doorZ;
     const walkers = agents.filter((a) => {
       const z = a.body.group.position.z;
-      return a.kind === "in" && a.body.group.visible && z > 0.6 && (doorZ === null || z < doorZ);
+      return a.kind === "in" && a.body.group.visible && z > 0.6 && (doorZ === null || z < doorZ) && a.body.group.position.y >= -DEEPEST_BOXED_M;
     });
     return walkers.reduce((best, a) => (!best || Math.abs(a.body.group.position.z - line) < Math.abs(best.body.group.position.z - line) ? a : best), null);
   }
@@ -1150,7 +1364,7 @@ export function createWalkSim(THREE, ui) {
     // above the person and the readouts do, so the same person never shows two px/m values.
     const g = agent.body.group;
     const faceY = MODEL_HEIGHT_M * g.scale.x * (input.facePointM / input.humanHeightM);
-    const density = densityAt(g.position.x, faceY, g.position.z);
+    const density = densityAt(g.position.x, g.position.y + faceY, g.position.z);
     const px = Math.max(2, Math.min(160, Math.round(density * FACE_CROP_M)));
     const sampled = px * FACE_SUPERSAMPLE;
     faceCamera.position.set(cameraX(), input.heightM, 0);
@@ -1289,6 +1503,7 @@ export function createWalkSim(THREE, ui) {
     needAllPeople();
     walking = !walking;
     paused = false;
+    if (input) poseStanding(input);
     syncWalking();
     start();
   });
@@ -1340,21 +1555,22 @@ export function createWalkSim(THREE, ui) {
     return Boolean(box) && point.x >= box.x - pad && point.x <= box.x + box.w + pad && point.y >= box.y - pad && point.y <= box.y + box.h + pad;
   }
   function lineXAt(point) {
-    const reach = standReach(input);
+    const span = standSpan(input);
     const w = parseFloat(ui.overlay.style.width) || 0;
     const h = parseFloat(ui.overlay.style.height) || 0;
-    const midY = (MODEL_HEIGHT_M * standing.body.group.scale.x) / 2;
+    const midY = span.y + (MODEL_HEIGHT_M * standing.body.group.scale.x) / 2;
     const miss = (x) => {
       const s = toScreen(x, midY, standZ(input), w, h);
       return s.behind ? Infinity : (s.x - point.x) ** 2 + (s.y - point.y) ** 2;
     };
-    let best = 0;
+    const reach = span.max - span.min;
+    let best = span.min;
     for (let i = 0; i <= 40; i += 1) {
-      const x = -reach + (2 * reach * i) / 40;
+      const x = span.min + (reach * i) / 40;
       if (miss(x) < miss(best)) best = x;
     }
-    let lo = Math.max(-reach, best - reach / 20);
-    let hi = Math.min(reach, best + reach / 20);
+    let lo = Math.max(span.min, best - reach / 20);
+    let hi = Math.min(span.max, best + reach / 20);
     for (let i = 0; i < 24; i += 1) {
       const a = lo + (hi - lo) / 3;
       const b = hi - (hi - lo) / 3;
@@ -1362,6 +1578,10 @@ export function createWalkSim(THREE, ui) {
     }
     return (lo + hi) / 2;
   }
+  const standMiddle = () => {
+    const span = standSpan(input);
+    return (span.min + span.max) / 2;
+  };
   function moveStanding(x) {
     standX = x;
     poseStanding(input);
@@ -1387,20 +1607,21 @@ export function createWalkSim(THREE, ui) {
   ui.canvas.addEventListener("pointerup", endDrag);
   ui.canvas.addEventListener("pointercancel", endDrag);
   ui.canvas.addEventListener("dblclick", (event) => {
-    if (overStanding(pointerOnCanvas(event))) moveStanding(0);
+    if (overStanding(pointerOnCanvas(event))) moveStanding(standMiddle());
   });
   // Arrow keys move the standing person the way it moves on screen; Home puts them back in the middle.
   ui.canvas.addEventListener("keydown", (event) => {
     if (walking || !input || !["ArrowLeft", "ArrowRight", "Home"].includes(event.key)) return;
     event.preventDefault();
     if (event.key === "Home") {
-      moveStanding(0);
+      moveStanding(standMiddle());
       return;
     }
     const w = parseFloat(ui.overlay.style.width) || 0;
     const h = parseFloat(ui.overlay.style.height) || 0;
     const z = standZ(input);
-    const screenRight = toScreen(standX + 0.1, 1, z, w, h).x > toScreen(standX, 1, z, w, h).x ? 1 : -1;
+    const y = 1 + standSpan(input).y;
+    const screenRight = toScreen(standX + 0.1, y, z, w, h).x > toScreen(standX, y, z, w, h).x ? 1 : -1;
     const step = (event.shiftKey ? 0.25 : 0.05) * (event.key === "ArrowRight" ? 1 : -1) * screenRight;
     moveStanding(standX + step);
   });
@@ -1473,6 +1694,17 @@ export function createWalkSim(THREE, ui) {
 
   return {
     snapshot,
+    // For tests: who is riding and who is on the landing, and how far the belts have run.
+    stats() {
+      const shown = walking && input && input.scene === "escalator" ? agents.filter((a) => a.body.group.visible) : [];
+      const riding = shown.filter((a) => a.phase === "ride");
+      return {
+        walking, paused, counts: { ...counts }, beltTravelM: beltTravel,
+        riding: riding.length, onLanding: shown.length - riding.length,
+        ridersY: riding.map((a) => Math.round(a.body.group.position.y * 100) / 100),
+        people: shown.map((a) => ({ x: a.body.group.position.x, y: a.body.group.position.y, z: a.body.group.position.z, riding: a.phase === "ride" })),
+      };
+    },
     viewState: () => ({ walking, paused, crowd, standingIndex, standLine, standX }),
     resetView: () => applyView({ walking: false, paused: false, crowd: "light", standingIndex: 0, standLine: "count", standX: 0 }),
     restoreView: applyView,
@@ -1514,7 +1746,7 @@ export function createWalkSim(THREE, ui) {
       rebuildHelpers(placement);
       if (orbit) aimOrbit(placement, false);
       syncPassersRow();
-      const key = [placement.scene, placement.lens, placement.distanceM.toFixed(1), placement.entranceWidthM || 0, (placement.faceLineDistanceM || 0).toFixed(1)].join("|");
+      const key = [placement.scene, placement.scene === "escalator" ? placement.landing : "", placement.lens, placement.distanceM.toFixed(1), placement.entranceWidthM || 0, (placement.faceLineDistanceM || 0).toFixed(1)].join("|");
       if (first || key !== layoutKey) respawnAll(placement);
       layoutKey = key;
       syncWalking();

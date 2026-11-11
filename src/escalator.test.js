@@ -11,6 +11,11 @@ import {
   faceLineSurface,
   floorWells,
   sideOutline,
+  pitDepthM,
+  slopeBand,
+  slopeSkirt,
+  floorPieces,
+  gridSegments,
 } from "./escalator.js";
 
 const rules = JSON.parse(readFileSync(new URL("../rules/scene-profiles.json", import.meta.url), "utf8"));
@@ -201,4 +206,93 @@ test("the side outline's treads are level and joined by risers, so the incline r
     }
     assert.ok(treads.some((point, i) => i % 2 === 1 && i + 1 < treads.length && Math.abs(treads[i + 1].y - point.y) > 1e-6), "the incline has risers");
   }
+});
+
+test("the pit is deeper than the lowest point of the truss, so the well reads as depth", () => {
+  const layout = escalatorLayout({ widthM: 2.6, landing: "top" });
+  assert.ok(pitDepthM(layout) > ESCALATOR.riseM + ESCALATOR.trussM);
+});
+
+test("a slope band follows the surface at fixed offsets above and below it", () => {
+  for (const landing of LANDINGS) {
+    const layout = escalatorLayout({ widthM: 2.6, landing });
+    const band = slopeBand(layout, ESCALATOR.handrailM, -ESCALATOR.trussM);
+    assert.equal(band.length, 6, "three points on each edge");
+    const top = band.slice(0, 3);
+    const bottom = band.slice(3);
+    assert.deepEqual(top.map((point) => point.u), [layout.combU, layout.inclineU, layout.endU]);
+    top.forEach((point) => near(point.y, surfaceHeight(layout, point.u) + ESCALATOR.handrailM));
+    bottom.forEach((point) => near(point.y, surfaceHeight(layout, point.u) - ESCALATOR.trussM));
+    assert.deepEqual(bottom.map((point) => point.u), [layout.endU, layout.inclineU, layout.combU], "returns along the bottom edge");
+  }
+});
+
+test("a skirt runs from the handrail line down to a fixed floor, however high the slope climbs", () => {
+  const layout = escalatorLayout({ widthM: 2.6, landing: "bottom" });
+  const skirt = slopeSkirt(layout, ESCALATOR.handrailM, 0);
+  const bottom = skirt.slice(3);
+  bottom.forEach((point) => assert.equal(point.y, 0));
+  near(skirt[2].y, ESCALATOR.riseM + ESCALATOR.handrailM);
+});
+
+const area = (rects) => rects.reduce((sum, r) => sum + (r.maxX - r.minX) * (r.maxU - r.minU), 0);
+const overlap = (a, b) => Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX) > 1e-9 && Math.min(a.maxU, b.maxU) - Math.max(a.minU, b.minU) > 1e-9;
+const bounds = { minX: -45, maxX: 45, minU: -15, maxU: 75 };
+
+test("with no wells the floor is one piece", () => {
+  assert.deepEqual(floorPieces(bounds, []), [bounds]);
+});
+
+test("floor pieces tile everything except the wells, with no gap and no overlap", () => {
+  const wells = floorWells(escalatorLayout({ widthM: 2.6, landing: "top" }));
+  const sceneWells = wells.map((w) => ({ ...w, minU: w.minU + 5, maxU: w.maxU + 5 }));
+  const pieces = floorPieces(bounds, sceneWells);
+
+  near(area(pieces), area([bounds]) - area(sceneWells));
+  for (const well of sceneWells) assert.ok(pieces.every((piece) => !overlap(piece, well)), "no floor over a well");
+  pieces.forEach((a, i) => pieces.slice(i + 1).forEach((b) => assert.ok(!overlap(a, b), "pieces do not overlap")));
+});
+
+test("the divider between two wells keeps its floor", () => {
+  const wells = floorWells(escalatorLayout({ widthM: 2.6, landing: "top" }));
+  const pieces = floorPieces(bounds, wells);
+  const [leave, arrive] = wells;
+  const island = pieces.find((piece) => piece.minX <= leave.maxX + 1e-9 && piece.maxX >= arrive.minX - 1e-9);
+  assert.ok(island, "a piece spans the divider");
+  assert.ok(island.minU <= wells[0].minU && island.maxU >= wells[0].maxU, "all along the wells");
+});
+
+test("two wells that touch leave no sliver of floor between them", () => {
+  const layout = escalatorLayout({ widthM: 2 * ESCALATOR.stepWidthM + ESCALATOR.minDividerM, landing: "top" });
+  const wells = floorWells(layout);
+  const pieces = floorPieces(bounds, wells);
+  assert.ok(pieces.every((piece) => piece.maxX - piece.minX > 1e-6), "no zero-width piece");
+  near(area(pieces), area([bounds]) - area(wells), 1e-6);
+});
+
+test("grid lines sit on whole steps of the grid and run the full bounds when nothing is cut", () => {
+  const segments = gridSegments({ minX: 0, maxX: 4, minU: 0, maxU: 3 }, 1, []);
+  const along = segments.filter((s) => s.x0 === s.x1);
+  const across = segments.filter((s) => s.u0 === s.u1);
+  assert.equal(along.length, 5);
+  assert.equal(across.length, 4);
+  along.forEach((s) => { assert.equal(s.u0, 0); assert.equal(s.u1, 3); });
+  across.forEach((s) => { assert.equal(s.x0, 0); assert.equal(s.x1, 4); });
+});
+
+test("a grid line stops at the edge of a well and picks up on the other side", () => {
+  const well = { minX: 2.2, maxX: 4.8, minU: 3, maxU: 7 };
+  const segments = gridSegments({ minX: 0, maxX: 8, minU: 0, maxU: 10 }, 1, [well]);
+  const column = segments.filter((s) => s.x0 === 3 && s.x1 === 3).map((s) => [s.u0, s.u1]);
+  assert.deepEqual(column, [[0, 3], [7, 10]]);
+  const row = segments.filter((s) => s.u0 === 5 && s.u1 === 5).map((s) => [s.x0, s.x1]);
+  assert.deepEqual(row, [[0, 2.2], [4.8, 8]]);
+  const inside = (s) => Math.min(s.x0, s.x1) < well.maxX - 1e-9 && Math.max(s.x0, s.x1) > well.minX + 1e-9 && Math.min(s.u0, s.u1) < well.maxU - 1e-9 && Math.max(s.u0, s.u1) > well.minU + 1e-9;
+  assert.ok(segments.every((s) => !(inside(s) && s.x0 > well.minX && s.x0 < well.maxX && s.u0 > well.minU && s.u0 < well.maxU)), "nothing drawn inside");
+});
+
+test("a grid line along the edge of a well is kept", () => {
+  const well = { minX: 2, maxX: 5, minU: 3, maxU: 7 };
+  const segments = gridSegments({ minX: 0, maxX: 8, minU: 0, maxU: 10 }, 1, [well]);
+  assert.ok(segments.some((s) => s.x0 === 2 && s.x1 === 2 && s.u0 === 0 && s.u1 === 10), "the edge x=2 line runs whole");
 });
