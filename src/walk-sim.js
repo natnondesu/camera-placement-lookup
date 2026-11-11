@@ -329,7 +329,7 @@ export function createWalkSim(THREE, ui) {
   function standSpan(p) {
     const lay = layout(p);
     const z = standZ(p);
-    if (lay.esc && z - p.distanceM > lay.esc.combU) {
+    if (lay.esc && z - p.distanceM > lay.esc.combU - 1e-6) {
       const lane = lay.esc.lanes.find((l) => l.role === "arrive");
       const inset = Math.min(0.25, Math.max(0, lane.maxX - lane.minX - 0.1) / 2);
       return { min: -lane.maxX + inset, max: -lane.minX - inset, y: escalatorRig ? escalatorRig.treadY("arrive", z - p.distanceM, beltTravel) : 0, lane: true };

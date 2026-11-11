@@ -20,7 +20,7 @@ A scene where people can only move in one direction through the view, with no cr
 _Avoid_: Corlidor
 
 **Escalator**:
-A scene where people step off one escalator onto a landing and leave by the other, so escalators come as a pair. People are counted on the flat landing, a few steps after they step off at the comb plate (where the steps meet the floor), with the Open door thresholds.
+A scene where people step off one escalator onto a landing and leave by the other, so escalators come as a pair. People are counted at the comb plate (the edge of the escalator, where the steps meet the floor), as they step off or on, with the Open door thresholds.
 _Avoid_: Stairs
 
 **Landing**:

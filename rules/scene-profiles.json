@@ -41,7 +41,7 @@
     {
       "id": "escalator",
       "name": "Escalator",
-      "description": "People step off one escalator onto the landing and leave by the other. Counted on the flat landing, with the Open door thresholds.",
+      "description": "People step off one escalator onto the landing and leave by the other. Counted at the edge of the escalator, where they step off, with the Open door thresholds.",
       "heightRangeM": { "min": 2.0, "max": 10.0, "step": 0.1 },
       "facePointM": 1.5,
       "humanHeightM": 1.7,

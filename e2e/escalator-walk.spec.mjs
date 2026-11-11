@@ -20,7 +20,7 @@ for (const landing of ["top", "bottom"]) {
     // the landing jumps from one frame to the next.
     const watched = await page.evaluate(() => new Promise((resolve) => {
       const d = currentPlacement().distanceM;
-      const comb = d + 1.5;
+      const comb = d;
       let last = window.walkSim.stats();
       let lastAt = performance.now();
       const falseCounts = [];

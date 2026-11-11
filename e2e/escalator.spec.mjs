@@ -112,6 +112,14 @@ test("the printed sheet carries the incline caveat when the face line is on the 
   await expect(page.locator("#sheetPage")).toContainText(/approximate/i);
 });
 
+test("the person on the counting line stands on the arriving escalator's edge, not in the divider", async ({ page }) => {
+  await openConsole(page, "s=escalator&h=4&e=2.6&m=distance");
+  await waitForPeople(page);
+  const x = await page.evaluate(() => window.walkSim.viewState().standX);
+  expect(x).toBeLessThan(-0.3);
+  expect(x).toBeGreaterThan(-1.3);
+});
+
 test("the standing person stops at the edge of the arriving lane when arrowed, instead of jumping to the middle", async ({ page }) => {
   await openConsole(page, "s=escalator&h=7&e=2.6&m=distance");
   await waitForPeople(page);

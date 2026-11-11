@@ -148,13 +148,23 @@ test("nobody is on a step before the comb plate or past the far end", () => {
   assert.equal(stepUnder(layout, layout.combU + 0.2, 0).topY, 0);
 });
 
+test("the comb plate sits exactly on the counting line", () => {
+  for (const landing of ["top", "bottom"]) {
+    const layout = escalatorLayout({ widthM: 2.6, landing });
+
+    assert.equal(layout.combU, 0);
+    assert.deepEqual(stepUnder(layout, -0.01, 0), null);
+    assert.notEqual(stepUnder(layout, 0.01, 0), null);
+  }
+});
+
 test("the face line is named by what it falls on: the landing, the flat steps or the incline", () => {
   const layout = escalatorLayout({ widthM: 2.6, landing: "top" });
 
   assert.equal(faceLineSurface(layout, -0.4), "landing");
   assert.equal(faceLineSurface(layout, 0), "landing");
-  assert.equal(faceLineSurface(layout, 0.78), "landing");
-  assert.equal(faceLineSurface(layout, 1.78), "steps");
+  assert.equal(faceLineSurface(layout, 0.78), "steps");
+  assert.equal(faceLineSurface(layout, 1.78), "incline");
   assert.equal(faceLineSurface(layout, 2.78), "incline");
   assert.equal(faceLineSurface(layout, null), "landing");
 });

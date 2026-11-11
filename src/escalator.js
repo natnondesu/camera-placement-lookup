@@ -10,8 +10,8 @@
 
 /** The dimensions of a typical mall escalator, and how the pair sits behind the counting line. */
 export const ESCALATOR = Object.freeze({
-  /** Counting line to the comb plate: people are counted a few steps after they step off. */
-  landingRunM: 1.5,
+  /** Counting line to the comb plate: none, people are counted as they step off or on. */
+  landingRunM: 0,
   /** The level steps between the comb plate and the incline. */
   flatRunM: 0.8,
   inclineDeg: 30,
